@@ -8,7 +8,8 @@ no GitHub.
 ## O que já está pronto
 
 - Tag `v*` → workflow **Release** cria o GitHub Release com os zips.
-- Release publicada → workflow **Publish to stores** envia o pacote para a loja.
+- Release concluída com sucesso → workflow **Publish to stores** envia o pacote
+  para a loja.
 - Se os segredos da loja não estiverem configurados, o workflow apenas avisa e
   termina com sucesso; nada quebra.
 
