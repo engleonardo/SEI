@@ -24,6 +24,7 @@ import { ruleAppliesNow, ruleMatches, ruleIssue, ruleRunCardCount, type Rule, ty
 import { dropLastRuleRun, getLastRuleRun, pushRuleRun } from '../storage/rule-runs';
 import { recordRuleApplications } from '../storage/rule-stats';
 import { getSettings } from '../storage/settings';
+import { getProcessCatalog } from '../storage/processes';
 import { mapLimit } from '../utils/async';
 import { CACHE_TTL, cacheDelete, cacheDeleteByPrefix, cacheGet, cacheGetOrSet, cacheSet } from './cache';
 import { TrelloClient, TrelloError, type TrelloCredentials } from './client';
@@ -407,14 +408,14 @@ export class TrelloRepository {
     let updated = await this.getCard(cardId, true);
     if (updated.links.length === 0) return updated;
 
-    const event: RuleEvent =
-      patch.idList && patch.idList !== current.idList
-        ? { kind: 'moved', fromListId: current.idList, toListId: patch.idList }
-        : patch.dueComplete === true && !current.dueComplete
-          ? { kind: 'completed' }
-          : { kind: 'updated' };
+    let event: RuleEvent | null = null;
+    if (patch.idList && patch.idList !== current.idList) {
+      event = { kind: 'moved', fromListId: current.idList, toListId: patch.idList };
+    } else if (patch.dueComplete === true && !current.dueComplete) {
+      event = { kind: 'completed' };
+    }
 
-    updated = await this.runRules(updated, event);
+    if (event) updated = await this.runRules(updated, event);
     await mergeSyncSnapshot([updated]);
     return updated;
   }
@@ -453,20 +454,6 @@ export class TrelloRepository {
     }
     if (!previous.dueComplete && card.dueComplete) {
       events.push({ kind: 'completed' });
-    }
-    const labelsChanged =
-      previous.labelIds.join(',') !==
-      card.labels
-        .map((label) => label.id)
-        .sort()
-        .join(',');
-    if (
-      previous.name !== card.name ||
-      previous.description !== card.description ||
-      previous.due !== card.due ||
-      labelsChanged
-    ) {
-      events.push({ kind: 'updated' });
     }
 
     if (events.length === 0) return card;
@@ -626,7 +613,12 @@ export class TrelloRepository {
     }
 
     const cards = await this.getAllLinkedCards();
-    const matching = cards.filter((card) => ruleAppliesNow(rule, card));
+    const catalog = await getProcessCatalog();
+    const matching = cards.filter((card) =>
+      ruleAppliesNow(rule, card, {
+        seiUnread: card.links.some((link) => Boolean(catalog[link]?.unread)),
+      }),
+    );
     if (dryRun) {
       return { applied: matching.length, total: cards.length };
     }
@@ -643,7 +635,7 @@ export class TrelloRepository {
       try {
         const result = await this.executeRules(
           card,
-          { kind: 'updated', toListId: card.idList },
+          { kind: 'seiUpdated' },
           new Set<string>(),
           0,
           true,
@@ -676,6 +668,55 @@ export class TrelloRepository {
     }
 
     return { applied, total: cards.length };
+  }
+
+  /**
+   * Dispara as regras de "processo SEI atualizado" quando a lista do SEI
+   * detecta novidade. Vale para todos os cartões vinculados ao processo,
+   * desde que estejam no quadro da regra.
+   */
+  async applySeiUpdateRules(processNumbers: string[]): Promise<{ applied: number }> {
+    const processes = new Set(
+      processNumbers
+        .map((number) => normalizeProcessNumber(number))
+        .filter((number): number is string => Boolean(number)),
+    );
+    if (processes.size === 0) return { applied: 0 };
+
+    const cards = await this.getAllLinkedCards();
+    const relevant = cards.filter((card) =>
+      card.links.some((link) => processes.has(link)),
+    );
+    if (relevant.length === 0) return { applied: 0 };
+
+    let applied = 0;
+    const touched: TrelloCard[] = [];
+    const counts = new Map<string, number>();
+
+    for (const card of relevant) {
+      try {
+        const result = await this.executeRules(
+          card,
+          { kind: 'seiUpdated' },
+          new Set<string>(),
+          0,
+          false,
+          undefined,
+          counts,
+        );
+        if (result.touched) {
+          applied += 1;
+          touched.push(result.card);
+        }
+      } catch {
+        // Uma falha isolada não interrompe as demais cartões.
+      }
+    }
+
+    await this.invalidateCardCaches();
+    if (touched.length > 0) await mergeSyncSnapshot(touched);
+    await recordRuleApplications(counts, 'auto');
+    return { applied };
   }
 
   private collectRuleRunDiff(

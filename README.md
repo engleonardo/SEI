@@ -158,9 +158,9 @@ O painel abre pelo ícone da extensão e pelo menu **Dashboard** das opções.
 Em **Opções -> Regras** você monta regras instantâneas, sem depender de automações do Trello.
 
 - Valem **somente para cartões vinculados** a processos do SEI.
-- Gatilhos: cartão concluído, entrada em uma lista, entrada em qualquer lista e atualização do cartão.
+- Gatilhos: cartão concluído, entrada em uma lista, entrada em qualquer lista e **processo SEI atualizado (novidade)**.
+- O gatilho de processo atualizado dispara quando a extensão lê a lista do SEI e o processo passa de sem novidade para com novidade (link vermelho). Roda uma vez por novidade, em todos os cartões vinculados ao processo que estejam no quadro da regra (e na lista escolhida, se houver).
 - Funcionam nos dois sentidos: quando a extensão grava no Trello e também quando a mudança é feita no Trello e você atualiza (botão **Atualizar**, ao abrir o painel ou pela atualização automática das preferências).
-- "Atualizado" considera nome, descrição, prazo e etiquetas. Checklist não conta como atualização.
 - Cada regra mostra um contador de quantas vezes já foi aplicada (com data e se foi automática ou manual). O botão **Zerar contadores** limpa esse histórico.
 - Várias ações por regra: mover para uma lista, mover para o topo, adicionar ou remover etiquetas.
 - Regras em cadeia, com limite de 5 níveis e proteção contra loop.

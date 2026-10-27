@@ -249,7 +249,7 @@ export function RulesSection({
       const list = boardLists(rule.boardId).find((item) => item.id === rule.trigger.listId);
       return list ? `${label} "${list.name}"` : label;
     }
-    if (rule.trigger.type === 'updated' && rule.trigger.listId) {
+    if (rule.trigger.type === 'seiUpdated' && rule.trigger.listId) {
       const list = boardLists(rule.boardId).find((item) => item.id === rule.trigger.listId);
       return list ? `${label} (lista "${list.name}")` : label;
     }
@@ -417,7 +417,7 @@ export function RulesSection({
                     ))}
                   </select>
 
-                  {(rule.trigger.type === 'enterList' || rule.trigger.type === 'updated') && (
+                  {(rule.trigger.type === 'enterList' || rule.trigger.type === 'seiUpdated') && (
                     <select
                       className="sfo-select"
                       value={rule.trigger.listId ?? ''}
@@ -433,7 +433,7 @@ export function RulesSection({
                       aria-label="Lista da condição"
                     >
                       <option value="">
-                        {rule.trigger.type === 'updated' ? 'Qualquer lista' : 'Escolha a lista'}
+                        {rule.trigger.type === 'seiUpdated' ? 'Qualquer lista' : 'Escolha a lista'}
                       </option>
                       {boardLists(rule.boardId).map((list) => (
                         <option key={list.id} value={list.id}>
@@ -443,6 +443,13 @@ export function RulesSection({
                     </select>
                   )}
                 </div>
+
+                {rule.trigger.type === 'seiUpdated' && (
+                  <p className="sfo-hint" style={{ margin: 0 }}>
+                    Dispara quando a lista do SEI indicar novidade no processo vinculado. Roda uma
+                    vez por novidade, em todos os cartões do processo que estejam neste quadro.
+                  </p>
+                )}
 
                 <div className="sfo-rule__actions">
                   <span className="sfo-rule__label">Então</span>

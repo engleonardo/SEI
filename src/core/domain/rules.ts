@@ -1,8 +1,8 @@
-export type RuleTriggerType = 'completed' | 'enterList' | 'enterAnyList' | 'updated';
+export type RuleTriggerType = 'completed' | 'enterList' | 'enterAnyList' | 'seiUpdated';
 
 export interface RuleTrigger {
   type: RuleTriggerType;
-  /** Lista do quadro da regra que dispara `enterList` ou filtra `updated`. */
+  /** Lista do quadro da regra que dispara `enterList` ou filtra `seiUpdated`. */
   listId?: string;
 }
 
@@ -29,7 +29,7 @@ export const RULE_TRIGGER_LABELS: Record<RuleTriggerType, string> = {
   completed: 'Ao concluir o cartão',
   enterList: 'Ao entrar na lista',
   enterAnyList: 'Ao entrar em qualquer lista',
-  updated: 'Ao atualizar o cartão',
+  seiUpdated: 'Quando o processo SEI for atualizado',
 };
 
 export const RULE_ACTION_LABELS: Record<RuleActionType, string> = {
@@ -82,8 +82,8 @@ export function defaultRules(): Rule[] {
     }),
     createRule({
       id: 'rule_default_updated',
-      name: 'Atualizado na lista, segue para outra lista',
-      trigger: { type: 'updated' },
+      name: 'Processo SEI atualizado, segue para outra lista',
+      trigger: { type: 'seiUpdated' },
       actions: [{ type: 'moveToList' }],
     }),
   ];
@@ -117,7 +117,7 @@ export function ruleIsConfigured(rule: Rule): boolean {
 }
 
 export interface RuleEvent {
-  kind: 'completed' | 'moved' | 'updated';
+  kind: 'completed' | 'moved' | 'seiUpdated';
   fromListId?: string | null;
   toListId?: string | null;
 }
@@ -169,8 +169,8 @@ export function ruleMatches(
       return event.kind === 'moved' && event.toListId === rule.trigger.listId;
     case 'enterAnyList':
       return event.kind === 'moved' && Boolean(event.toListId);
-    case 'updated':
-      if (event.kind !== 'updated') return false;
+    case 'seiUpdated':
+      if (event.kind !== 'seiUpdated') return false;
       return rule.trigger.listId ? card.idList === rule.trigger.listId : true;
     default:
       return false;
@@ -184,6 +184,7 @@ export function ruleMatches(
 export function ruleAppliesNow(
   rule: Rule,
   card: { idBoard: string; idList: string; dueComplete: boolean; links: string[] },
+  options: { seiUnread?: boolean } = {},
 ): boolean {
   if (card.links.length === 0) return false;
   if (!rule.boardId || card.idBoard !== rule.boardId) return false;
@@ -196,7 +197,8 @@ export function ruleAppliesNow(
       return card.idList === rule.trigger.listId;
     case 'enterAnyList':
       return true;
-    case 'updated':
+    case 'seiUpdated':
+      if (!options.seiUnread) return false;
       return rule.trigger.listId ? card.idList === rule.trigger.listId : true;
     default:
       return false;

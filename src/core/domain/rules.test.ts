@@ -40,7 +40,7 @@ describe('regras', () => {
   it('dispara ao concluir o cartão', () => {
     const completed = rule({ trigger: { type: 'completed' }, actions: [{ type: 'moveToTop' }] });
     expect(ruleMatches(completed, { kind: 'completed' }, card)).toBe(true);
-    expect(ruleMatches(completed, { kind: 'updated' }, card)).toBe(false);
+    expect(ruleMatches(completed, { kind: 'seiUpdated' }, card)).toBe(false);
   });
 
   it('dispara ao entrar na lista configurada', () => {
@@ -55,16 +55,17 @@ describe('regras', () => {
   it('dispara ao entrar em qualquer lista', () => {
     const enter = rule({ trigger: { type: 'enterAnyList' }, actions: [{ type: 'moveToTop' }] });
     expect(ruleMatches(enter, { kind: 'moved', toListId: 'list-2' }, card)).toBe(true);
-    expect(ruleMatches(enter, { kind: 'updated' }, card)).toBe(false);
+    expect(ruleMatches(enter, { kind: 'seiUpdated' }, card)).toBe(false);
   });
 
-  it('em atualização, respeita a lista configurada', () => {
-    const updated = rule({
-      trigger: { type: 'updated', listId: 'list-1' },
+  it('dispara quando o processo SEI é atualizado', () => {
+    const sei = rule({
+      trigger: { type: 'seiUpdated', listId: 'list-1' },
       actions: [{ type: 'moveToTop' }],
     });
-    expect(ruleMatches(updated, { kind: 'updated' }, card)).toBe(true);
-    expect(ruleMatches(updated, { kind: 'updated' }, { ...card, idList: 'list-2' })).toBe(false);
+    expect(ruleMatches(sei, { kind: 'seiUpdated' }, card)).toBe(true);
+    expect(ruleMatches(sei, { kind: 'seiUpdated' }, { ...card, idList: 'list-2' })).toBe(false);
+    expect(ruleMatches(sei, { kind: 'moved', toListId: 'list-1' }, card)).toBe(false);
   });
 
   it('ignora regra desativada', () => {
@@ -146,15 +147,22 @@ describe('regras', () => {
       ).toBe(true);
     });
 
-    it('atualizado respeita a lista configurada', () => {
-      const updated = rule({
-        trigger: { type: 'updated', listId: 'list-2' },
+    it('processo SEI atualizado só atinge cartões com novidade', () => {
+      const sei = rule({
+        trigger: { type: 'seiUpdated', listId: 'list-1' },
         actions: [{ type: 'moveToTop' }],
       });
-      expect(ruleAppliesNow(updated, { ...card, dueComplete: false })).toBe(false);
+      expect(ruleAppliesNow(sei, { ...card, dueComplete: false })).toBe(false);
       expect(
-        ruleAppliesNow(updated, { ...card, idList: 'list-2', dueComplete: false }),
+        ruleAppliesNow(sei, { ...card, dueComplete: false }, { seiUnread: true }),
       ).toBe(true);
+      expect(
+        ruleAppliesNow(
+          sei,
+          { ...card, idList: 'list-2', dueComplete: false },
+          { seiUnread: true },
+        ),
+      ).toBe(false);
     });
   });
 });

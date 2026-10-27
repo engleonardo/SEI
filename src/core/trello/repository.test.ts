@@ -65,6 +65,14 @@ vi.mock('../storage/rule-stats', () => ({
   },
 }));
 
+const catalogState = vi.hoisted(() => ({
+  catalog: {} as Record<string, { unread: boolean }>,
+}));
+
+vi.mock('../storage/processes', () => ({
+  getProcessCatalog: async () => ({ ...catalogState.catalog }),
+}));
+
 const syncState = vi.hoisted(() => ({
   snapshot: {} as Record<string, unknown>,
 }));
@@ -162,6 +170,7 @@ beforeEach(() => {
   syncState.snapshot = {};
   runState.runs = [];
   statsState.stats = {};
+  catalogState.catalog = {};
   mocks.settings = {
     ...mocks.settings,
     defaultBoardId: 'board-1',
@@ -538,5 +547,90 @@ describe('TrelloRepository', () => {
     expect(undone.cards).toBe(1);
     expect(currentList).toBe('list-1');
     expect(runState.runs).toHaveLength(0);
+  });
+
+  it('aplica regra de novidade do SEI só nos cartões do quadro da regra', async () => {
+    mocks.settings = { ...mocks.settings, defaultBoardId: '' };
+    mocks.rules = [
+      {
+        id: 'rule-sei',
+        name: 'Processo atualizado recebe etiqueta',
+        enabled: true,
+        boardId: 'board-1',
+        trigger: { type: 'seiUpdated' },
+        actions: [{ type: 'addLabel', labelId: 'label-novo' }],
+      },
+    ];
+
+    const client = fakeClient();
+    vi.mocked(client.get).mockImplementation(async (path: string) => {
+      if (path === '/search') {
+        return {
+          cards: [
+            rawCard({ id: 'card-1', desc: `SEI ${PROCESS}` }),
+            rawCard({
+              id: 'card-2',
+              desc: `SEI ${PROCESS}`,
+              idBoard: 'board-2',
+              board: { id: 'board-2', name: 'Outro quadro' },
+            }),
+          ],
+        };
+      }
+      if (path.startsWith('/boards/')) return [];
+      return rawCard({
+        id: 'card-1',
+        desc: `SEI ${PROCESS}`,
+        labels: [{ id: 'label-novo', name: 'Novo', color: 'blue' }],
+      });
+    });
+    vi.mocked(client.post).mockResolvedValue({});
+
+    const repo = repository(client);
+    const result = await repo.applySeiUpdateRules([PROCESS]);
+
+    expect(result.applied).toBe(1);
+    expect(client.post).toHaveBeenCalledWith('/cards/card-1/idLabels', {
+      value: 'label-novo',
+    });
+    expect(client.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('aplicar agora considera novidade do SEI no processo vinculado', async () => {
+    mocks.settings = { ...mocks.settings, defaultBoardId: '' };
+    mocks.rules = [
+      {
+        id: 'rule-sei',
+        name: 'Processo atualizado segue para Demandas',
+        enabled: true,
+        boardId: 'board-1',
+        trigger: { type: 'seiUpdated' },
+        actions: [{ type: 'moveToList', listId: 'list-2' }],
+      },
+    ];
+
+    const client = fakeClient();
+    vi.mocked(client.get).mockImplementation(async (path: string) => {
+      if (path === '/search') {
+        return { cards: [rawCard({ id: 'card-1', desc: `SEI ${PROCESS}` })] };
+      }
+      if (path === '/boards/board-1/lists') {
+        return [
+          { id: 'list-1', name: 'Lista' },
+          { id: 'list-2', name: 'Demandas' },
+        ];
+      }
+      if (path.startsWith('/boards/')) return [];
+      return rawCard({ id: 'card-1', desc: `SEI ${PROCESS}` });
+    });
+    vi.mocked(client.put).mockResolvedValue({});
+
+    const repo = repository(client);
+
+    catalogState.catalog = {};
+    expect(await repo.applyRuleNow('rule-sei', true)).toEqual({ applied: 0, total: 1 });
+
+    catalogState.catalog = { [PROCESS]: { unread: true } };
+    expect(await repo.applyRuleNow('rule-sei', true)).toEqual({ applied: 1, total: 1 });
   });
 });

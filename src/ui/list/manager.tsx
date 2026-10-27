@@ -556,7 +556,11 @@ export class ListManager {
     if (this.catalogTimer) window.clearTimeout(this.catalogTimer);
     this.catalogTimer = window.setTimeout(() => {
       this.catalogTimer = null;
-      void callRpc('processes:upsert', { processes: records }).catch(() => undefined);
+      void callRpc('processes:upsert', { processes: records })
+        .then((result) => {
+          if (result.rulesApplied > 0) void loadList();
+        })
+        .catch(() => undefined);
     }, 1_200);
   }
 

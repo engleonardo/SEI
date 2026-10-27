@@ -168,7 +168,18 @@ const handlers = {
 
   'processes:list': () => listProcessRecords(),
 
-  'processes:upsert': ({ processes }) => upsertProcessRecords(processes),
+  'processes:upsert': async ({ processes }) => {
+    const result = await upsertProcessRecords(processes);
+    let rulesApplied = 0;
+    if (result.unread.length > 0) {
+      try {
+        rulesApplied = (await repository.applySeiUpdateRules(result.unread)).applied;
+      } catch {
+        rulesApplied = 0;
+      }
+    }
+    return { updated: result.updated, total: result.total, rulesApplied };
+  },
 } satisfies HandlerMap;
 
 export interface DueSummary {

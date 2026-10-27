@@ -109,7 +109,7 @@ export interface RpcMap {
   'processes:list': { payload: undefined; result: ProcessRecord[] };
   'processes:upsert': {
     payload: { processes: Array<Partial<ProcessRecord> & { number: string }> };
-    result: { updated: number; total: number };
+    result: { updated: number; total: number; rulesApplied: number };
   };
 }
 

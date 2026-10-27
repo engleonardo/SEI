@@ -68,4 +68,12 @@ describe('catálogo de processos do SEI', () => {
     expect((await upsertProcessRecords([input])).updated).toBe(1);
     expect((await upsertProcessRecords([input])).updated).toBe(0);
   });
+
+  it('sinaliza novidade só na transição para não lido', async () => {
+    expect((await upsertProcessRecords([{ number: PROCESS, unread: false }])).unread).toEqual([]);
+    expect((await upsertProcessRecords([{ number: PROCESS, unread: true }])).unread).toEqual([
+      PROCESS,
+    ]);
+    expect((await upsertProcessRecords([{ number: PROCESS, unread: true }])).unread).toEqual([]);
+  });
 });

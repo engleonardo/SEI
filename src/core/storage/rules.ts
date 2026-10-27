@@ -39,12 +39,14 @@ function sanitizeRule(value: unknown): Rule | null {
   if (!value || typeof value !== 'object') return null;
   const rule = value as Record<string, unknown>;
   const trigger = (rule.trigger ?? {}) as Record<string, unknown>;
-  const triggerType = trigger.type;
+  const rawTriggerType = trigger.type;
+  // Regras antigas usavam "updated" para edição do cartão; agora o gatilho é a novidade do SEI.
+  const triggerType = rawTriggerType === 'updated' ? 'seiUpdated' : rawTriggerType;
   if (
     triggerType !== 'completed' &&
     triggerType !== 'enterList' &&
     triggerType !== 'enterAnyList' &&
-    triggerType !== 'updated'
+    triggerType !== 'seiUpdated'
   ) {
     return null;
   }
