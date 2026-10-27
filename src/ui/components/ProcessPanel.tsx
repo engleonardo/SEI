@@ -29,7 +29,7 @@ export function ProcessPanel({
     setError(null);
     setNeedsSetup(false);
     try {
-      const value = await callRpc('trello:cards-for-process', { processNumber });
+      const value = await callRpc('trello:cards-for-process', { processNumber, fresh: true });
       setCards(value);
     } catch (cause) {
       setError(errorMessage(cause));

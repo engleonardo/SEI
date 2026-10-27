@@ -112,7 +112,7 @@ function Dashboard() {
       setLastTab(nextLastTab);
 
       if (nextSettings.appKey && nextSettings.appToken) {
-        const nextCards = await callRpc('trello:all-linked-cards', undefined);
+        const nextCards = await callRpc('trello:all-linked-cards', { fresh: true });
         setCards(nextCards);
       } else {
         setCards([]);

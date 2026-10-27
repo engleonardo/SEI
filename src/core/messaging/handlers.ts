@@ -51,12 +51,13 @@ const handlers = {
     return undefined;
   },
 
-  'trello:boards': () => repository.getBoards(),
-  'trello:lists': ({ boardId }) => repository.getLists(boardId),
-  'trello:board-cards': ({ boardId }) => repository.getBoardCards(boardId),
+  'trello:boards': (payload) => repository.getBoards(payload?.fresh),
+  'trello:lists': ({ boardId, fresh }) => repository.getLists(boardId, fresh),
+  'trello:board-cards': ({ boardId, fresh }) => repository.getBoardCards(boardId, fresh),
   'trello:card': ({ cardId }) => repository.getCard(cardId),
-  'trello:cards-for-process': ({ processNumber }) => repository.getCardsForProcess(processNumber),
-  'trello:all-linked-cards': () => repository.getAllLinkedCards(),
+  'trello:cards-for-process': ({ processNumber, fresh }) =>
+    repository.getCardsForProcess(processNumber, fresh),
+  'trello:all-linked-cards': (payload) => repository.getAllLinkedCards(payload?.fresh),
   'trello:search-cards': ({ query }) => repository.searchCardsByName(query),
   'trello:create-card': (payload) => repository.createCard(payload),
   'trello:update-card': ({ cardId, patch }) => repository.updateCard(cardId, patch),

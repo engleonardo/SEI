@@ -87,7 +87,7 @@ function App() {
         setBoards([]);
         return;
       }
-      const value = await callRpc('trello:boards', undefined);
+      const value = await callRpc('trello:boards', { fresh: true });
       setBoards(value);
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });

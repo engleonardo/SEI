@@ -21,6 +21,7 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 ## O que você resolve com o SEI Flow
 
 - **Vínculo de mão dupla:** crie um cartão novo ou vincule um cartão que já existe no Trello ao processo do SEI.
+- **Sincronização nos dois sentidos:** ao atualizar a extensão, o estado do Trello é relido e aplicado aos cartões, às etiquetas e às regras.
 - **Vários cartões por processo**, todos visíveis e organizados.
 - **Edição completa no SEI:** nome, descrição, etiquetas, checklist, prazo, quadro e lista, com botão **Concluir** no cartão.
 - **Criação com contexto:** escolha etiquetas, quadro, lista, início e término na hora de criar o cartão.
@@ -157,6 +158,7 @@ Em **Opções -> Regras** você monta regras instantâneas, sem depender de auto
 
 - Valem **somente para cartões vinculados** a processos do SEI.
 - Gatilhos: cartão concluído, entrada em uma lista, entrada em qualquer lista e atualização do cartão.
+- Funcionam nos dois sentidos: quando a extensão grava no Trello e também quando a mudança é feita no Trello e você atualiza (botão **Atualizar**, ao abrir o painel ou pela atualização automática das preferências).
 - Várias ações por regra: mover para uma lista, mover para o topo, adicionar ou remover etiquetas.
 - Regras em cadeia, com limite de 5 níveis e proteção contra loop.
 - Uma regra não pode mover para duas listas diferentes ao mesmo tempo.

@@ -49,7 +49,7 @@ export async function loadList(): Promise<void> {
   pending = (async () => {
     try {
       const [cards, settings] = await Promise.all([
-        callRpc('trello:all-linked-cards', undefined),
+        callRpc('trello:all-linked-cards', { fresh: true }),
         callRpc('settings:get', undefined),
       ]);
       listStore.set((previous) => ({

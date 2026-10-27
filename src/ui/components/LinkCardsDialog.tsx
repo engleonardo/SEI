@@ -28,7 +28,7 @@ export function LinkCardsDialog({ processNumber, onClose, onLinked }: LinkCardsD
 
   useEffect(() => {
     let active = true;
-    Promise.all([callRpc('settings:get', undefined), callRpc('trello:boards', undefined)])
+    Promise.all([callRpc('settings:get', undefined), callRpc('trello:boards', { fresh: true })])
       .then(([nextSettings, nextBoards]) => {
         if (!active) return;
         setBoards(nextBoards);
@@ -53,7 +53,7 @@ export function LinkCardsDialog({ processNumber, onClose, onLinked }: LinkCardsD
     setLoading(true);
     setError(null);
     setSelected(new Set());
-    callRpc('trello:board-cards', { boardId })
+    callRpc('trello:board-cards', { boardId, fresh: true })
       .then((value) => {
         if (active) setCards(value);
       })

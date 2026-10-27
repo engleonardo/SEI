@@ -25,7 +25,7 @@ export function InlineLocationPicker({
 
   useEffect(() => {
     let active = true;
-    callRpc('trello:boards', undefined)
+    callRpc('trello:boards', { fresh: true })
       .then((value) => {
         if (!active) return;
         setBoards(value);
@@ -48,7 +48,7 @@ export function InlineLocationPicker({
   useEffect(() => {
     if (!boardId) return;
     let active = true;
-    callRpc('trello:lists', { boardId })
+    callRpc('trello:lists', { boardId, fresh: true })
       .then((value) => {
         if (!active) return;
         setLists(value);

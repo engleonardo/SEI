@@ -13,10 +13,17 @@ import type {
 import { normalizeProcessNumber, sanitizeProcessForQuery } from '../domain/process';
 import { addLink, hasLink, parseLinks, removeLink, stripLinks } from '../link/marker';
 import { getRules } from '../storage/rules';
+import {
+  forgetCards,
+  getSyncSnapshot,
+  mergeSyncSnapshot,
+  replaceSyncSnapshot,
+  type CardSnapshot,
+} from '../storage/sync';
 import { ruleMatches, type Rule, type RuleEvent } from '../domain/rules';
 import { getSettings } from '../storage/settings';
 import { mapLimit } from '../utils/async';
-import { CACHE_TTL, cacheDelete, cacheDeleteByPrefix, cacheGetOrSet, cacheSet } from './cache';
+import { CACHE_TTL, cacheDelete, cacheDeleteByPrefix, cacheGet, cacheGetOrSet, cacheSet } from './cache';
 import { TrelloClient, TrelloError, type TrelloCredentials } from './client';
 import { toCard, toCards } from './normalize';
 
@@ -60,8 +67,8 @@ export class TrelloRepository {
     return getSettings();
   }
 
-  async getBoards(): Promise<TrelloBoard[]> {
-    return cacheGetOrSet('boards', CACHE_TTL.boards, async () => {
+  async getBoards(fresh = false): Promise<TrelloBoard[]> {
+    const load = async () => {
       const response = await this.client.get<TrelloBoard[]>('/members/me/boards', {
         filter: 'open',
         fields: BOARD_FIELDS,
@@ -70,21 +77,33 @@ export class TrelloRepository {
       return (response ?? [])
         .filter((board) => Boolean(board?.id && board?.name))
         .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-    });
+    };
+    if (fresh) {
+      const boards = await load();
+      await cacheSet('boards', boards);
+      return boards;
+    }
+    return cacheGetOrSet('boards', CACHE_TTL.boards, load);
   }
 
-  async getLists(boardId: string): Promise<TrelloList[]> {
-    return cacheGetOrSet(`lists:${boardId}`, CACHE_TTL.boardLists, async () => {
+  async getLists(boardId: string, fresh = false): Promise<TrelloList[]> {
+    const load = async () => {
       const response = await this.client.get<TrelloList[]>(`/boards/${boardId}/lists`, {
         filter: 'open',
         fields: LIST_FIELDS,
       });
       return (response ?? []).filter((list) => Boolean(list?.id && list?.name));
-    });
+    };
+    if (fresh) {
+      const lists = await load();
+      await cacheSet(`lists:${boardId}`, lists);
+      return lists;
+    }
+    return cacheGetOrSet(`lists:${boardId}`, CACHE_TTL.boardLists, load);
   }
 
-  async getBoardCards(boardId: string): Promise<TrelloCard[]> {
-    return cacheGetOrSet(`boardcards:${boardId}`, CACHE_TTL.boardCards, async () => {
+  async getBoardCards(boardId: string, fresh = false): Promise<TrelloCard[]> {
+    const load = async () => {
       const [board, lists, raw] = await Promise.all([
         this.getBoards().then((boards) => boards.find((item) => item.id === boardId) ?? null),
         this.getLists(boardId),
@@ -94,7 +113,15 @@ export class TrelloRepository {
         }),
       ]);
       return this.applyBoardLabels(toCards(asCardList(raw), board, lists));
-    });
+    };
+
+    if (fresh) {
+      const cards = await load();
+      await cacheSet(`boardcards:${boardId}`, cards);
+      return cards;
+    }
+
+    return cacheGetOrSet(`boardcards:${boardId}`, CACHE_TTL.boardCards, load);
   }
 
   async getCard(cardId: string, fresh = false): Promise<TrelloCard> {
@@ -198,19 +225,19 @@ export class TrelloRepository {
     return toCards(raw);
   }
 
-  async getCardsForProcess(processNumber: string): Promise<TrelloCard[]> {
+  async getCardsForProcess(processNumber: string, fresh = false): Promise<TrelloCard[]> {
     const process = sanitizeProcessForQuery(processNumber);
     if (!process) return [];
 
-    return cacheGetOrSet(`process:${process}`, CACHE_TTL.processCards, async () => {
+    const load = async () => {
       const settings = await this.settings();
       const searched = await this.safeSearch(`description:"SEI ${process}" is:open`);
 
       let fromDefaultBoard: TrelloCard[] = [];
       if (settings.defaultBoardId) {
         try {
-          fromDefaultBoard = (await this.getBoardCards(settings.defaultBoardId)).filter((card) =>
-            card.links.includes(process),
+          fromDefaultBoard = (await this.getBoardCards(settings.defaultBoardId, fresh)).filter(
+            (card) => card.links.includes(process),
           );
         } catch {
           fromDefaultBoard = [];
@@ -219,18 +246,34 @@ export class TrelloRepository {
 
       const merged = mergeById(toCards(asCardList(searched)), fromDefaultBoard);
       return this.applyBoardLabels(merged.filter((card) => card.links.includes(process)));
-    });
+    };
+
+    if (fresh) {
+      try {
+        const cards = await load();
+        await this.refreshBoardLabels(cards);
+        const synced = await this.reconcile(cards, false);
+        await cacheSet(`process:${process}`, synced);
+        return synced;
+      } catch (error) {
+        const cached = await cacheGet<TrelloCard[]>(`process:${process}`, Number.POSITIVE_INFINITY);
+        if (cached) return cached;
+        throw error;
+      }
+    }
+
+    return cacheGetOrSet(`process:${process}`, CACHE_TTL.processCards, load);
   }
 
-  async getAllLinkedCards(): Promise<TrelloCard[]> {
-    return cacheGetOrSet('all-linked', CACHE_TTL.allLinkedCards, async () => {
+  async getAllLinkedCards(fresh = false): Promise<TrelloCard[]> {
+    const load = async () => {
       const settings = await this.settings();
       const searched = await this.safeSearch('description:SEI is:open');
 
       let fromDefaultBoard: TrelloCard[] = [];
       if (settings.defaultBoardId) {
         try {
-          fromDefaultBoard = await this.getBoardCards(settings.defaultBoardId);
+          fromDefaultBoard = await this.getBoardCards(settings.defaultBoardId, fresh);
         } catch {
           fromDefaultBoard = [];
         }
@@ -238,6 +281,40 @@ export class TrelloRepository {
 
       const merged = mergeById(toCards(asCardList(searched)), fromDefaultBoard);
       return this.applyBoardLabels(merged.filter((card) => card.links.length > 0));
+    };
+
+    if (fresh) {
+      try {
+        const cards = await load();
+        await this.refreshBoardLabels(cards);
+        const synced = await this.reconcile(cards);
+        await cacheSet('all-linked', synced);
+        return synced;
+      } catch (error) {
+        const cached = await cacheGet<TrelloCard[]>('all-linked', Number.POSITIVE_INFINITY);
+        if (cached) return cached;
+        throw error;
+      }
+    }
+
+    return cacheGetOrSet('all-linked', CACHE_TTL.allLinkedCards, load);
+  }
+
+  /**
+   * Relê as etiquetas dos quadros envolvidos para refletir nomes e cores
+   * alterados diretamente no Trello.
+   */
+  private async refreshBoardLabels(cards: TrelloCard[]): Promise<void> {
+    const boardIds = Array.from(
+      new Set(cards.map((card) => card.idBoard).filter((id): id is string => Boolean(id))),
+    ).slice(0, 10);
+    if (boardIds.length === 0) return;
+    await mapLimit(boardIds, 3, async (boardId) => {
+      try {
+        await this.getBoardLabels(boardId, true);
+      } catch {
+        // mantém o cache atual se o quadro falhar
+      }
     });
   }
 
@@ -282,7 +359,9 @@ export class TrelloRepository {
     const raw = await this.client.post<TrelloCardApi>('/cards', body);
 
     await this.invalidateCardCaches();
-    return this.getCard(raw.id, true);
+    const created = await this.getCard(raw.id, true);
+    await mergeSyncSnapshot([created]);
+    return created;
   }
 
   async updateCard(
@@ -334,7 +413,69 @@ export class TrelloRepository {
           : { kind: 'updated' };
 
     updated = await this.runRules(updated, event);
+    await mergeSyncSnapshot([updated]);
     return updated;
+  }
+
+  /**
+   * Compara o estado atual do Trello com o último estado conhecido e dispara
+   * as regras para mudanças feitas fora da extensão (site/app do Trello).
+   */
+  private async reconcile(cards: TrelloCard[], replace = true): Promise<TrelloCard[]> {
+    const snapshot = await getSyncSnapshot();
+    const result: TrelloCard[] = [];
+
+    for (const card of cards) {
+      const previous = snapshot[card.id];
+      if (!previous) {
+        result.push(card);
+        continue;
+      }
+      result.push(await this.applyRemoteEvents(card, previous));
+    }
+
+    if (replace) await replaceSyncSnapshot(result);
+    else await mergeSyncSnapshot(result);
+    return result;
+  }
+
+  private async applyRemoteEvents(
+    card: TrelloCard,
+    previous: CardSnapshot,
+  ): Promise<TrelloCard> {
+    if (card.links.length === 0) return card;
+
+    const events: RuleEvent[] = [];
+    if (previous.idList !== card.idList) {
+      events.push({ kind: 'moved', fromListId: previous.idList, toListId: card.idList });
+    }
+    if (!previous.dueComplete && card.dueComplete) {
+      events.push({ kind: 'completed' });
+    }
+    const labelsChanged =
+      previous.labelIds.join(',') !==
+      card.labels
+        .map((label) => label.id)
+        .sort()
+        .join(',');
+    if (
+      previous.name !== card.name ||
+      previous.description !== card.description ||
+      previous.due !== card.due ||
+      labelsChanged
+    ) {
+      events.push({ kind: 'updated' });
+    }
+
+    if (events.length === 0) return card;
+
+    let current = card;
+    const applied = new Set<string>();
+    for (const event of events) {
+      const state = await this.executeRules(current, event, applied, 0, false);
+      current = state.card;
+    }
+    return current;
   }
 
   /**
@@ -449,6 +590,7 @@ export class TrelloRepository {
 
     const cards = await this.getAllLinkedCards();
     let applied = 0;
+    const touched: TrelloCard[] = [];
     for (const card of cards) {
       try {
         const result = await this.executeRules(
@@ -459,18 +601,23 @@ export class TrelloRepository {
           true,
           rule.id,
         );
-        if (result.touched) applied += 1;
+        if (result.touched) {
+          applied += 1;
+          touched.push(result.card);
+        }
       } catch {
         // Uma falha isolada não interrompe a aplicação nas demais cartões.
       }
     }
     await this.invalidateCardCaches();
+    if (touched.length > 0) await mergeSyncSnapshot(touched);
     return { applied, total: cards.length };
   }
 
   async deleteCard(cardId: string): Promise<void> {
     await this.client.delete(`/cards/${cardId}`);
     await this.invalidateCardCaches();
+    await forgetCards([cardId]);
   }
 
   async linkCards(cardIds: string[], processNumber: string): Promise<BulkLinkResult[]> {
@@ -496,6 +643,9 @@ export class TrelloRepository {
     });
 
     await this.invalidateCardCaches();
+    await mergeSyncSnapshot(
+      results.map((result) => result.card).filter((card): card is TrelloCard => Boolean(card)),
+    );
     return results;
   }
 
@@ -541,6 +691,9 @@ export class TrelloRepository {
     });
 
     await this.invalidateCardCaches();
+    await mergeSyncSnapshot(
+      results.map((result) => result.card).filter((card): card is TrelloCard => Boolean(card)),
+    );
     return results;
   }
 
@@ -551,7 +704,9 @@ export class TrelloRepository {
       desc: removeLink(current.desc, processNumber),
     });
     await this.invalidateCardCaches();
-    return this.getCard(cardId, true);
+    const updated = await this.getCard(cardId, true);
+    await mergeSyncSnapshot([updated]);
+    return updated;
   }
 
   async getBoardLabels(boardId: string, fresh = false): Promise<TrelloLabel[]> {
@@ -585,13 +740,17 @@ export class TrelloRepository {
   async addLabelToCard(cardId: string, labelId: string): Promise<TrelloCard> {
     await this.client.post(`/cards/${cardId}/idLabels`, { value: labelId });
     await this.invalidateCardCaches();
-    return this.getCard(cardId, true);
+    const card = await this.getCard(cardId, true);
+    await mergeSyncSnapshot([card]);
+    return card;
   }
 
   async removeLabelFromCard(cardId: string, labelId: string): Promise<TrelloCard> {
     await this.client.delete(`/cards/${cardId}/idLabels/${labelId}`);
     await this.invalidateCardCaches();
-    return this.getCard(cardId, true);
+    const card = await this.getCard(cardId, true);
+    await mergeSyncSnapshot([card]);
+    return card;
   }
 
   async getChecklists(cardId: string, fresh = false): Promise<TrelloChecklist[]> {

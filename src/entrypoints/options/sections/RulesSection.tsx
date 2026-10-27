@@ -35,7 +35,7 @@ export function RulesSection({
       setLabels((previous) => (previous[boardId] ? previous : { ...previous, [boardId]: [] }));
       try {
         const [boardLists, boardLabels] = await Promise.all([
-          callRpc('trello:lists', { boardId }),
+          callRpc('trello:lists', { boardId, fresh: true }),
           callRpc('trello:board-labels', { boardId }),
         ]);
         setLists((previous) => ({ ...previous, [boardId]: boardLists }));

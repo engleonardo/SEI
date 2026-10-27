@@ -28,6 +28,49 @@ vi.mock('../storage/rules', () => ({
   getRules: async () => mocks.rules,
 }));
 
+const syncState = vi.hoisted(() => ({
+  snapshot: {} as Record<string, unknown>,
+}));
+
+interface SnapshotCard {
+  id: string;
+  idList: string;
+  dueComplete: boolean;
+  name: string;
+  description: string;
+  due: string | null;
+  labels: Array<{ id: string }>;
+}
+
+function snapshotEntry(card: SnapshotCard) {
+  return {
+    idList: card.idList,
+    dueComplete: card.dueComplete,
+    name: card.name,
+    description: card.description,
+    due: card.due,
+    labelIds: card.labels.map((label) => label.id).sort(),
+  };
+}
+
+function storeSnapshot(cards: SnapshotCard[], replace = false) {
+  if (replace) syncState.snapshot = {};
+  for (const card of cards) syncState.snapshot[card.id] = snapshotEntry(card);
+}
+
+vi.mock('../storage/sync', () => ({
+  getSyncSnapshot: async () => ({ ...syncState.snapshot }),
+  snapshotOf: snapshotEntry,
+  mergeSyncSnapshot: async (cards: SnapshotCard[]) => storeSnapshot(cards),
+  replaceSyncSnapshot: async (cards: SnapshotCard[]) => storeSnapshot(cards, true),
+  forgetCards: async (ids: string[]) => {
+    for (const id of ids) delete syncState.snapshot[id];
+  },
+  clearSyncSnapshot: async () => {
+    syncState.snapshot = {};
+  },
+}));
+
 vi.mock('./cache', () => ({
   CACHE_TTL: {
     boards: 1,
@@ -38,6 +81,7 @@ vi.mock('./cache', () => ({
     allLinkedCards: 1,
   },
   cacheGetOrSet: (_key: string, _ttl: number, factory: () => Promise<unknown>) => factory(),
+  cacheSet: vi.fn(async () => undefined),
   cacheDelete: vi.fn(async () => undefined),
   cacheDeleteByPrefix: vi.fn(async () => undefined),
 }));
@@ -78,6 +122,7 @@ function repository(client: TrelloClient) {
 
 beforeEach(() => {
   mocks.rules = [];
+  syncState.snapshot = {};
   mocks.settings = {
     ...mocks.settings,
     defaultBoardId: 'board-1',
@@ -268,5 +313,50 @@ describe('TrelloRepository', () => {
 
     expect(client.put).toHaveBeenCalledTimes(1);
     expect(client.put).toHaveBeenCalledWith('/cards/card-1', { dueComplete: true });
+  });
+
+  it('detecta mudança feita no Trello e aplica a regra na atualização', async () => {
+    mocks.settings = { ...mocks.settings, defaultBoardId: '' };
+    mocks.rules = [
+      {
+        id: 'rule-top',
+        name: 'Entrou em qualquer lista, vai para o topo',
+        enabled: true,
+        trigger: { type: 'enterAnyList' },
+        actions: [{ type: 'moveToTop' }],
+      },
+    ];
+
+    let remoteList = 'list-1';
+    const client = fakeClient();
+    const remoteCard = () =>
+      rawCard({
+        desc: `SEI ${PROCESS}`,
+        idList: remoteList,
+        list: { id: remoteList, name: 'Lista remota' },
+      });
+
+    vi.mocked(client.get).mockImplementation(async (path: string) => {
+      if (path === '/search') return { cards: [remoteCard()] };
+      if (path.startsWith('/boards/')) return [];
+      return remoteCard();
+    });
+    vi.mocked(client.put).mockResolvedValue({});
+
+    const repo = repository(client);
+
+    // Primeira leitura apenas registra o estado atual, sem disparar regra.
+    await repo.getAllLinkedCards(true);
+    expect(client.put).not.toHaveBeenCalled();
+
+    // Usuário move o cartão direto no Trello.
+    remoteList = 'list-2';
+    await repo.getAllLinkedCards(true);
+    expect(client.put).toHaveBeenCalledWith('/cards/card-1', { pos: 'top' });
+
+    // Nova atualização não repete a regra já aplicada.
+    const calls = vi.mocked(client.put).mock.calls.length;
+    await repo.getAllLinkedCards(true);
+    expect(vi.mocked(client.put).mock.calls.length).toBe(calls);
   });
 });

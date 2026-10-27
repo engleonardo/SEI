@@ -21,12 +21,15 @@ export interface RpcMap {
   'settings:clear-cache': { payload: undefined; result: { cleared: true } };
   'options:open': { payload: undefined; result: undefined };
   'dashboard:open': { payload: undefined; result: undefined };
-  'trello:boards': { payload: undefined; result: TrelloBoard[] };
-  'trello:lists': { payload: { boardId: string }; result: TrelloList[] };
-  'trello:board-cards': { payload: { boardId: string }; result: TrelloCard[] };
+  'trello:boards': { payload: { fresh?: boolean } | undefined; result: TrelloBoard[] };
+  'trello:lists': { payload: { boardId: string; fresh?: boolean }; result: TrelloList[] };
+  'trello:board-cards': { payload: { boardId: string; fresh?: boolean }; result: TrelloCard[] };
   'trello:card': { payload: { cardId: string }; result: TrelloCard };
-  'trello:cards-for-process': { payload: { processNumber: string }; result: TrelloCard[] };
-  'trello:all-linked-cards': { payload: undefined; result: TrelloCard[] };
+  'trello:cards-for-process': {
+    payload: { processNumber: string; fresh?: boolean };
+    result: TrelloCard[];
+  };
+  'trello:all-linked-cards': { payload: { fresh?: boolean } | undefined; result: TrelloCard[] };
   'trello:search-cards': { payload: { query: string }; result: TrelloCard[] };
   'trello:create-card': {
     payload: {

@@ -82,7 +82,7 @@ export function CreateCardDialog({
     if (!settings) return;
     let active = true;
     setLoadingBoards(true);
-    callRpc('trello:boards', undefined)
+    callRpc('trello:boards', { fresh: true })
       .then((value) => {
         if (!active) return;
         const items = Array.isArray(value) ? value : [];
@@ -113,7 +113,7 @@ export function CreateCardDialog({
     }
     let active = true;
     setLoadingLists(true);
-    callRpc('trello:lists', { boardId })
+    callRpc('trello:lists', { boardId, fresh: true })
       .then((value) => {
         if (!active) return;
         const items = Array.isArray(value) ? value : [];
