@@ -28,19 +28,27 @@ envios pela API.
 
 1. No [Google Cloud Console](https://console.cloud.google.com/), crie/selecione
    um projeto e ative a **Chrome Web Store API**.
-2. Em **APIs e serviços → Tela de consentimento OAuth**, configure o app
-   (público externo, usuário de teste = sua conta).
+2. Em **APIs e serviços > Tela de consentimento OAuth**, configure o app
+   (público externo). Publique o app em **Produção**; em modo de teste o
+   refresh token expira em 7 dias.
 3. Em **Credenciais**, crie um **ID do cliente OAuth** do tipo **App para
    computador**.
-4. Gere o `refresh token`:
+4. Gere o `refresh token` pelo OAuth 2.0 Playground:
+   1. Abra https://developers.google.com/oauthplayground
+   2. Clique na engrenagem no canto superior direito e marque **Use your own
+      OAuth credentials**.
+   3. Informe o **Client ID** e o **Client Secret**.
+   4. No campo de escopos, informe:
+      `https://www.googleapis.com/auth/chromewebstore`
+   5. Clique em **Authorize APIs** e entre com a conta Google que é dona do
+      item na Chrome Web Store.
+   6. Clique em **Exchange authorization code for tokens**.
+   7. Copie o **Refresh token** exibido.
 
-```bash
-npx --yes chrome-webstore-upload-cli@4 get-token \
-  --client-id "SEU_CLIENT_ID" \
-  --client-secret "SEU_CLIENT_SECRET"
-```
-
-O comando abre o navegador e devolve o `refresh token`.
+> O Client Secret é uma credencial sensível. Se ele foi exposto em conversa,
+> issue tracker ou repositório, regenere-o no Google Cloud Console antes de
+> gerar o refresh token. O refresh token também é sensível e nunca deve ir
+> para o Git.
 
 ### 3. Configure os segredos no GitHub
 
@@ -63,6 +71,9 @@ gh secret set CWS_CLIENT_ID
 gh secret set CWS_CLIENT_SECRET
 gh secret set CWS_REFRESH_TOKEN
 ```
+
+> A **chave pública** do pacote não é usada no upload nem no GitHub Actions.
+> Não é preciso cadastrá-la e ela não deve ser adicionada ao repositório.
 
 ### 4. Publique uma nova versão
 
