@@ -25,7 +25,7 @@ Esses dados permanecem no seu navegador. As credenciais são usadas exclusivamen
 
 - **`storage`**: salvar credenciais, preferências e cache localmente.
 - **`scripting`**: injetar a interface do SEI Flow nas páginas do SEI que você autorizar.
-- **`activeTab`**: identificar a aba atual quando você abre o popup da extensão.
+- **`activeTab`**: identificar a aba atual quando você clica no ícone da extensão, para oferecer a ativação do site correto no Painel SEI Flow.
 - **Permissão opcional de sites**: concedida por você, site a site, ou para todos os sites. Serve apenas para inserir a interface no SEI. Em páginas que não são do SEI, o script é encerrado sem alterar nada.
 - **`https://api.trello.com/*`**: necessário para ler e gravar cartões na sua conta do Trello.
 

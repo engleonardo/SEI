@@ -6,7 +6,16 @@ const root = path.resolve(import.meta.dirname, '..');
 const sourceDir = path.join(root, 'docs', 'screenshots');
 const outputDir = path.join(root, 'docs', 'store', 'screenshots-1280x800');
 
-const screenshots = ['list', 'filter', 'process', 'link-dialog', 'bulk', 'options'];
+const screenshots = [
+  'dashboard',
+  'list',
+  'filter',
+  'process',
+  'link-dialog',
+  'bulk',
+  'create-dialog',
+  'options',
+];
 
 await mkdir(outputDir, { recursive: true });
 
@@ -19,15 +28,6 @@ for (const name of screenshots) {
     .toFile(output);
   console.log(`store screenshot: ${path.relative(root, output)}`);
 }
-
-const popup = await sharp(path.join(sourceDir, 'popup.png')).resize({ width: 380 }).png().toBuffer();
-const popupBackground = sharp({
-  create: { width: 1280, height: 800, channels: 3, background: '#eef4fb' },
-}).png();
-await popupBackground
-  .composite([{ input: popup, left: 450, top: 80 }])
-  .png()
-  .toFile(path.join(outputDir, 'popup-1280x800.png'));
 
 const icon = await readFile(path.join(root, 'public', 'icon-128.png'));
 const iconData = icon.toString('base64');
@@ -42,8 +42,9 @@ const bannerSvg = `
   <rect width="440" height="280" rx="18" fill="url(#bg)"/>
   <image href="data:image/png;base64,${iconData}" x="34" y="74" width="132" height="132"/>
   <text x="188" y="126" font-family="Segoe UI, Arial, sans-serif" font-size="35" font-weight="700" fill="#ffffff">SEI Flow</text>
-  <text x="190" y="158" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#dbeafe">Trello dentro do SEI</text>
-  <text x="190" y="184" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#bfdbfe">Prazos, etiquetas e checklist</text>
+  <text x="190" y="158" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#dbeafe">Gestão eficiente</text>
+  <text x="190" y="183" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#bfdbfe">Prazos, etiquetas e checklist</text>
+  <text x="190" y="204" font-family="Segoe UI, Arial, sans-serif" font-size="9.5" fill="#93c5fd">Eng. Leonardo Almeida de Oliveira</text>
 </svg>`;
 await sharp(Buffer.from(bannerSvg))
   .png()

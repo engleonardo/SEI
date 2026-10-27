@@ -59,9 +59,11 @@ export function ListToolbar() {
   }, [state.cards]);
 
   const active = activeFilterCount(state.filters);
-  const updated = state.lastUpdated
-    ? new Date(state.lastUpdated).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    : null;
+  const brandTitle = state.lastUpdated
+    ? `${state.cards.length} ${state.cards.length === 1 ? 'cartão' : 'cartões'} · atualizado às ${new Date(
+        state.lastUpdated,
+      ).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+    : `${state.cards.length} ${state.cards.length === 1 ? 'cartão' : 'cartões'}`;
 
   const activeChips: string[] = [];
   if (state.filters.noCard) activeChips.push('Sem cartão');
@@ -93,15 +95,8 @@ export function ListToolbar() {
 
   return (
     <div className="sf-toolbar">
-      <div className="sf-toolbar__brand">
+      <div className="sf-toolbar__brand" title={state.loading ? 'Sincronizando…' : brandTitle}>
         <BrandMark size={26} className="sf-toolbar__mark" />
-        <span className="sf-toolbar__meta">
-          {state.loading
-            ? 'sincronizando…'
-            : `${state.cards.length} ${state.cards.length === 1 ? 'cartão' : 'cartões'}${
-                updated ? ` · ${updated}` : ''
-              }`}
-        </span>
       </div>
 
       <div className="sf-toolbar__search">

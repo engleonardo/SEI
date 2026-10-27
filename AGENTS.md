@@ -29,9 +29,11 @@ Antes de concluir qualquer mudança, rode `npm run verify`. Para mudanças de UI
 
 - `src/entrypoints/background.ts`: service worker, mensagens, ativação e injeção.
 - `src/entrypoints/sei-inject.ts`: script não listado injetado nas páginas.
-- `src/entrypoints/popup/` e `src/entrypoints/options/`: páginas da extensão.
+- `src/entrypoints/dashboard/`: página inicial com métricas, filtros, edição e links do SEI.
+- `src/entrypoints/options/`: conexão, destino, sites, preferências e diagnóstico.
 - `src/core/trello/`: client HTTP, cache, normalização e repositório.
 - `src/core/sei/`: detecção de página, número do processo, linhas e mount.
+- `src/core/storage/processes.ts`: catálogo de processos (tipo, especificação, URL e novidade).
 - `src/core/link/marker.ts`: fonte de verdade do vínculo `SEI <processo>`.
 - `src/ui/`: componentes React, Shadow DOM, estilos e store da lista.
 
@@ -59,7 +61,8 @@ Antes de concluir qualquer mudança, rode `npm run verify`. Para mudanças de UI
 - A versão vem de `package.json`; o WXT gera o manifest.
 - Zips em `.output/` após `npm run zip*`.
 - CI em `.github/workflows/ci.yml`; release por tag `v*` em `release.yml`.
-- Passos de loja e justificativa de permissões em `docs/publicacao.md`.
+- Envio automático à Chrome Web Store/AMO em `publish-store.yml` quando os segredos existirem.
+- Passos de loja, justificativa de permissões e auto-publicação em `docs/publicacao.md` e `docs/store/`.
 
 ## Git
 

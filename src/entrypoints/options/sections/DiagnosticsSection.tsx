@@ -100,7 +100,7 @@ export function DiagnosticsSection({
           <div className="sfo-list-item">
             <Icon name="board" size={15} />
             <div className="sfo-list-item__main">
-              <div className="sfo-list-item__title">Dashboard de prazos</div>
+              <div className="sfo-list-item__title">Painel SEI Flow</div>
               <button
                 type="button"
                 className="sfo-btn sfo-btn--sm"

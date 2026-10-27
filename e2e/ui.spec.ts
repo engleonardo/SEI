@@ -21,6 +21,7 @@ const card = {
   list: { id: 'list-1', name: 'Em análise' },
   links: [PROCESS],
   hasChecklist: false,
+  lastActivity: '2026-10-25T12:00:00.000Z',
 };
 
 const freeCard = {
@@ -120,6 +121,12 @@ async function stubExtension(page: Page) {
               case 'trello:create-card':
                 response = ok({ ...freeCardData, id: 'card-new', name: 'Novo cartão criado' });
                 break;
+              case 'processes:upsert':
+                response = ok({ updated: 1, total: 3 });
+                break;
+              case 'processes:list':
+                response = ok([]);
+                break;
               default:
                 response = ok(null);
             }
@@ -169,6 +176,15 @@ test('lista de processos mostra o cartão vinculado e o botão de ações', asyn
   await expect(page.locator('.sf-card--highlight')).toHaveCount(1);
   await expect(page.getByText('+ Cartão')).toHaveCount(0);
   await expect(page.locator('.sf-toolbar__brand img').first()).toBeVisible();
+  await expect(page.locator('.sf-toolbar__meta')).toHaveCount(0);
+  await expect(page.locator('.sf-detail-strip')).toHaveCount(1);
+  const centered = await page.locator('.sf-card--compact').first().evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const strip = element.closest('.sf-detail-strip')?.getBoundingClientRect();
+    if (!strip) return false;
+    return Math.abs(rect.left + rect.width / 2 - (strip.left + strip.width / 2)) < 2;
+  });
+  expect(centered).toBe(true);
 });
 
 test('processo aberto mostra o painel completo', async ({ page }) => {
@@ -223,7 +239,7 @@ test('filtros: busca com foco estável, cores do Trello e quadro/lista separados
   await expect(labelChip).toBeVisible();
   expect(
     await labelChip.evaluate((element) => getComputedStyle(element).backgroundColor),
-  ).toBe('rgb(235, 90, 70)');
+  ).toBe('rgb(248, 113, 104)');
 
   await dialog.getByRole('button', { name: 'Contratos' }).click();
   await expect(dialog.getByRole('button', { name: 'Em análise' })).toBeVisible();

@@ -12,6 +12,8 @@ import {
   removeActivatedOrigin,
   saveSettings,
 } from '../storage/settings';
+import { getLastActionTab } from '../storage/last-tab';
+import { listProcessRecords, upsertProcessRecords } from '../storage/processes';
 
 const repository = new TrelloRepository();
 
@@ -139,6 +141,12 @@ const handlers = {
       origin: normalizeOrigin(url),
     };
   },
+
+  'activation:last-tab': () => getLastActionTab(),
+
+  'processes:list': () => listProcessRecords(),
+
+  'processes:upsert': ({ processes }) => upsertProcessRecords(processes),
 } satisfies HandlerMap;
 
 export interface DueSummary {

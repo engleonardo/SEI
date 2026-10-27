@@ -19,6 +19,7 @@ const card: TrelloCard = {
   list: { id: 'list-1', name: 'Lista' },
   links: ['11111.111111/2024-60'],
   hasChecklist: false,
+  lastActivity: null,
 };
 
 const common = {

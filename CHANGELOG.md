@@ -9,24 +9,36 @@ Primeira versão estável preparada para publicação na Chrome Web Store.
 
 ### Adicionado
 
-- Dashboard de prazos com resumo de atrasados, vencendo hoje, próximos 7 dias, sem prazo e total.
-- Filtros de busca, quadro e somente atrasados no dashboard.
-- Notificações diárias de prazos e badge com contagem de atrasados/vencendo hoje.
-- Alarm periódico de verificação de prazos.
+- **Painel SEI Flow como página inicial da extensão**, aberto pelo ícone da barra do navegador.
+- Métricas de atrasados, vencendo hoje, próximos 7 dias, sem prazo, concluídos, atualizados nos últimos 7 dias, processos com novidade no SEI e total vinculado.
+- Filtros do painel por busca, quadro, lista, tipo de processo, etiqueta, prazo, atualização no Trello e atualização no SEI.
+- Agrupamento por prazo, quadro, lista, tipo de processo, etiqueta ou lista única, com ordenação configurável.
+- Detalhes e edição completa dos cartões pelo painel (nome, descrição, etiquetas, checklist, prazo, quadro/lista, desvincular e excluir).
+- Links dos processos no painel abrem a página correspondente do SEI.
+- Catálogo local de processos com tipo, especificação, URL, origem e indicador de novidade.
+- Filtro de atualizações no Trello (hoje, 7 dias, 30 dias e desde a última visita).
+- Exportação CSV dos cartões filtrados.
+- Notificações diárias de prazos e alarme periódico de verificação.
+- Badge com a quantidade de **processos atualizados (não lidos) no SEI**.
 - Ação em lote para vincular cartões a vários processos de uma vez.
 - Barra de ferramentas fixa (sticky) em listas longas.
 - Persistência dos filtros durante a sessão da aba.
 - Atalhos `/` e `Ctrl+K`/`Cmd+K` para focar a busca.
 - Renderização sob demanda dos cartões visíveis (IntersectionObserver).
-- Documentação de publicação e arquivos de loja em `docs/store/`.
+- Envio automático para Chrome Web Store e AMO quando os segredos estiverem configurados.
+- Documentação de publicação, loja e auto-publicação em `docs/store/`.
 - Arquivo `CREDITS.md` e exigência de manutenção de créditos em cópias/derivados.
 - Política de segurança e automações de segurança no GitHub.
 
 ### Alterado
 
 - Versão estável 1.0.0.
-- Página de opções inclui a preferência de notificações.
-- Dashboard acessível pelo popup, barra do SEI e opções.
+- O popup foi removido; o painel é a página inicial e concentra ativação, status e cartões.
+- Barra do SEI apenas com o logo, sem contagem de cartões ou horário.
+- Cartões da lista ficam anexados à linha do processo, centralizados e com destaque vermelho para processos não lidos.
+- Etiquetas usam as 30 cores oficiais do Trello (incluindo `_dark` e `_light`), com busca da cor real no quadro.
+- Créditos atualizados para **Engenheiro Leonardo Almeida de Oliveira**.
+- Links para GitHub ficaram restritos à seção **Diagnóstico** das opções, para suporte e relato de bugs.
 - README e NOTICE mantêm os créditos do projeto inspirador e exigem crédito ao autor deste projeto em trabalhos derivados.
 
 ## [0.1.2] — 2026-10-26

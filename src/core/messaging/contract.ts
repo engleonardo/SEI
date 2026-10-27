@@ -10,6 +10,8 @@ import type {
   TrelloLabel,
   TrelloList,
 } from '../domain/types';
+import type { LastActionTab } from '../storage/last-tab';
+import type { ProcessRecord } from '../storage/processes';
 
 export interface RpcMap {
   'settings:get': { payload: undefined; result: Settings };
@@ -81,6 +83,12 @@ export interface RpcMap {
   'activation:status': {
     payload: { url: string };
     result: { activated: boolean; allSites: boolean; origin: string | null };
+  };
+  'activation:last-tab': { payload: undefined; result: LastActionTab | null };
+  'processes:list': { payload: undefined; result: ProcessRecord[] };
+  'processes:upsert': {
+    payload: { processes: Array<Partial<ProcessRecord> & { number: string }> };
+    result: { updated: number; total: number };
   };
 }
 

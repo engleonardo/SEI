@@ -1,6 +1,6 @@
 import { browser } from 'wxt/browser';
 
-const CACHE_PREFIX = 'sei-flow:cache:v1:';
+const CACHE_PREFIX = 'sei-flow:cache:v2:';
 const memory = new Map<string, { at: number; value: unknown }>();
 const inFlight = new Map<string, Promise<unknown>>();
 

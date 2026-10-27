@@ -276,26 +276,34 @@
 }
 
 .sf-card--compact {
-  max-width: 680px;
-  margin-top: 0;
-  padding: 6px 9px;
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 8px 11px;
   border-left-width: 3px;
-  border-top-left-radius: 0;
-  border-top-right-radius: 9px;
-  border-bottom-right-radius: 9px;
-  border-bottom-left-radius: 9px;
+  border-top-color: transparent;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
 }
 
-.sf-card--compact::before {
-  content: '';
-  position: absolute;
-  left: -13px;
-  top: -1px;
-  width: 2px;
-  height: 50%;
-  border-radius: 2px;
-  background: var(--sf-accent);
-  opacity: 0.55;
+.sf-detail-strip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 0 6px 3px;
+  background: transparent;
+}
+
+.sf-detail-strip .sf-stack {
+  width: 100%;
+  max-width: 920px;
+  gap: 6px;
+}
+
+.sf-detail-strip--highlight .sf-card--compact {
+  border-color: var(--sf-danger);
+  border-top-color: transparent;
 }
 
 .sf-card--overdue {
@@ -827,25 +835,14 @@
 
 .sf-toolbar__brand {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 0;
   flex: 0 0 auto;
 }
 
 .sf-toolbar__mark {
   flex: 0 0 auto;
-}
-
-.sf-toolbar__meta {
-  max-width: 120px;
-  font-size: 10px;
-  line-height: 1.15;
-  color: var(--sf-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .sf-toolbar__search {

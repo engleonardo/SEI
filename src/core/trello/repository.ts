@@ -18,7 +18,8 @@ import { CACHE_TTL, cacheDelete, cacheDeleteByPrefix, cacheGetOrSet } from './ca
 import { TrelloClient, TrelloError, type TrelloCredentials } from './client';
 import { toCard, toCards } from './normalize';
 
-const CARD_FIELDS = 'id,name,desc,shortUrl,due,dueComplete,idBoard,idList,idChecklists,labels';
+const CARD_FIELDS =
+  'id,name,desc,shortUrl,due,dueComplete,idBoard,idList,idChecklists,labels,dateLastActivity';
 const BOARD_FIELDS = 'id,name';
 const LIST_FIELDS = 'id,name';
 const LABEL_FIELDS = 'id,name,color';
@@ -90,7 +91,7 @@ export class TrelloRepository {
           fields: CARD_FIELDS,
         }),
       ]);
-      return toCards(asCardList(raw), board, lists);
+      return this.applyBoardLabels(toCards(asCardList(raw), board, lists));
     });
   }
 
@@ -102,7 +103,8 @@ export class TrelloRepository {
         board: 'true',
         list: 'true',
       });
-      return toCard(raw);
+      const [card] = await this.applyBoardLabels([toCard(raw)]);
+      return card ?? toCard(raw);
     }
     return cacheGetOrSet(key, 30_000, async () => {
       const raw = await this.client.get<TrelloCardApi>(`/cards/${cardId}`, {
@@ -110,7 +112,53 @@ export class TrelloRepository {
         board: 'true',
         list: 'true',
       });
-      return toCard(raw);
+      const [card] = await this.applyBoardLabels([toCard(raw)]);
+      return card ?? toCard(raw);
+    });
+  }
+
+  /**
+   * O endpoint de busca do Trello pode devolver etiquetas sem a cor (ou com
+   * dados parciais). A fonte de verdade é o quadro; aqui completamos nome e
+   * cor com as etiquetas reais do board para o chip bater com o Trello.
+   */
+  private async applyBoardLabels(cards: TrelloCard[]): Promise<TrelloCard[]> {
+    const boardIds = Array.from(
+      new Set(
+        cards
+          .filter((card) => card.labels.length > 0 && Boolean(card.idBoard))
+          .map((card) => card.idBoard),
+      ),
+    ).slice(0, 25);
+    if (boardIds.length === 0) return cards;
+
+    const groups = await mapLimit(boardIds, 4, async (boardId) => {
+      try {
+        return [boardId, await this.getBoardLabels(boardId)] as const;
+      } catch {
+        return [boardId, [] as TrelloLabel[]] as const;
+      }
+    });
+    const labelsByBoard = new Map(groups);
+
+    return cards.map((card) => {
+      const boardLabels = labelsByBoard.get(card.idBoard);
+      if (!boardLabels || boardLabels.length === 0) return card;
+      const byId = new Map(boardLabels.map((label) => [label.id, label]));
+      let changed = false;
+      const labels = card.labels.map((label) => {
+        const source = byId.get(label.id);
+        if (!source) return label;
+        const color = source.color ?? label.color;
+        const name = label.name || source.name;
+        const idBoard = label.idBoard ?? source.idBoard;
+        if (color !== label.color || name !== label.name || idBoard !== label.idBoard) {
+          changed = true;
+          return { ...label, color, name, idBoard };
+        }
+        return label;
+      });
+      return changed ? { ...card, labels } : card;
     });
   }
 
@@ -168,7 +216,7 @@ export class TrelloRepository {
       }
 
       const merged = mergeById(toCards(asCardList(searched)), fromDefaultBoard);
-      return merged.filter((card) => card.links.includes(process));
+      return this.applyBoardLabels(merged.filter((card) => card.links.includes(process)));
     });
   }
 
@@ -187,7 +235,7 @@ export class TrelloRepository {
       }
 
       const merged = mergeById(toCards(asCardList(searched)), fromDefaultBoard);
-      return merged.filter((card) => card.links.length > 0);
+      return this.applyBoardLabels(merged.filter((card) => card.links.length > 0));
     });
   }
 

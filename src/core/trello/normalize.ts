@@ -33,6 +33,7 @@ export function toCard(
     list: list ? { id: list.id, name: list.name } : null,
     links,
     hasChecklist: Array.isArray(raw.idChecklists) && raw.idChecklists.length > 0,
+    lastActivity: raw.dateLastActivity ?? null,
   };
 }
 

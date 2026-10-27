@@ -2,14 +2,14 @@
 
 ## SEI Flow
 
-- Autor e mantenedor: **Leonardo Oliveira**
+- Autor e mantenedor: **Engenheiro Leonardo Almeida de Oliveira**
 - Repositório: https://github.com/engleonardo/SEI
 - Licença: MIT (veja `LICENSE`)
 
 O SEI Flow é um projeto independente. Você pode usar, copiar, modificar e distribuir o software, inclusive comercialmente, desde que preserve:
 
 1. o aviso de copyright e a licença MIT;
-2. os créditos a **Leonardo Oliveira** e o link para https://github.com/engleonardo/SEI;
+2. os créditos a **Engenheiro Leonardo Almeida de Oliveira** e o link para https://github.com/engleonardo/SEI;
 3. os créditos do projeto que inspirou este trabalho (abaixo), quando aplicável.
 
 Os créditos não podem ser removidos de cópias ou trabalhos derivados. Se você criar uma versão derivada, deixe claro que se trata de uma versão independente e não oficial.

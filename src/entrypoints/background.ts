@@ -10,6 +10,8 @@ import {
   removeActivatedOrigin,
   saveSettings,
 } from '../core/storage/settings';
+import { saveLastActionTab } from '../core/storage/last-tab';
+import { listProcessRecords } from '../core/storage/processes';
 
 async function maybeInject(tabId: number, url: string): Promise<void> {
   if (tabId < 0 || !url) return;
@@ -38,7 +40,7 @@ async function onInstalled(details: { reason: string }): Promise<void> {
   await setupAlarms();
   void refreshBadge();
   if (details.reason === 'install') {
-    await browser.runtime.openOptionsPage();
+    await browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') });
   }
 }
 
@@ -57,20 +59,17 @@ async function setupAlarms(): Promise<void> {
 
 async function refreshBadge(): Promise<void> {
   try {
-    const settings = await getSettings();
-    if (!settings.appKey || !settings.appToken) {
-      await browser.action.setBadgeText({ text: '' });
-      return;
-    }
-    const summary = await getDueSummary();
-    const count = summary.overdue + summary.dueToday;
-    await browser.action.setBadgeText({ text: count > 0 ? String(count) : '' });
-    await browser.action.setBadgeBackgroundColor({ color: '#c0392b' });
+    const processes = await listProcessRecords();
+    const unread = processes.filter((process) => process.unread).length;
+    await browser.action.setBadgeText({
+      text: unread > 0 ? (unread > 99 ? '99+' : String(unread)) : '',
+    });
+    await browser.action.setBadgeBackgroundColor({ color: '#1d4ed8' });
     await browser.action.setTitle({
       title:
-        count > 0
-          ? `SEI Flow — ${summary.overdue} atrasado(s), ${summary.dueToday} vencendo hoje`
-          : 'SEI Flow',
+        unread > 0
+          ? `SEI Flow — ${unread} processo(s) com novidade no SEI`
+          : 'SEI Flow — gestão eficiente',
     });
   } catch {
     await browser.action.setBadgeText({ text: '' }).catch(() => undefined);
@@ -153,6 +152,14 @@ export default defineBackground(() => {
     void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') });
   });
 
+  // O dashboard é a página inicial: o ícone da extensão abre o painel.
+  browser.action.onClicked.addListener((tab) => {
+    void (async () => {
+      await saveLastActionTab({ id: tab.id, url: tab.url, title: tab.title });
+      await browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') });
+    })();
+  });
+
   browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.status !== 'complete') return;
     if (!tab.url) return;
@@ -167,7 +174,10 @@ export default defineBackground(() => {
     if (!isRpcRequest(message)) return false;
     handleRpc(message)
       .then((response) => {
-        if (response.ok && message.rpc.startsWith('trello:')) {
+        if (
+          response.ok &&
+          (message.rpc.startsWith('trello:') || message.rpc.startsWith('processes:'))
+        ) {
           scheduleBadgeUpdate();
         }
         sendResponse(response);
