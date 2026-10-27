@@ -122,6 +122,36 @@ export interface RuleEvent {
   toListId?: string | null;
 }
 
+export interface RuleRunMove {
+  cardId: string;
+  cardName: string;
+  fromListId: string;
+  toListId: string;
+}
+
+export interface RuleRunLabel {
+  cardId: string;
+  cardName: string;
+  labelId: string;
+  added: boolean;
+}
+
+export interface RuleRun {
+  id: string;
+  at: number;
+  ruleId: string;
+  ruleName: string;
+  moves: RuleRunMove[];
+  labels: RuleRunLabel[];
+}
+
+export function ruleRunCardCount(run: RuleRun): number {
+  const ids = new Set<string>();
+  for (const move of run.moves) ids.add(move.cardId);
+  for (const label of run.labels) ids.add(label.cardId);
+  return ids.size;
+}
+
 export function ruleMatches(
   rule: Rule,
   event: RuleEvent,

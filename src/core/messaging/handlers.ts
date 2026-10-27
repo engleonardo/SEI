@@ -16,6 +16,7 @@ import {
 import { getLastActionTab } from '../storage/last-tab';
 import { listProcessRecords, upsertProcessRecords } from '../storage/processes';
 import { getRules, saveRules } from '../storage/rules';
+import { getLastRuleRun } from '../storage/rule-runs';
 
 const repository = new TrelloRepository();
 
@@ -152,6 +153,10 @@ const handlers = {
   'rules:save': ({ rules }) => saveRules(rules),
 
   'rules:apply-now': ({ ruleId, dryRun }) => repository.applyRuleNow(ruleId, dryRun),
+
+  'rules:last-run': () => getLastRuleRun(),
+
+  'rules:undo': () => repository.undoLastRuleRun(),
 
   'processes:list': () => listProcessRecords(),
 

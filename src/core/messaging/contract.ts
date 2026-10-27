@@ -12,7 +12,7 @@ import type {
 } from '../domain/types';
 import type { LastActionTab } from '../storage/last-tab';
 import type { ProcessRecord } from '../storage/processes';
-import type { Rule } from '../domain/rules';
+import type { Rule, RuleRun } from '../domain/rules';
 
 export interface RpcMap {
   'settings:get': { payload: undefined; result: Settings };
@@ -97,6 +97,11 @@ export interface RpcMap {
   'rules:apply-now': {
     payload: { ruleId: string; dryRun?: boolean };
     result: { applied: number; total: number };
+  };
+  'rules:last-run': { payload: undefined; result: RuleRun | null };
+  'rules:undo': {
+    payload: undefined;
+    result: { reverted: number; total: number; cards: number };
   };
   'processes:list': { payload: undefined; result: ProcessRecord[] };
   'processes:upsert': {

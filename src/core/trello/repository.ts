@@ -20,7 +20,8 @@ import {
   replaceSyncSnapshot,
   type CardSnapshot,
 } from '../storage/sync';
-import { ruleAppliesNow, ruleMatches, ruleIssue, type Rule, type RuleEvent } from '../domain/rules';
+import { ruleAppliesNow, ruleMatches, ruleIssue, ruleRunCardCount, type Rule, type RuleEvent, type RuleRunLabel, type RuleRunMove } from '../domain/rules';
+import { dropLastRuleRun, getLastRuleRun, pushRuleRun } from '../storage/rule-runs';
 import { getSettings } from '../storage/settings';
 import { mapLimit } from '../utils/async';
 import { CACHE_TTL, cacheDelete, cacheDeleteByPrefix, cacheGet, cacheGetOrSet, cacheSet } from './cache';
@@ -615,7 +616,12 @@ export class TrelloRepository {
 
     let applied = 0;
     const touched: TrelloCard[] = [];
+    const moves: RuleRunMove[] = [];
+    const labels: RuleRunLabel[] = [];
+
     for (const card of matching) {
+      const beforeListId = card.idList;
+      const beforeLabels = new Set(card.labels.map((label) => label.id));
       try {
         const result = await this.executeRules(
           card,
@@ -625,17 +631,117 @@ export class TrelloRepository {
           true,
           rule.id,
         );
-        if (result.touched) {
-          applied += 1;
-          touched.push(result.card);
-        }
+        if (!result.touched) continue;
+
+        applied += 1;
+        touched.push(result.card);
+        this.collectRuleRunDiff(card.name, beforeListId, beforeLabels, result.card, moves, labels);
       } catch {
         // Uma falha isolada não interrompe a aplicação nas demais cartões.
       }
     }
+
     await this.invalidateCardCaches();
     if (touched.length > 0) await mergeSyncSnapshot(touched);
+
+    if (moves.length > 0 || labels.length > 0) {
+      await pushRuleRun({
+        id: `run_${Date.now().toString(36)}`,
+        at: Date.now(),
+        ruleId: rule.id,
+        ruleName: rule.name,
+        moves,
+        labels,
+      });
+    }
+
     return { applied, total: cards.length };
+  }
+
+  private collectRuleRunDiff(
+    cardName: string,
+    beforeListId: string,
+    beforeLabels: Set<string>,
+    after: TrelloCard,
+    moves: RuleRunMove[],
+    labels: RuleRunLabel[],
+  ): void {
+    if (after.idList !== beforeListId) {
+      moves.push({
+        cardId: after.id,
+        cardName,
+        fromListId: beforeListId,
+        toListId: after.idList,
+      });
+    }
+
+    const afterLabels = new Set(after.labels.map((label) => label.id));
+    for (const label of afterLabels) {
+      if (!beforeLabels.has(label)) {
+        labels.push({ cardId: after.id, cardName, labelId: label, added: true });
+      }
+    }
+    for (const label of beforeLabels) {
+      if (!afterLabels.has(label)) {
+        labels.push({ cardId: after.id, cardName, labelId: label, added: false });
+      }
+    }
+  }
+
+  /**
+   * Desfaz a última aplicação manual ("Aplicar agora"): devolve cada cartão à
+   * lista de origem e reverte as etiquetas adicionadas/removidas.
+   * Cartões que mudaram de lista depois da aplicação são preservados.
+   */
+  async undoLastRuleRun(): Promise<{ reverted: number; total: number; cards: number }> {
+    const run = await getLastRuleRun();
+    if (!run) {
+      throw new TrelloError('validation', 'Nenhuma aplicação em massa para desfazer.');
+    }
+
+    const touched: TrelloCard[] = [];
+    let reverted = 0;
+
+    for (const move of run.moves) {
+      try {
+        const card = await this.getCard(move.cardId, true);
+        if (card.links.length === 0) continue;
+        if (card.idList !== move.toListId) continue;
+        await this.client.put(`/cards/${card.id}`, { idList: move.fromListId });
+        touched.push(await this.getCard(card.id, true));
+        reverted += 1;
+      } catch {
+        // lista de origem removida ou cartão apagado: mantém como está
+      }
+    }
+
+    for (const change of run.labels) {
+      try {
+        const card = await this.getCard(change.cardId, true);
+        if (card.links.length === 0) continue;
+        const has = card.labels.some((label) => label.id === change.labelId);
+        if (change.added === has) continue;
+        if (change.added) {
+          await this.client.delete(`/cards/${card.id}/idLabels/${change.labelId}`);
+        } else {
+          await this.client.post(`/cards/${card.id}/idLabels`, { value: change.labelId });
+        }
+        touched.push(await this.getCard(card.id, true));
+        reverted += 1;
+      } catch {
+        // etiqueta removida ou cartão apagado: mantém como está
+      }
+    }
+
+    await this.invalidateCardCaches();
+    if (touched.length > 0) await mergeSyncSnapshot(touched);
+    await dropLastRuleRun();
+
+    return {
+      reverted,
+      total: run.moves.length + run.labels.length,
+      cards: ruleRunCardCount(run),
+    };
   }
 
   async deleteCard(cardId: string): Promise<void> {

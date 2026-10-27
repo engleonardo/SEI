@@ -5,9 +5,11 @@ import {
   RULE_TRIGGER_LABELS,
   createRule,
   ruleIssue,
+  ruleRunCardCount,
   type Rule,
   type RuleAction,
   type RuleActionType,
+  type RuleRun,
   type RuleTriggerType,
 } from '../../../core/domain/rules';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
@@ -33,7 +35,18 @@ export function RulesSection({
     total: number;
   } | null>(null);
   const [applying, setApplying] = useState(false);
+  const [lastRun, setLastRun] = useState<RuleRun | null>(null);
+  const [undoOpen, setUndoOpen] = useState(false);
+  const [undoing, setUndoing] = useState(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
+
+  const loadLastRun = useCallback(async () => {
+    try {
+      setLastRun(await callRpc('rules:last-run', undefined));
+    } catch {
+      setLastRun(null);
+    }
+  }, []);
 
   const loadBoardData = useCallback(
     async (boardId: string) => {
@@ -72,10 +85,11 @@ export function RulesSection({
       .finally(() => {
         if (active) setLoading(false);
       });
+    void loadLastRun();
     return () => {
       active = false;
     };
-  }, [loadBoardData, notify]);
+  }, [loadBoardData, loadLastRun, notify]);
 
   const persist = (next: Rule[], message?: string) => {
     setRules(next);
@@ -193,10 +207,28 @@ export function RulesSection({
         text: `Regra aplicada em ${result.applied} de ${result.total} cartões vinculados.`,
       });
       setConfirmApply(null);
+      await loadLastRun();
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
     } finally {
       setApplying(false);
+    }
+  };
+
+  const undoLastRun = async () => {
+    setUndoing(true);
+    try {
+      const result = await callRpc('rules:undo', undefined);
+      notify({
+        kind: 'success',
+        text: `${result.reverted} de ${result.total} alterações revertidas em ${result.cards} cartões.`,
+      });
+      setUndoOpen(false);
+      await loadLastRun();
+    } catch (cause) {
+      notify({ kind: 'error', text: errorMessage(cause) });
+    } finally {
+      setUndoing(false);
     }
   };
 
@@ -245,6 +277,25 @@ export function RulesSection({
         </div>
       }
     >
+      {lastRun && (
+        <div className="sfo-rules-undo">
+          <span className="sfo-rules-undo__text">
+            <Icon name="clock" size={13} />
+            Última aplicação manual: <strong>{lastRun.ruleName}</strong> em{' '}
+            {ruleRunCardCount(lastRun)} cartões ·{' '}
+            {new Date(lastRun.at).toLocaleString('pt-BR')}
+          </span>
+          <button
+            type="button"
+            className="sfo-btn sfo-btn--sm"
+            onClick={() => setUndoOpen(true)}
+          >
+            <Icon name="refresh" size={13} />
+            Desfazer
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className="sfo-loading">
           <Spinner />
@@ -486,6 +537,16 @@ export function RulesSection({
           busy={applying}
           onConfirm={() => void confirmApplyNow()}
           onClose={() => setConfirmApply(null)}
+        />
+      )}
+      {undoOpen && lastRun && (
+        <ConfirmDialog
+          title="Desfazer aplicação"
+          message={`Serão revertidas ${lastRun.moves.length + lastRun.labels.length} alterações feitas em ${ruleRunCardCount(lastRun)} cartões pela regra "${lastRun.ruleName}". Cartões que mudaram de lista depois disso são mantidos como estão.`}
+          confirmLabel="Desfazer"
+          busy={undoing}
+          onConfirm={() => void undoLastRun()}
+          onClose={() => setUndoOpen(false)}
         />
       )}
     </>

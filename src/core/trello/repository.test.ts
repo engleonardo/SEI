@@ -28,6 +28,22 @@ vi.mock('../storage/rules', () => ({
   getRules: async () => mocks.rules,
 }));
 
+const runState = vi.hoisted(() => ({ runs: [] as Array<Record<string, unknown>> }));
+
+vi.mock('../storage/rule-runs', () => ({
+  getLastRuleRun: async () => runState.runs[0] ?? null,
+  getRuleRuns: async () => [...runState.runs],
+  pushRuleRun: async (run: Record<string, unknown>) => {
+    runState.runs.unshift(run);
+  },
+  dropLastRuleRun: async () => {
+    runState.runs.shift();
+  },
+  clearRuleRuns: async () => {
+    runState.runs = [];
+  },
+}));
+
 const syncState = vi.hoisted(() => ({
   snapshot: {} as Record<string, unknown>,
 }));
@@ -123,6 +139,7 @@ function repository(client: TrelloClient) {
 beforeEach(() => {
   mocks.rules = [];
   syncState.snapshot = {};
+  runState.runs = [];
   mocks.settings = {
     ...mocks.settings,
     defaultBoardId: 'board-1',
@@ -430,5 +447,72 @@ describe('TrelloRepository', () => {
       pos: 'bottom',
       idList: 'list-done',
     });
+    expect(runState.runs[0]).toMatchObject({
+      ruleId: 'rule-done',
+      moves: [{ cardId: 'card-1', fromListId: 'list-1', toListId: 'list-done' }],
+    });
+  });
+
+  it('desfaz a última aplicação devolvendo o cartão à lista original', async () => {
+    mocks.settings = { ...mocks.settings, defaultBoardId: '' };
+    mocks.rules = [
+      {
+        id: 'rule-done',
+        name: 'Concluído vai para concluídos',
+        enabled: true,
+        boardId: 'board-1',
+        trigger: { type: 'completed' },
+        actions: [{ type: 'moveToList', listId: 'list-done' }],
+      },
+    ];
+
+    let currentList = 'list-1';
+    const client = fakeClient();
+    vi.mocked(client.get).mockImplementation(async (path: string) => {
+      if (path === '/search') {
+        return {
+          cards: [
+            rawCard({
+              id: 'card-1',
+              desc: `SEI ${PROCESS}`,
+              dueComplete: true,
+              idList: currentList,
+              list: { id: currentList, name: 'Lista' },
+            }),
+          ],
+        };
+      }
+      if (path === '/boards/board-1/lists') {
+        return [
+          { id: 'list-1', name: 'Lista' },
+          { id: 'list-done', name: 'Concluídos' },
+        ];
+      }
+      if (path.startsWith('/boards/')) return [];
+      return rawCard({
+        id: 'card-1',
+        desc: `SEI ${PROCESS}`,
+        dueComplete: true,
+        idList: currentList,
+        list: { id: currentList, name: 'Lista' },
+      });
+    });
+    vi.mocked(client.put).mockImplementation(async (path: string, body?: unknown) => {
+      if (path === '/cards/card-1') {
+        const patch = body as { idList?: string } | undefined;
+        if (patch?.idList) currentList = patch.idList;
+      }
+      return {};
+    });
+
+    const repo = repository(client);
+    await repo.applyRuleNow('rule-done');
+    expect(currentList).toBe('list-done');
+
+    const undone = await repo.undoLastRuleRun();
+    expect(undone.reverted).toBe(1);
+    expect(undone.cards).toBe(1);
+    expect(currentList).toBe('list-1');
+    expect(runState.runs).toHaveLength(0);
   });
 });
