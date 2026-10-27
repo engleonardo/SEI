@@ -65,7 +65,7 @@ export interface RpcMap {
   };
   'trello:add-label': { payload: { cardId: string; labelId: string }; result: TrelloCard };
   'trello:remove-label': { payload: { cardId: string; labelId: string }; result: TrelloCard };
-  'trello:checklists': { payload: { cardId: string }; result: TrelloChecklist[] };
+  'trello:checklists': { payload: { cardId: string; fresh?: boolean }; result: TrelloChecklist[] };
   'trello:create-checklist': {
     payload: { cardId: string; name: string };
     result: TrelloChecklist[];
