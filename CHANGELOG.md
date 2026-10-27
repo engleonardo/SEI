@@ -3,6 +3,15 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.1.1] — 2026-10-26
+
+### Alterado
+
+- Incorporada a logo oficial fornecida pelo projeto em `docs/brand/sei-flow.svg`.
+- Ícones 16/32/48/128 e favicon regenerados a partir da logo oficial.
+- `BrandMark` agora usa o ícone oficial via `runtime.getURL` e `web_accessible_resources`.
+- Versão do pacote atualizada para 0.1.1.
+
 ## [0.1.0] — 2026-10-26
 
 ### Adicionado

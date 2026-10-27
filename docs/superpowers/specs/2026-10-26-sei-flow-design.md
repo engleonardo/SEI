@@ -33,10 +33,11 @@ Alternativas descartadas: Webpack + React 17 (dívida técnica), Vite + CRXJS (m
 
 ## Marca
 
-- Fonte vetorial: `public/logo.svg` (quadro branco com barras azuis e pétalas coloridas).
+- Fonte vetorial oficial: `docs/brand/sei-flow.svg` (arquivo fornecido pelo projeto).
 - Ícones PNG 16/32/48/128 gerados por `scripts/generate-icons.mjs` com `sharp`.
-- Componente `src/ui/BrandMark.tsx` replica a marca na UI injetada, popup e opções.
+- `src/ui/BrandMark.tsx` usa o ícone `icon-128.png` via `runtime.getURL`, com `web_accessible_resources` restrito a `*://*/*`.
 - Favicon das páginas de extensão aponta para `icon-128.png`.
+- O SVG fonte não é incluído no pacote da extensão para não inflar o zip.
 
 ## Conexão com o Trello
 

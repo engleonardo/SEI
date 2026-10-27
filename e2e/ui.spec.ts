@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+﻿import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
@@ -47,10 +47,13 @@ const settings = {
 };
 
 const scriptPath = join(process.cwd(), '.output', 'chrome-mv3', 'sei-inject.js');
+const iconDataUrl = `data:image/png;base64,${readFileSync(
+  join(process.cwd(), 'public', 'icon-128.png'),
+).toString('base64')}`;
 
 async function stubExtension(page: Page) {
   await page.addInitScript(
-    ({ cardData, freeCardData, settingsData }) => {
+    ({ cardData, freeCardData, settingsData, iconUrl }) => {
       const ok = (data: unknown) => Promise.resolve({ ok: true, data });
       const withCallback = <T,>(value: T | Promise<T>, callback?: (result: T) => void) => {
         if (typeof callback === 'function') {
@@ -65,6 +68,7 @@ async function stubExtension(page: Page) {
       (window as unknown as { chrome: unknown }).chrome = {
         runtime: {
           id: 'test-extension',
+          getURL: (path: string) => (path.endsWith('icon-128.png') ? iconUrl : path),
           sendMessage: (
             message: { rpc: string; payload?: { processNumber?: string; cardIds?: string[] } },
             callback?: (response: unknown) => void,
@@ -129,7 +133,7 @@ async function stubExtension(page: Page) {
         tabs: { query: () => Promise.resolve([]) },
       };
     },
-    { cardData: card, freeCardData: freeCard, settingsData: settings },
+    { cardData: card, freeCardData: freeCard, settingsData: settings, iconUrl: iconDataUrl },
   );
 }
 
@@ -200,3 +204,4 @@ test('filtro sem cartão esconde processos que já têm cartão', async ({ page 
   await expect(page.getByText('Cartão vinculado')).toBeHidden();
   await expect(page.getByText(OTHER)).toBeVisible();
 });
+
