@@ -14,6 +14,12 @@ export default defineConfig({
     permissions: ['storage', 'scripting', 'activeTab'],
     optional_host_permissions: ['*://*/*'],
     host_permissions: ['https://api.trello.com/*'],
+    web_accessible_resources: [
+      {
+        resources: ['icon-128.png'],
+        matches: ['*://*/*'],
+      },
+    ],
     action: {
       default_title: 'SEI Flow',
     },

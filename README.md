@@ -1,7 +1,7 @@
 # SEI Flow
 
 <p align="center">
-  <img src="public/logo.svg" width="112" alt="Logo do SEI Flow" />
+  <img src="docs/brand/sei-flow.svg" width="112" alt="Logo do SEI Flow" />
 </p>
 
 Extensão para **Chrome, Firefox e Edge** que integra o **Trello** ao **SEI (Sistema Eletrônico de Informações)**. Crie, vincule e edite cartões diretamente na árvore e na lista de processos, sem alternar de aba.

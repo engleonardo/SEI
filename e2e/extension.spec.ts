@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+﻿import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium, expect, test } from '@playwright/test';
@@ -65,9 +65,16 @@ test('extensão carrega, injeta no SEI e abre opções/popup', async () => {
     await expect(page.getByText('SEI Flow').first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole('button', { name: 'Abrir filtros' })).toBeVisible();
 
+    const logo = page.locator('img[src*="icon-128.png"]').first();
+    await expect(logo).toBeVisible();
+    expect(await logo.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+
     const options = await context.newPage();
     await options.goto(`chrome-extension://${extensionId}/options.html`);
     await expect(options.getByRole('heading', { level: 1, name: /^Conexão$/ })).toBeVisible();
+    const optionsLogo = options.locator('img[src*="icon-128.png"]').first();
+    await expect(optionsLogo).toBeVisible();
+    expect(await optionsLogo.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
 
     const popup = await context.newPage();
     await popup.setViewportSize({ width: 380, height: 640 });
@@ -80,3 +87,4 @@ test('extensão carrega, injeta no SEI e abre opções/popup', async () => {
     rmSync(profileDir, { recursive: true, force: true });
   }
 });
+
