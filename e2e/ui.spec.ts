@@ -1,4 +1,4 @@
-﻿import { readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
@@ -271,4 +271,3 @@ test('lote reconhece processos e lista cartões do quadro', async ({ page }) => 
   await expect(dialog.getByText('3 processo(s) válido(s) reconhecido(s).')).toBeVisible();
   await expect(dialog.getByText('Cartão livre')).toBeVisible();
 });
-
