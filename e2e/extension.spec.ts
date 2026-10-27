@@ -68,14 +68,12 @@ test('extensão carrega, injeta no SEI e abre opções/popup', async () => {
     const options = await context.newPage();
     await options.goto(`chrome-extension://${extensionId}/options.html`);
     await expect(options.getByRole('heading', { level: 1, name: /^Conexão$/ })).toBeVisible();
-    await options.screenshot({ path: 'test-results/options.png', fullPage: true });
 
     const popup = await context.newPage();
     await popup.setViewportSize({ width: 380, height: 640 });
     await popup.goto(`chrome-extension://${extensionId}/popup.html`);
     await expect(popup.getByText('SEI Flow').first()).toBeVisible();
     await expect(popup.getByText('Página atual')).toBeVisible();
-    await popup.screenshot({ path: 'test-results/popup.png', fullPage: true });
   } finally {
     await context.close();
     rmSync(extensionDir, { recursive: true, force: true });

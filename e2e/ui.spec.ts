@@ -152,7 +152,6 @@ test('lista de processos mostra o cartão vinculado e o botão de ações', asyn
   await expect(page.getByText('Cartão vinculado')).toBeVisible();
   await expect(page.getByRole('button', { name: /Cartões/ }).first()).toBeVisible();
   await expect(page.getByText('SEI Flow').first()).toBeVisible();
-  await page.screenshot({ path: 'test-results/list.png', fullPage: true });
 });
 
 test('processo aberto mostra o painel completo', async ({ page }) => {
@@ -162,7 +161,6 @@ test('processo aberto mostra o painel completo', async ({ page }) => {
   await expect(page.getByText('Cartão vinculado')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Novo cartão' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Vincular cartões' })).toBeVisible();
-  await page.screenshot({ path: 'test-results/process.png', fullPage: true });
 });
 
 test('diálogo de novo cartão abre com o destino padrão', async ({ page }) => {
@@ -173,7 +171,6 @@ test('diálogo de novo cartão abre com o destino padrão', async ({ page }) => 
   await expect(page.getByRole('dialog').getByLabel('Nome')).toHaveValue(PROCESS);
   await expect(page.getByText('Contratos').first()).toBeVisible();
   await expect(page.getByText('Em análise').first()).toBeVisible();
-  await page.screenshot({ path: 'test-results/create-dialog.png', fullPage: true });
 });
 
 test('diálogo de vínculo lista cartões do quadro e permite seleção múltipla', async ({ page }) => {
@@ -191,7 +188,6 @@ test('diálogo de vínculo lista cartões do quadro e permite seleção múltipl
     .getByRole('checkbox')
     .check();
   await expect(page.getByRole('button', { name: /Vincular \(1\)/ })).toBeVisible();
-  await page.screenshot({ path: 'test-results/link-dialog.png', fullPage: true });
 });
 
 test('filtro sem cartão esconde processos que já têm cartão', async ({ page }) => {
