@@ -157,6 +157,26 @@ describe('TrelloRepository', () => {
     expect(client.put).not.toHaveBeenCalled();
   });
 
+  it('vincula um cartão a vários processos em uma única gravação', async () => {
+    const client = fakeClient();
+    const third = '98765.432109/2026-01';
+    vi.mocked(client.get)
+      .mockResolvedValueOnce(rawCard({ desc: 'Descrição' }))
+      .mockResolvedValueOnce(
+        rawCard({ desc: `SEI ${PROCESS}\nSEI ${OTHER}\nSEI ${third}\nDescrição` }),
+      );
+    vi.mocked(client.put).mockResolvedValue({});
+
+    const repo = repository(client);
+    const results = await repo.linkCardsToProcesses(['card-1'], [PROCESS, OTHER, third, PROCESS]);
+
+    expect(results[0]?.status).toBe('linked');
+    expect(client.put).toHaveBeenCalledTimes(1);
+    expect(client.put).toHaveBeenCalledWith('/cards/card-1', {
+      desc: `SEI ${PROCESS}\nSEI ${OTHER}\nSEI ${third}\nDescrição`,
+    });
+  });
+
   it('desvincula apenas o processo atual', async () => {
     const client = fakeClient();
     vi.mocked(client.get)

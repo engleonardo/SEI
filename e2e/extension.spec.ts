@@ -1,8 +1,9 @@
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+﻿import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium, expect, test } from '@playwright/test';
 
+test.use({ trace: 'off' });
 test.describe.configure({ mode: 'serial' });
 
 const EXTENSION_SOURCE = join(process.cwd(), '.output', 'chrome-mv3');
@@ -62,7 +63,9 @@ test('extensão carrega, injeta no SEI e abre opções/popup', async () => {
     await page.goto('http://sei.test/sei/controlador.php?acao=procedimento_controlar');
 
     // O script é injetado pelo background via scripting.executeScript.
-    await expect(page.getByText('SEI Flow').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.sf-toolbar__brand img').first()).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByRole('button', { name: 'Abrir filtros' })).toBeVisible();
 
     const logo = page.locator('img[src*="icon-128.png"]').first();
@@ -81,9 +84,14 @@ test('extensão carrega, injeta no SEI e abre opções/popup', async () => {
     await popup.goto(`chrome-extension://${extensionId}/popup.html`);
     await expect(popup.getByText('SEI Flow').first()).toBeVisible();
     await expect(popup.getByText('Página atual')).toBeVisible();
+
+    const dashboard = await context.newPage();
+    await dashboard.goto(`chrome-extension://${extensionId}/dashboard.html`);
+    await expect(dashboard.getByRole('heading', { name: 'Dashboard de prazos' })).toBeVisible();
   } finally {
     await context.close();
     rmSync(extensionDir, { recursive: true, force: true });
     rmSync(profileDir, { recursive: true, force: true });
   }
 });
+

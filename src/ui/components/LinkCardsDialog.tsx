@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { browser } from 'wxt/browser';
 import type { TrelloBoard, TrelloCard } from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
+import { openOptionsPage } from '../../core/messaging/actions';
 import { Icon } from '../icons';
 import { showToast } from '../toast';
 import { classNames, formatDue, labelColorHex, labelTextColor, locationLabel } from '../utils';
@@ -171,7 +171,7 @@ export function LinkCardsDialog({ processNumber, onClose, onLinked }: LinkCardsD
             <button
               type="button"
               className="sf-btn sf-btn--sm"
-              onClick={() => void browser.runtime.openOptionsPage()}
+              onClick={() => void openOptionsPage()}
             >
               Abrir opções
             </button>

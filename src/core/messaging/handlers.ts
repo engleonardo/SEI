@@ -38,6 +38,16 @@ const handlers = {
     return { cleared: true as const };
   },
 
+  'options:open': async () => {
+    await browser.runtime.openOptionsPage();
+    return undefined;
+  },
+
+  'dashboard:open': async () => {
+    await browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') });
+    return undefined;
+  },
+
   'trello:boards': () => repository.getBoards(),
   'trello:lists': ({ boardId }) => repository.getLists(boardId),
   'trello:board-cards': ({ boardId }) => repository.getBoardCards(boardId),
@@ -52,6 +62,8 @@ const handlers = {
     return undefined;
   },
   'trello:link-cards': ({ cardIds, processNumber }) => repository.linkCards(cardIds, processNumber),
+  'trello:link-cards-bulk': ({ cardIds, processNumbers }) =>
+    repository.linkCardsToProcesses(cardIds, processNumbers),
   'trello:unlink-card': ({ cardId, processNumber }) => repository.unlinkCard(cardId, processNumber),
   'trello:board-labels': ({ boardId }) => repository.getBoardLabels(boardId),
   'trello:create-label': ({ boardId, name, color }) => repository.createLabel(boardId, name, color),
@@ -129,8 +141,39 @@ const handlers = {
   },
 } satisfies HandlerMap;
 
-export async function handleRpc(request: RpcRequest): Promise<RpcResponse<unknown>> {
-  const handler = (handlers as Record<string, unknown>)[request.rpc] as
+export interface DueSummary {
+  total: number;
+  overdue: number;
+  dueToday: number;
+  dueSoon: number;
+}
+
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+export async function getDueSummary(): Promise<DueSummary> {
+  const cards = await repository.getAllLinkedCards();
+  const today = startOfDay(new Date());
+  const soonLimit = new Date(today);
+  soonLimit.setDate(soonLimit.getDate() + 7);
+
+  let overdue = 0;
+  let dueToday = 0;
+  let dueSoon = 0;
+
+  for (const card of cards) {
+    if (!card.due || card.dueComplete) continue;
+    const due = startOfDay(new Date(card.due));
+    if (due.getTime() < today.getTime()) overdue += 1;
+    else if (due.getTime() === today.getTime()) dueToday += 1;
+    else if (due.getTime() <= soonLimit.getTime()) dueSoon += 1;
+  }
+
+  return { total: cards.length, overdue, dueToday, dueSoon };
+}
+
+export async function handleRpc(request: RpcRequest): Promise<RpcResponse<unknown>> {  const handler = (handlers as Record<string, unknown>)[request.rpc] as
     | ((payload: unknown) => Promise<unknown>)
     | undefined;
 

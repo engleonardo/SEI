@@ -1,7 +1,7 @@
 import { defineBackground } from 'wxt/utils/define-background';
 import { browser } from 'wxt/browser';
 import { injectSeiScript } from '../core/activation/inject';
-import { handleRpc } from '../core/messaging/handlers';
+import { handleRpc, getDueSummary } from '../core/messaging/handlers';
 import { isRpcRequest } from '../core/messaging/contract';
 import {
   getSettings,
@@ -35,8 +35,78 @@ async function injectIntoOpenTabs(): Promise<void> {
 
 async function onInstalled(details: { reason: string }): Promise<void> {
   await getSettings();
+  await setupAlarms();
+  void refreshBadge();
   if (details.reason === 'install') {
     await browser.runtime.openOptionsPage();
+  }
+}
+
+const DUE_ALARM = 'sei-flow:due-check';
+const NOTIFICATION_ID = 'sei-flow:due';
+const LAST_NOTIFICATION_KEY = 'sei-flow:last-due-notification';
+let badgeTimer: ReturnType<typeof setTimeout> | null = null;
+
+async function setupAlarms(): Promise<void> {
+  try {
+    await browser.alarms.create(DUE_ALARM, { periodInMinutes: 60 });
+  } catch (error) {
+    console.debug('[SEI Flow] Falha ao criar alarme de prazos.', error);
+  }
+}
+
+async function refreshBadge(): Promise<void> {
+  try {
+    const settings = await getSettings();
+    if (!settings.appKey || !settings.appToken) {
+      await browser.action.setBadgeText({ text: '' });
+      return;
+    }
+    const summary = await getDueSummary();
+    const count = summary.overdue + summary.dueToday;
+    await browser.action.setBadgeText({ text: count > 0 ? String(count) : '' });
+    await browser.action.setBadgeBackgroundColor({ color: '#c0392b' });
+    await browser.action.setTitle({
+      title:
+        count > 0
+          ? `SEI Flow — ${summary.overdue} atrasado(s), ${summary.dueToday} vencendo hoje`
+          : 'SEI Flow',
+    });
+  } catch {
+    await browser.action.setBadgeText({ text: '' }).catch(() => undefined);
+  }
+}
+
+function scheduleBadgeUpdate(): void {
+  if (badgeTimer) clearTimeout(badgeTimer);
+  badgeTimer = setTimeout(() => {
+    badgeTimer = null;
+    void refreshBadge();
+  }, 2_000);
+}
+
+async function notifyDue(): Promise<void> {
+  try {
+    const settings = await getSettings();
+    if (!settings.notificationsEnabled) return;
+    const summary = await getDueSummary();
+    const count = summary.overdue + summary.dueToday;
+    if (count === 0) return;
+
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const stored = await browser.storage.local.get(LAST_NOTIFICATION_KEY);
+    if (stored[LAST_NOTIFICATION_KEY] === todayKey) return;
+
+    await browser.notifications.create(NOTIFICATION_ID, {
+      type: 'basic',
+      iconUrl: browser.runtime.getURL('/icon-128.png'),
+      title: 'SEI Flow — prazos',
+      message: `${summary.overdue} atrasado(s) e ${summary.dueToday} vencendo hoje.`,
+      priority: 1,
+    });
+    await browser.storage.local.set({ [LAST_NOTIFICATION_KEY]: todayKey });
+  } catch (error) {
+    console.debug('[SEI Flow] Falha ao notificar prazos.', error);
   }
 }
 
@@ -66,7 +136,21 @@ export default defineBackground(() => {
   });
 
   browser.runtime.onStartup.addListener(() => {
+    void setupAlarms();
+    void refreshBadge();
     void injectIntoOpenTabs();
+  });
+
+  browser.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name !== DUE_ALARM) return;
+    void refreshBadge();
+    void notifyDue();
+  });
+
+  browser.notifications.onClicked.addListener((notificationId) => {
+    if (notificationId !== NOTIFICATION_ID) return;
+    void browser.notifications.clear(notificationId);
+    void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') });
   });
 
   browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -82,7 +166,12 @@ export default defineBackground(() => {
   browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (!isRpcRequest(message)) return false;
     handleRpc(message)
-      .then((response) => sendResponse(response))
+      .then((response) => {
+        if (response.ok && message.rpc.startsWith('trello:')) {
+          scheduleBadgeUpdate();
+        }
+        sendResponse(response);
+      })
       .catch((error: unknown) => {
         sendResponse({
           ok: false,

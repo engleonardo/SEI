@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+﻿import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
@@ -70,7 +70,10 @@ async function stubExtension(page: Page) {
           id: 'test-extension',
           getURL: (path: string) => (path.endsWith('icon-128.png') ? iconUrl : path),
           sendMessage: (
-            message: { rpc: string; payload?: { processNumber?: string; cardIds?: string[] } },
+            message: {
+              rpc: string;
+              payload?: { processNumber?: string; cardIds?: string[]; processNumbers?: string[] };
+            },
             callback?: (response: unknown) => void,
           ) => {
             let response: Promise<unknown>;
@@ -99,6 +102,14 @@ async function stubExtension(page: Page) {
                 response = ok([freeCardData, cardData]);
                 break;
               case 'trello:link-cards':
+                response = ok(
+                  (message.payload?.cardIds ?? []).map((cardId) => {
+                    const found = [cardData, freeCardData].find((item) => item.id === cardId);
+                    return { cardId, status: 'linked', card: found };
+                  }),
+                );
+                break;
+              case 'trello:link-cards-bulk':
                 response = ok(
                   (message.payload?.cardIds ?? []).map((cardId) => {
                     const found = [cardData, freeCardData].find((item) => item.id === cardId);
@@ -157,7 +168,7 @@ test('lista de processos mostra o cartão vinculado e o botão de ações', asyn
   await expect(page.getByRole('button', { name: /Abrir ações do processo/ }).first()).toBeVisible();
   await expect(page.locator('.sf-card--highlight')).toHaveCount(1);
   await expect(page.getByText('+ Cartão')).toHaveCount(0);
-  await expect(page.getByText('SEI Flow').first()).toBeVisible();
+  await expect(page.locator('.sf-toolbar__brand img').first()).toBeVisible();
 });
 
 test('processo aberto mostra o painel completo', async ({ page }) => {
@@ -233,3 +244,31 @@ test('filtro sem cartão esconde processos que já têm cartão', async ({ page 
   await expect(page.getByText('Cartão vinculado')).toBeHidden();
   await expect(page.getByText(OTHER)).toBeVisible();
 });
+
+test('atalho / foca a busca da barra', async ({ page }) => {
+  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
+
+  await page.keyboard.press('/');
+  const search = page.getByLabel('Buscar processo ou cartão');
+  expect(
+    await search.evaluate(
+      (element) => (element.getRootNode() as Document | ShadowRoot).activeElement === element,
+    ),
+  ).toBe(true);
+});
+
+test('lote reconhece processos e lista cartões do quadro', async ({ page }) => {
+  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
+
+  await page
+    .getByRole('button', { name: 'Vincular cartões a vários processos' })
+    .click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByText('Vincular cartões a vários processos')).toBeVisible();
+  await dialog.getByLabel('Processos de destino').fill(
+    `${PROCESS}\n${OTHER}\n98765.432109/2026-01`,
+  );
+  await expect(dialog.getByText('3 processo(s) válido(s) reconhecido(s).')).toBeVisible();
+  await expect(dialog.getByText('Cartão livre')).toBeVisible();
+});
+

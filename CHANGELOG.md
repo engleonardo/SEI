@@ -3,6 +3,32 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.0.0] — 2026-10-27
+
+Primeira versão estável preparada para publicação na Chrome Web Store.
+
+### Adicionado
+
+- Dashboard de prazos com resumo de atrasados, vencendo hoje, próximos 7 dias, sem prazo e total.
+- Filtros de busca, quadro e somente atrasados no dashboard.
+- Notificações diárias de prazos e badge com contagem de atrasados/vencendo hoje.
+- Alarm periódico de verificação de prazos.
+- Ação em lote para vincular cartões a vários processos de uma vez.
+- Barra de ferramentas fixa (sticky) em listas longas.
+- Persistência dos filtros durante a sessão da aba.
+- Atalhos `/` e `Ctrl+K`/`Cmd+K` para focar a busca.
+- Renderização sob demanda dos cartões visíveis (IntersectionObserver).
+- Documentação de publicação e arquivos de loja em `docs/store/`.
+- Arquivo `CREDITS.md` e exigência de manutenção de créditos em cópias/derivados.
+- Política de segurança e automações de segurança no GitHub.
+
+### Alterado
+
+- Versão estável 1.0.0.
+- Página de opções inclui a preferência de notificações.
+- Dashboard acessível pelo popup, barra do SEI e opções.
+- README e NOTICE mantêm os créditos do projeto inspirador e exigem crédito ao autor deste projeto em trabalhos derivados.
+
 ## [0.1.2] — 2026-10-26
 
 ### Adicionado

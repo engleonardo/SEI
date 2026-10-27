@@ -219,6 +219,15 @@ function App() {
               <Icon name="settings" size={14} />
               {connected ? 'Abrir configurações' : 'Conectar ao Trello'}
             </button>
+            <button
+              className="sfp-btn"
+              onClick={() =>
+                void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') })
+              }
+            >
+              <Icon name="board" size={14} />
+              Dashboard de prazos
+            </button>
           </section>
 
           {notice && <div className={`sfp-alert sfp-alert--${notice.kind}`}>{notice.text}</div>}

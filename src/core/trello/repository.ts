@@ -10,7 +10,7 @@ import type {
   TrelloLabel,
   TrelloList,
 } from '../domain/types';
-import { sanitizeProcessForQuery } from '../domain/process';
+import { normalizeProcessNumber, sanitizeProcessForQuery } from '../domain/process';
 import { addLink, hasLink, parseLinks, removeLink, stripLinks } from '../link/marker';
 import { getSettings } from '../storage/settings';
 import { mapLimit } from '../utils/async';
@@ -276,6 +276,51 @@ export class TrelloRepository {
         await this.client.put(`/cards/${cardId}`, {
           desc: addLink(current.desc, processNumber),
         });
+        const card = await this.getCard(cardId, true);
+        return { cardId, status: 'linked' as const, card };
+      } catch (error) {
+        return {
+          cardId,
+          status: 'error' as const,
+          message: error instanceof Error ? error.message : 'Falha ao vincular o cartão.',
+        };
+      }
+    });
+
+    await this.invalidateCardCaches();
+    return results;
+  }
+
+  async linkCardsToProcesses(
+    cardIds: string[],
+    processNumbers: string[],
+  ): Promise<BulkLinkResult[]> {
+    const processes = Array.from(
+      new Set(
+        processNumbers
+          .map((process) => normalizeProcessNumber(process))
+          .filter((process): process is string => Boolean(process)),
+      ),
+    );
+    if (processes.length === 0) {
+      throw new TrelloError('validation', 'Informe pelo menos um número de processo válido.');
+    }
+
+    const unique = Array.from(new Set(cardIds.filter(Boolean)));
+    const results = await mapLimit(unique, 2, async (cardId) => {
+      try {
+        const current = await this.getCard(cardId, true);
+        const existing = parseLinks(current.desc);
+        const newLinks = processes.filter((processNumber) => !existing.includes(processNumber));
+        if (newLinks.length === 0) {
+          return { cardId, status: 'already' as const, card: current };
+        }
+        const links = [...newLinks, ...existing];
+        const description = stripLinks(current.desc);
+        const desc = [...links.map((process) => `SEI ${process}`), description]
+          .filter(Boolean)
+          .join('\n');
+        await this.client.put(`/cards/${cardId}`, { desc });
         const card = await this.getCard(cardId, true);
         return { cardId, status: 'linked' as const, card };
       } catch (error) {

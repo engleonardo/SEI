@@ -14,25 +14,33 @@ export function PreferencesSection({
 }) {
   const [theme, setTheme] = useState<ThemePreference>(settings.theme);
   const [compact, setCompact] = useState(settings.compact);
+  const [notifications, setNotifications] = useState(settings.notificationsEnabled);
   const [autoRefresh, setAutoRefresh] = useState(String(settings.autoRefreshMinutes));
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setTheme(settings.theme);
     setCompact(settings.compact);
+    setNotifications(settings.notificationsEnabled);
     setAutoRefresh(String(settings.autoRefreshMinutes));
   }, [settings]);
 
   const dirty =
     theme !== settings.theme ||
     compact !== settings.compact ||
+    notifications !== settings.notificationsEnabled ||
     Number(autoRefresh) !== settings.autoRefreshMinutes;
 
   const savePreferences = async () => {
     const minutes = Math.max(0, Math.min(120, Number(autoRefresh) || 0));
     setBusy(true);
     try {
-      await save({ theme, compact, autoRefreshMinutes: minutes });
+      await save({
+        theme,
+        compact,
+        notificationsEnabled: notifications,
+        autoRefreshMinutes: minutes,
+      });
       notify({ kind: 'success', text: 'Preferências salvas.' });
     } catch (cause) {
       notify({ kind: 'error', text: cause instanceof Error ? cause.message : 'Erro ao salvar.' });
@@ -106,6 +114,21 @@ export function PreferencesSection({
           <span className="sfo-toggle-row__text">
             Mostra os cartões em versão reduzida abaixo de cada processo, com ações por ícone.
             Desmarque para usar cartões completos também na lista.
+          </span>
+        </span>
+      </label>
+
+      <label className="sfo-toggle-row">
+        <input
+          type="checkbox"
+          checked={notifications}
+          onChange={(event) => setNotifications(event.target.checked)}
+        />
+        <span className="sfo-toggle-row__body">
+          <span className="sfo-toggle-row__title">Notificações de prazos</span>
+          <span className="sfo-toggle-row__text">
+            Envia um aviso por dia quando houver cartões atrasados ou vencendo hoje, além do badge
+            com a contagem no ícone da extensão.
           </span>
         </span>
       </label>

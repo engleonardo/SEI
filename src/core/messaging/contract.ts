@@ -16,6 +16,8 @@ export interface RpcMap {
   'settings:save': { payload: Partial<Settings>; result: Settings };
   'settings:test-connection': { payload: undefined; result: ConnectionInfo };
   'settings:clear-cache': { payload: undefined; result: { cleared: true } };
+  'options:open': { payload: undefined; result: undefined };
+  'dashboard:open': { payload: undefined; result: undefined };
   'trello:boards': { payload: undefined; result: TrelloBoard[] };
   'trello:lists': { payload: { boardId: string }; result: TrelloList[] };
   'trello:board-cards': { payload: { boardId: string }; result: TrelloCard[] };
@@ -37,6 +39,10 @@ export interface RpcMap {
   'trello:delete-card': { payload: { cardId: string }; result: undefined };
   'trello:link-cards': {
     payload: { cardIds: string[]; processNumber: string };
+    result: BulkLinkResult[];
+  };
+  'trello:link-cards-bulk': {
+    payload: { cardIds: string[]; processNumbers: string[] };
     result: BulkLinkResult[];
   };
   'trello:unlink-card': {
