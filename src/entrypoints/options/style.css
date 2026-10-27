@@ -142,6 +142,33 @@ a {
   color: var(--accent);
 }
 
+.sfo-nav__item--dashboard {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.sfo-nav__item--dashboard:hover {
+  background: var(--accent-soft);
+}
+
+.sfo-nav__badge {
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.sfo-nav__sep {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--border);
+}
+
 .sfo-sidebar__footer {
   padding: 12px 14px;
   border: 1px solid var(--border);

@@ -15,15 +15,34 @@ export async function callRpc<T extends RpcType>(
   type: T,
   payload: RpcMap[T]['payload'],
 ): Promise<RpcMap[T]['result']> {
+  const runtime = (browser as typeof browser | undefined)?.runtime as
+    | { sendMessage?: (message: unknown) => Promise<unknown> }
+    | undefined;
+
+  if (!runtime?.sendMessage) {
+    throw new RpcError(
+      'context_invalidated',
+      'A extensão foi atualizada ou recarregada. Recarregue a página do SEI e tente novamente.',
+    );
+  }
+
   let response: RpcResponse<RpcMap[T]['result']> | undefined;
   try {
-    response = (await browser.runtime.sendMessage({
+    response = (await runtime.sendMessage({
       rpc: type,
       payload,
     })) as RpcResponse<RpcMap[T]['result']> | undefined;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Falha de comunicação com a extensão.';
-    throw new RpcError('background_unreachable', message);
+    const invalidated = /Extension context invalidated|message port closed|Receiving end does not exist/i.test(
+      message,
+    );
+    throw new RpcError(
+      invalidated ? 'context_invalidated' : 'background_unreachable',
+      invalidated
+        ? 'A extensão foi atualizada ou recarregada. Recarregue a página do SEI e tente novamente.'
+        : message,
+    );
   }
 
   if (!response) throw new RpcError('empty_response', 'A extensão não respondeu.');

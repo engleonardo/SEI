@@ -44,7 +44,7 @@ Antes de concluir qualquer mudança, rode `npm run verify`. Para mudanças de UI
 - Não use `alert`, `confirm` ou `prompt` nativos; use `Modal`/`ConfirmDialog` e toasts.
 - Mantenha textos de interface em português (pt-BR), com tom direto.
 - Todo acesso ao Trello passa pelo background; content script não faz `fetch` direto.
-- Preserve o marcador `SEI <processo>` para compatibilidade com o projeto original.
+- Preserve o marcador `SEI <processo>` para interoperabilidade com o projeto que inspirou este trabalho.
 - Não logue tokens nem URLs completas da API.
 - Novas permissões exigem justificativa na documentação de publicação e revisão do manifest.
 - Componentes e funções devem ter uma responsabilidade clara; prefira arquivos focados.

@@ -44,6 +44,7 @@ export interface DashboardFiltersProps {
   onClear: () => void;
   onMarkSeen: () => void;
   onExport: () => void;
+  showSearch?: boolean;
 }
 
 export function DashboardFilters({
@@ -59,6 +60,7 @@ export function DashboardFilters({
   onClear,
   onMarkSeen,
   onExport,
+  showSearch = true,
 }: DashboardFiltersProps) {
   const active = activeFilterCount(filters);
   const lastVisitLabel = lastVisit
@@ -82,29 +84,31 @@ export function DashboardFilters({
 
   return (
     <section className="sdo-filters">
-      <div className="sdo-filters__top">
-        <div className="sdo-search">
-          <Icon name="search" size={16} />
-          <input
-            id="sdo-search"
-            className="sdo-search__input"
-            value={filters.search}
-            onChange={(event) => onChange({ search: event.target.value })}
-            placeholder="Buscar cartão, processo, tipo, etiqueta, quadro ou lista…"
-            aria-label="Buscar cartão, processo, tipo, etiqueta, quadro ou lista"
-            title="Atalho: / ou Ctrl+K"
-          />
-          {filters.search && (
-            <button
-              type="button"
-              className="sdo-search__clear"
-              onClick={() => onChange({ search: '' })}
-              aria-label="Limpar busca"
-            >
-              <Icon name="close" size={14} />
-            </button>
-          )}
-        </div>
+      <div className={`sdo-filters__top${showSearch ? '' : ' sdo-filters__top--actions-only'}`}>
+        {showSearch && (
+          <div className="sdo-search">
+            <Icon name="search" size={16} />
+            <input
+              id="sdo-search"
+              className="sdo-search__input"
+              value={filters.search}
+              onChange={(event) => onChange({ search: event.target.value })}
+              placeholder="Buscar cartão, processo, tipo, etiqueta, quadro ou lista…"
+              aria-label="Buscar cartão, processo, tipo, etiqueta, quadro ou lista"
+              title="Atalho: / ou Ctrl+K"
+            />
+            {filters.search && (
+              <button
+                type="button"
+                className="sdo-search__clear"
+                onClick={() => onChange({ search: '' })}
+                aria-label="Limpar busca"
+              >
+                <Icon name="close" size={14} />
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="sdo-filters__actions">
           <button type="button" className="sfo-btn sfo-btn--sm" onClick={onExport}>
@@ -319,7 +323,7 @@ export function DashboardFilters({
           <Icon name="clock" size={13} />
           Última visita: {lastVisitLabel ?? 'agora'}
           <button type="button" className="sdo-link-btn" onClick={onMarkSeen}>
-            Marcar novidades como vistas
+            Marcar atualizações como vistas
           </button>
         </span>
       </div>

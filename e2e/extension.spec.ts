@@ -77,6 +77,7 @@ test('extensão carrega, injeta no SEI e abre opções/dashboard', async () => {
     const options = await context.newPage();
     await options.goto(`chrome-extension://${extensionId}/options.html`);
     await expect(options.getByRole('heading', { level: 1, name: /^Conexão$/ })).toBeVisible();
+    await expect(options.getByRole('button', { name: /Dashboard/ })).toBeVisible();
     const optionsLogo = options.locator('img[src*="icon-128.png"]').first();
     await expect(optionsLogo).toBeVisible();
     expect(await optionsLogo.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
@@ -86,6 +87,7 @@ test('extensão carrega, injeta no SEI e abre opções/dashboard', async () => {
     await expect(dashboard.getByRole('heading', { name: /Painel SEI Flow/ })).toBeVisible();
     await expect(dashboard.getByText('Gestão eficiente de processos, prazos, etiquetas e cartões.')).toBeVisible();
     await expect(dashboard.getByText('Desenvolvido por Engenheiro Leonardo Almeida de Oliveira')).toBeVisible();
+    await dashboard.getByRole('button', { name: /^Filtros/ }).click();
     await expect(dashboard.getByText('Etiquetas', { exact: true })).toBeVisible();
   } finally {
     await context.close();

@@ -177,6 +177,7 @@ test('lista de processos mostra o cartão vinculado e o botão de ações', asyn
   await expect(page.getByText('+ Cartão')).toHaveCount(0);
   await expect(page.locator('.sf-toolbar__brand img').first()).toBeVisible();
   await expect(page.locator('.sf-toolbar__meta')).toHaveCount(0);
+  await expect(page.getByText('(leonardo.oliveira.15)')).toBeVisible();
   await expect(page.locator('.sf-detail-strip')).toHaveCount(1);
   const centered = await page.locator('.sf-card--compact').first().evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -187,10 +188,33 @@ test('lista de processos mostra o cartão vinculado e o botão de ações', asyn
   expect(centered).toBe(true);
 });
 
-test('processo aberto mostra o painel completo', async ({ page }) => {
-  await openFixture(page, 'sei-content-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_visualizar');
+test('quadro/lista abre seletor inline, sem popup', async ({ page }) => {
+  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
 
-  await expect(page.getByText('SEI Flow').first()).toBeVisible();
+  await page.getByTitle('Mover cartão').first().click();
+  await expect(page.getByText('Mover cartão').first()).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByLabel('Quadro', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Lista', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+});
+
+test('edição de descrição abre uma área ampla', async ({ page }) => {
+  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
+
+  await page.getByText('Descrição do cartão').click();
+  const textarea = page.getByLabel('Descrição do cartão');
+  await expect(textarea).toBeVisible();
+  expect(await textarea.evaluate((element) => (element as HTMLTextAreaElement).clientHeight)).toBeGreaterThan(
+    120,
+  );
+});
+
+test('processo aberto mostra o painel completo', async ({ page }) => {
+  await openFixture(page, 'sei-content-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_trabalhar');
+
+  await expect(page.getByText('SEI Flow')).toHaveCount(0);
+  await expect(page.getByText('1 cartão')).toHaveCount(0);
   await expect(page.getByText('Cartão vinculado')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Novo cartão' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Vincular cartões' })).toBeVisible();

@@ -14,10 +14,16 @@ export function detectPageKind(doc: Document = document, url?: string): SeiPageK
   const href = url ?? doc.location?.href ?? '';
   const action = actionFromUrl(href);
 
-  if (action === 'procedimento_controlar' || action === 'procedimento_trabalhar') return 'process-list';
+  if (action === 'procedimento_controlar') return 'process-list';
 
-  if (action === 'procedimento_visualizar' || action === 'arvore_visualizar') {
-    return findProcessNumber(doc) ? 'process-content' : 'unknown';
+  if (
+    action === 'procedimento_trabalhar' ||
+    action === 'procedimento_visualizar' ||
+    action === 'arvore_visualizar'
+  ) {
+    if (findProcessNumber(doc)) return 'process-content';
+    if (findProcessRows(doc).length > 0) return 'process-list';
+    return 'unknown';
   }
 
   if (findProcessRows(doc).length > 0) return 'process-list';

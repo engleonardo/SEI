@@ -68,8 +68,8 @@ async function refreshBadge(): Promise<void> {
     await browser.action.setTitle({
       title:
         unread > 0
-          ? `SEI Flow — ${unread} processo(s) com novidade no SEI`
-          : 'SEI Flow — gestão eficiente',
+          ? `SEI Flow - ${unread} processo(s) atualizado(s) no SEI`
+          : 'SEI Flow - gestão eficiente',
     });
   } catch {
     await browser.action.setBadgeText({ text: '' }).catch(() => undefined);
@@ -99,7 +99,7 @@ async function notifyDue(): Promise<void> {
     await browser.notifications.create(NOTIFICATION_ID, {
       type: 'basic',
       iconUrl: browser.runtime.getURL('/icon-128.png'),
-      title: 'SEI Flow — prazos',
+      title: 'SEI Flow - prazos',
       message: `${summary.overdue} atrasado(s) e ${summary.dueToday} vencendo hoje.`,
       priority: 1,
     });
