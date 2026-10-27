@@ -19,6 +19,7 @@ import {
   DEFAULT_FILTERS,
   DUE_FILTER_OPTIONS,
   PROCESS_UPDATE_OPTIONS,
+  SORT_GROUPS,
   SORT_OPTIONS,
   activeFilterCount,
   cardsToCsv,
@@ -175,6 +176,9 @@ function Dashboard() {
       if (patch.boardId !== undefined && patch.boardId !== previous.boardId) {
         next = { ...next, listId: '' };
       }
+      if (patch.sort !== undefined) {
+        next = { ...next, group: SORT_GROUPS[patch.sort] };
+      }
       saveFilters(next);
       return next;
     });
@@ -276,8 +280,8 @@ function Dashboard() {
   const listTotal = listCounts.reduce((sum, item) => sum + item.count, 0);
 
   const groups = useMemo(
-    () => groupCards(visibleCards, filters.group, filters.sort, catalog),
-    [visibleCards, filters.group, filters.sort, catalog],
+    () => groupCards(visibleCards, SORT_GROUPS[filters.sort], filters.sort, catalog),
+    [visibleCards, filters.sort, catalog],
   );
 
   const exportCsv = () => {

@@ -146,7 +146,7 @@ O painel abre pelo ícone da extensão e pelo menu **Dashboard** das opções.
 - Busca por cartão, processo, tipo, etiqueta, quadro, lista e também pela descrição do cartão.
 - Filtros recolhíveis por quadro, lista, tipo de processo, etiqueta, prazo, atualização no Trello e atualização no SEI.
 - Chips de lista com contagem por lista do quadro selecionado; o quadro padrão já vem escolhido.
-- Agrupamento por prazo, quadro, lista, tipo de processo, etiqueta ou lista única.
+- Ordenação sempre visível: prazo, atualização, nome (A-Z), lista, quadro e lista, etiqueta ou tipo de processo. A ordenação também define o agrupamento da tela.
 - Edição direto no cartão, sem modal: clique no título, na descrição, nas etiquetas, no prazo, no checklist ou no destino.
 - Botões **Concluir/Reabrir**, **Etiquetas**, **Checklist**, **Prazo** e **Mover** no rodapé do cartão, alinhados à esquerda.
 - Links dos processos abrem a página correspondente no SEI.

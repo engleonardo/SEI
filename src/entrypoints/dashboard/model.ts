@@ -79,6 +79,17 @@ export const GROUP_OPTIONS: Array<{ value: GroupMode; label: string }> = [
   { value: 'none', label: 'Lista única' },
 ];
 
+/** Cada ordenação define também como os cartões são agrupados na tela. */
+export const SORT_GROUPS: Record<SortMode, GroupMode> = {
+  due: 'due',
+  activity: 'none',
+  name: 'none',
+  list: 'list',
+  board: 'board',
+  label: 'label',
+  type: 'type',
+};
+
 export const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
   { value: 'due', label: 'Prazo (mais próximo primeiro)' },
   { value: 'activity', label: 'Atualização mais recente' },
@@ -366,7 +377,6 @@ export function activeFilterCount(filters: DashboardFilters): number {
   if (filters.due !== 'any') count += 1;
   if (filters.activity !== 'any') count += 1;
   if (filters.processUpdate !== 'any') count += 1;
-  if (filters.group !== 'due') count += 1;
   if (filters.sort !== 'due') count += 1;
   return count;
 }
@@ -378,15 +388,17 @@ export function loadFilters(): DashboardFilters {
     const parsed = JSON.parse(raw) as Partial<DashboardFilters>;
     const sortValues: SortMode[] = ['due', 'activity', 'name', 'list', 'board', 'label', 'type'];
     const groupValues: GroupMode[] = ['due', 'board', 'list', 'type', 'label', 'none'];
+    const sort = sortValues.includes(parsed.sort as SortMode)
+      ? (parsed.sort as SortMode)
+      : DEFAULT_FILTERS.sort;
+    const group = groupValues.includes(parsed.group as GroupMode)
+      ? (parsed.group as GroupMode)
+      : SORT_GROUPS[sort];
     return {
       ...DEFAULT_FILTERS,
       ...parsed,
-      sort: sortValues.includes(parsed.sort as SortMode)
-        ? (parsed.sort as SortMode)
-        : DEFAULT_FILTERS.sort,
-      group: groupValues.includes(parsed.group as GroupMode)
-        ? (parsed.group as GroupMode)
-        : DEFAULT_FILTERS.group,
+      sort,
+      group,
       labelIds: Array.isArray(parsed.labelIds)
         ? parsed.labelIds.filter((value): value is string => typeof value === 'string')
         : [],
