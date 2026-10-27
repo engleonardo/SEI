@@ -9,5 +9,10 @@ test-results/
 *.log
 .env
 .env.*
+key.json
+*.key
+*.pem
+*.p12
+client_secret*.json
 .DS_Store
 Thumbs.db
