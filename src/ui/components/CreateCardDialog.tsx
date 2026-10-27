@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { browser } from 'wxt/browser';
 import type { Settings, TrelloCard } from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
+import { openOptionsPage } from '../../core/messaging/actions';
 import { Icon } from '../icons';
 import { showToast } from '../toast';
 import { Modal } from './Modal';
@@ -91,7 +91,7 @@ export function CreateCardDialog({
             <button
               type="button"
               className="sf-btn sf-btn--primary"
-              onClick={() => void browser.runtime.openOptionsPage()}
+              onClick={() => void openOptionsPage()}
             >
               <Icon name="settings" size={14} />
               Abrir opções
@@ -114,7 +114,7 @@ export function CreateCardDialog({
             <button
               type="button"
               className="sf-btn sf-btn--sm"
-              onClick={() => void browser.runtime.openOptionsPage()}
+              onClick={() => void openOptionsPage()}
             >
               Abrir opções
             </button>

@@ -11,7 +11,7 @@ export default defineConfig({
       'Vincule cartões do Trello a processos do SEI, crie cartões e edite etiquetas, prazos e checklists sem sair do SEI.',
     author: 'Leonardo Oliveira',
     homepage_url: 'https://github.com/engleonardo/SEI',
-    permissions: ['storage', 'scripting', 'activeTab'],
+    permissions: ['storage', 'scripting', 'activeTab', 'alarms', 'notifications'],
     optional_host_permissions: ['*://*/*'],
     host_permissions: ['https://api.trello.com/*'],
     web_accessible_resources: [

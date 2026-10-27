@@ -12,12 +12,31 @@ export interface ListState {
   lastUpdated: number | null;
 }
 
+const FILTERS_STORAGE_KEY = 'sei-flow:filters:v1';
+
+function loadFilters(): ListFilters {
+  try {
+    const raw = window.sessionStorage.getItem(FILTERS_STORAGE_KEY);
+    if (!raw) return { ...EMPTY_FILTERS };
+    const parsed = JSON.parse(raw) as Partial<ListFilters>;
+    return {
+      ...EMPTY_FILTERS,
+      ...parsed,
+      labelIds: Array.isArray(parsed.labelIds) ? parsed.labelIds : [],
+      listIds: Array.isArray(parsed.listIds) ? parsed.listIds : [],
+      boardId: typeof parsed.boardId === 'string' ? parsed.boardId : '',
+    };
+  } catch {
+    return { ...EMPTY_FILTERS };
+  }
+}
+
 export const listStore = new Store<ListState>({
   loading: false,
   error: null,
   cards: [],
   settings: null,
-  filters: { ...EMPTY_FILTERS },
+  filters: loadFilters(),
   lastUpdated: null,
 });
 
@@ -60,10 +79,15 @@ export function cardsForProcess(processNumber: string): TrelloCard[] {
 }
 
 export function setFilters(patch: Partial<ListFilters>): void {
-  listStore.set((previous) => ({
-    ...previous,
-    filters: { ...previous.filters, ...patch },
-  }));
+  listStore.set((previous) => {
+    const filters = { ...previous.filters, ...patch };
+    try {
+      window.sessionStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
+    } catch {
+      // sessionStorage pode estar indisponível; o filtro continua em memória
+    }
+    return { ...previous, filters };
+  });
 }
 
 export function updateCard(updated: TrelloCard): void {

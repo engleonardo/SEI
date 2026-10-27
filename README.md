@@ -40,13 +40,14 @@ A extensão original SEI+Trello só sabia **criar** cartões a partir do SEI. O 
   <img src="docs/screenshots/popup.png" width="30%" alt="Popup de ativação" />
 </p>
 
-## Funcionalidades da Fase 1
+## Funcionalidades
 
 | Recurso | SEI Flow |
 | --- | --- |
 | Criar cartão a partir do processo | ✅ |
 | Vincular cartão existente do Trello | ✅ |
 | Vincular vários cartões de uma vez | ✅ |
+| Vincular cartões a vários processos em lote | ✅ |
 | Vários cartões por processo | ✅ |
 | Editar nome e descrição | ✅ |
 | Criar, aplicar e remover etiquetas | ✅ |
@@ -55,11 +56,12 @@ A extensão original SEI+Trello só sabia **criar** cartões a partir do SEI. O 
 | Mover cartão entre quadro/lista | ✅ |
 | Desvincular sem excluir do Trello | ✅ |
 | Excluir cartão do Trello | ✅ |
-| Filtros na lista de processos | ✅ |
-| Tema claro/escuro | ✅ |
+| Filtros por quadro, lista, etiqueta, prazo e cartão | ✅ |
+| Tema claro/escuro (claro padrão) | ✅ |
 | Cache e retry/backoff em 429/5xx | ✅ |
-| Dashboard de prazos e notificações | 🔜 Fase 2 |
-| Ações em lote entre processos | 🔜 Fase 3 |
+| Dashboard de prazos | ✅ |
+| Notificações de prazo e badge de atrasados | ✅ |
+| Barra fixa, atalho de busca e filtros persistidos | ✅ |
 
 ## Instalação (desenvolvimento)
 
@@ -189,13 +191,14 @@ Os arquivos ficam em `.output/`.
 
 ## Roadmap
 
-- **Fase 2**: dashboard de prazos, notificações, badge e visão por quadro/lista.
-- **Fase 3**: ações em lote entre processos, modelos de cartão e importação/exportação CSV.
-- **Fase 4**: i18n (pt-BR/en) e melhorias contínuas de acessibilidade.
+- **Fase 4**: i18n (pt-BR/en), importação/exportação CSV e melhorias contínuas de acessibilidade.
+- **Melhorias futuras**: modelos de cartão, regras de automação por etiqueta e suporte a múltiplas contas do Trello.
 
-## Créditos
+## Créditos e atribuição
 
-Este projeto é inspirado e compatível com o [SEI+Trello](https://github.com/luiscrjunior/sei-trello), criado por **Luís Carlos Reischak Júnior**, e com o fork comunitário [awlmdnitce/sei-trello](https://github.com/awlmdnitce/sei-trello). O marcador `SEI <processo>` foi mantido para interoperabilidade. Veja [NOTICE](NOTICE).
+Este projeto é inspirado e compatível com o [SEI+Trello](https://github.com/luiscrjunior/sei-trello), criado por **Luís Carlos Reischak Júnior**, e com o fork comunitário [awlmdnitce/sei-trello](https://github.com/awlmdnitce/sei-trello). O marcador `SEI <processo>` foi mantido para interoperabilidade. Veja [NOTICE](NOTICE) e [CREDITS.md](CREDITS.md).
+
+O SEI Flow é de **uso livre** (MIT), mas quem copiar, modificar ou redistribuir deve **manter os créditos** ao autor original deste projeto, **Leonardo Oliveira**, e um link para https://github.com/engleonardo/SEI, além dos créditos do projeto que o inspirou. Os créditos não podem ser removidos de trabalhos derivados.
 
 ## Licença
 

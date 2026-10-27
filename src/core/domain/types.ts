@@ -105,6 +105,7 @@ export interface Settings {
   allSites: boolean;
   theme: ThemePreference;
   compact: boolean;
+  notificationsEnabled: boolean;
   autoRefreshMinutes: number;
 }
 

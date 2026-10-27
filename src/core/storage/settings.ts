@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS: Settings = {
   allSites: false,
   theme: 'light',
   compact: true,
+  notificationsEnabled: true,
   autoRefreshMinutes: 0,
 };
 
@@ -22,6 +23,8 @@ function sanitize(value: Partial<Settings> | null | undefined): Settings {
     ...DEFAULT_SETTINGS,
     ...(value ?? {}),
     theme: value?.theme === 'dark' ? 'dark' : 'light',
+    notificationsEnabled:
+      typeof value?.notificationsEnabled === 'boolean' ? value.notificationsEnabled : true,
     activatedOrigins: Array.isArray(value?.activatedOrigins)
       ? [...new Set(value.activatedOrigins.filter((origin) => typeof origin === 'string' && origin.length > 0))]
       : [],

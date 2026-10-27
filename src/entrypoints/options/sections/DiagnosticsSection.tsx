@@ -98,6 +98,22 @@ export function DiagnosticsSection({
       <SectionCard title="Links úteis" subtitle="Documentação, suporte e privacidade." icon="external">
         <div className="sfo-list">
           <div className="sfo-list-item">
+            <Icon name="board" size={15} />
+            <div className="sfo-list-item__main">
+              <div className="sfo-list-item__title">Dashboard de prazos</div>
+              <button
+                type="button"
+                className="sfo-btn sfo-btn--sm"
+                style={{ marginTop: 6 }}
+                onClick={() =>
+                  void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') })
+                }
+              >
+                Abrir dashboard
+              </button>
+            </div>
+          </div>
+          <div className="sfo-list-item">
             <Icon name="external" size={15} />
             <div className="sfo-list-item__main">
               <div className="sfo-list-item__title">Repositório no GitHub</div>

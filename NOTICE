@@ -16,3 +16,7 @@ O formato de vínculo `SEI <número-do-processo>` na descrição do cartão foi 
 O SEI Flow não mantém servidor próprio e não salva dados de usuários fora do navegador. O uso da extensão é de responsabilidade exclusiva do usuário. O criador não tem ingerência, controle ou responsabilidade sobre informações inseridas, exibidas ou armazenadas no SEI, no Trello ou em qualquer sistema de terceiros.
 
 Trello é uma marca registrada da Atlassian. SEI é um sistema desenvolvido pelo TRF4. Este projeto não é afiliado, endossado ou patrocinado pela Atlassian ou pelo TRF4.
+
+## Atribuição obrigatória
+
+O SEI Flow é de uso livre sob a licença MIT. Cópias, modificações e distribuições devem manter os créditos a **Leonardo Oliveira** e o link para https://github.com/engleonardo/SEI, além dos créditos do projeto que inspirou este trabalho. Veja `CREDITS.md`.

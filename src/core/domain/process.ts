@@ -52,3 +52,11 @@ export function isSameProcess(a: string, b: string): boolean {
 export function sanitizeProcessForQuery(processNumber: string): string {
   return processNumber.replace(/["\\]/g, '');
 }
+
+export function parseProcessNumbers(input: string): string[] {
+  const values = input
+    .split(/[\s,;]+/)
+    .map((value) => normalizeProcessNumber(value))
+    .filter((value): value is string => Boolean(value));
+  return Array.from(new Set(values));
+}

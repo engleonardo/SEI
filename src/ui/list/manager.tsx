@@ -70,6 +70,8 @@ export class ListManager {
   private toolbarRoot: Root | null = null;
   private toolbarHost: HTMLDivElement | null = null;
   private observer: MutationObserver | null = null;
+  private cardObserver: IntersectionObserver | null = null;
+  private keyHandler: ((event: KeyboardEvent) => void) | null = null;
   private unsubscribe: (() => void) | null = null;
   private timer: number | null = null;
   private refreshTimer: number | null = null;
@@ -83,6 +85,35 @@ export class ListManager {
     this.unsubscribe = listStore.subscribe(() => this.scheduleSync());
     this.observer = new MutationObserver(() => this.scheduleReconcile());
     this.observer.observe(document.body, { childList: true, subtree: true });
+
+    if (typeof IntersectionObserver !== 'undefined') {
+      this.cardObserver = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) this.mountCardsForRow(entry.target as HTMLTableRowElement);
+          }
+        },
+        { rootMargin: '300px' },
+      );
+    }
+
+    this.keyHandler = (event: KeyboardEvent) => {
+      const target = event.composedPath()[0];
+      const editable =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable);
+      if (editable) return;
+      const isShortcut =
+        event.key === '/' || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k');
+      if (!isShortcut) return;
+      const input = this.toolbarHost?.shadowRoot?.querySelector<HTMLInputElement>('input');
+      if (!input) return;
+      event.preventDefault();
+      input.focus();
+    };
+    document.addEventListener('keydown', this.keyHandler);
 
     this.reconcile();
     void loadList();
@@ -100,6 +131,8 @@ export class ListManager {
     this.destroyed = true;
 
     this.observer?.disconnect();
+    this.cardObserver?.disconnect();
+    if (this.keyHandler) document.removeEventListener('keydown', this.keyHandler);
     this.unsubscribe?.();
     if (this.timer) window.clearTimeout(this.timer);
     if (this.refreshTimer) window.clearInterval(this.refreshTimer);
@@ -137,6 +170,9 @@ export class ListManager {
     const { host, container } = createShadowHost();
     host.style.display = 'block';
     host.style.margin = '4px 0';
+    host.style.position = 'sticky';
+    host.style.top = '0';
+    host.style.zIndex = '50';
 
     const commandBar = findCommandBar(document);
     const table = findProcessTable(document);
@@ -277,22 +313,42 @@ export class ListManager {
       const rowVisible = window.getComputedStyle(entry.row).display !== 'none';
       const shouldShowCards = visible && rowVisible && cards.length > 0;
 
-      if (cards.length > 0 && !entry.cardRoot) {
-        entry.cardRoot = mountReact(
-          entry.cardContainer,
-          <ProcessRowCards
-            processNumber={entry.processNumber}
-            compact
-            highlight={highlight}
-          />,
-        );
-      } else if (cards.length === 0 && entry.cardRoot) {
+      entry.cardRow.style.display = shouldShowCards ? '' : 'none';
+
+      if (cards.length > 0) {
+        if (!entry.cardRoot && shouldShowCards) {
+          const rect = entry.cardRow.getBoundingClientRect();
+          const nearViewport = rect.top < window.innerHeight + 300 && rect.bottom > -300;
+          if (!this.cardObserver || nearViewport) {
+            this.mountCardsForRow(entry.cardRow);
+          } else {
+            this.cardObserver.observe(entry.cardRow);
+          }
+        }
+      } else if (entry.cardRoot) {
         entry.cardRoot.unmount();
         entry.cardRoot = null;
+        this.cardObserver?.unobserve(entry.cardRow);
       }
-
-      entry.cardRow.style.display = shouldShowCards ? '' : 'none';
     }
+  }
+
+  private mountCardsForRow(cardRow: HTMLTableRowElement): void {
+    const entry = Array.from(this.entries.values()).find((item) => item.cardRow === cardRow);
+    if (!entry || entry.cardRoot || cardRow.style.display === 'none') return;
+    const cards = listStore.get().cards.filter((card) =>
+      card.links.includes(entry.processNumber),
+    );
+    if (cards.length === 0) return;
+    this.cardObserver?.unobserve(cardRow);
+    entry.cardRoot = mountReact(
+      entry.cardContainer,
+      <ProcessRowCards
+        processNumber={entry.processNumber}
+        compact
+        highlight={entry.highlight}
+      />,
+    );
   }
 
   private applyFilter(row: HTMLTableRowElement, visible: boolean): void {

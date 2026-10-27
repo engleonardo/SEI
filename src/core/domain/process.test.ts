@@ -3,6 +3,7 @@ import {
   extractProcessNumber,
   isSameProcess,
   normalizeProcessNumber,
+  parseProcessNumbers,
   sanitizeProcessForQuery,
 } from './process';
 
@@ -33,5 +34,18 @@ describe('process number', () => {
   it('compara e sanitiza para busca', () => {
     expect(isSameProcess(' 123 ', '123')).toBe(true);
     expect(sanitizeProcessForQuery('123"\\abc')).toBe('123abc');
+  });
+
+  it('extrai vários processos de um texto em lote', () => {
+    expect(
+      parseProcessNumbers(
+        '11111.111111/2024-60, 22222.222222/2025-12\n33333.333333/2026-01; inválido',
+      ),
+    ).toEqual([
+      '11111.111111/2024-60',
+      '22222.222222/2025-12',
+      '33333.333333/2026-01',
+    ]);
+    expect(parseProcessNumbers('abc')).toEqual([]);
   });
 });

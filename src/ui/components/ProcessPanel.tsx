@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { browser } from 'wxt/browser';
 import type { TrelloCard } from '../../core/domain/types';
 import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
+import { openOptionsPage } from '../../core/messaging/actions';
 import { Icon } from '../icons';
 import { CardStack } from '../components/CardStack';
 
@@ -67,7 +67,7 @@ export function ProcessPanel({ processNumber }: { processNumber: string }) {
             <button
               type="button"
               className="sf-btn sf-btn--sm"
-              onClick={() => void browser.runtime.openOptionsPage()}
+              onClick={() => void openOptionsPage()}
             >
               <Icon name="settings" size={13} />
               Abrir opções

@@ -276,7 +276,7 @@
 }
 
 .sf-card--compact {
-  max-width: 780px;
+  max-width: 680px;
   margin-top: 0;
   padding: 6px 9px;
   border-left-width: 3px;
@@ -331,11 +331,11 @@
 .sf-card--compact .sf-card__desc {
   margin-top: 4px;
   font-size: 12px;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
 }
 
 .sf-card--compact:hover .sf-card__desc {
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 4;
 }
 
 .sf-card--compact .sf-card__meta {
@@ -826,12 +826,12 @@
 }
 
 .sf-toolbar__brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--sf-text);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+  flex: 0 0 auto;
 }
 
 .sf-toolbar__mark {
@@ -839,8 +839,13 @@
 }
 
 .sf-toolbar__meta {
-  font-size: 12px;
+  max-width: 120px;
+  font-size: 10px;
+  line-height: 1.15;
   color: var(--sf-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sf-toolbar__search {

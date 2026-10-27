@@ -343,6 +343,10 @@ export function CardItem({
               Checklist
             </button>
           )}
+          <span className="sf-card__meta-item" title="Processo vinculado">
+            <Icon name="link" size={11} />
+            {processNumber}
+          </span>
           <button
             type="button"
             className="sf-card__meta-item"

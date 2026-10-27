@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { browser } from 'wxt/browser';
 import type { TrelloLabel } from '../../core/domain/types';
 import { BrandMark } from '../BrandMark';
 import { Icon } from '../icons';
 import { useStore } from '../store';
 import { activeFilterCount, type DueFilter } from '../filters';
+import { openDashboard, openOptionsPage } from '../../core/messaging/actions';
 import { FilterDialog, type FilterOption, type ListOption } from './FilterDialog';
+import { BulkLinkDialog } from '../components/BulkLinkDialog';
 import { listStore, loadList, setFilters } from './store';
 
 const DUE_LABELS: Record<DueFilter, string> = {
@@ -19,6 +20,7 @@ const DUE_LABELS: Record<DueFilter, string> = {
 export function ListToolbar() {
   const state = useStore(listStore);
   const [showFilters, setShowFilters] = useState(false);
+  const [showBulk, setShowBulk] = useState(false);
 
   const labels = useMemo(() => {
     const map = new Map<string, TrelloLabel>();
@@ -91,16 +93,16 @@ export function ListToolbar() {
 
   return (
     <div className="sf-toolbar">
-      <span className="sf-toolbar__brand">
-        <BrandMark size={22} className="sf-toolbar__mark" />
-        SEI Flow
-      </span>
-
-      <span className="sf-toolbar__meta">
-        {state.loading
-          ? 'sincronizando…'
-          : `${state.cards.length} cartão(ões)${updated ? ` · ${updated}` : ''}`}
-      </span>
+      <div className="sf-toolbar__brand">
+        <BrandMark size={26} className="sf-toolbar__mark" />
+        <span className="sf-toolbar__meta">
+          {state.loading
+            ? 'sincronizando…'
+            : `${state.cards.length} ${state.cards.length === 1 ? 'cartão' : 'cartões'}${
+                updated ? ` · ${updated}` : ''
+              }`}
+        </span>
+      </div>
 
       <div className="sf-toolbar__search">
         <Icon name="search" size={13} className="sf-toolbar__search-icon" />
@@ -110,6 +112,7 @@ export function ListToolbar() {
           onChange={(event) => setFilters({ search: event.target.value })}
           placeholder="Buscar processo ou cartão…"
           aria-label="Buscar processo ou cartão"
+          title="Buscar processo ou cartão (atalho: / ou Ctrl+K)"
         />
       </div>
 
@@ -123,6 +126,18 @@ export function ListToolbar() {
         Filtros
         {active > 0 && <span className="sf-filter-count">{active}</span>}
       </button>
+
+      {active > 0 && (
+        <button
+          type="button"
+          className="sf-icon-btn"
+          onClick={clearFilters}
+          aria-label="Limpar filtros"
+          title="Limpar filtros"
+        >
+          <Icon name="close" size={15} />
+        </button>
+      )}
 
       <button
         type="button"
@@ -138,7 +153,27 @@ export function ListToolbar() {
       <button
         type="button"
         className="sf-icon-btn"
-        onClick={() => void browser.runtime.openOptionsPage()}
+        onClick={() => void openDashboard()}
+        aria-label="Abrir dashboard de prazos"
+        title="Abrir dashboard de prazos"
+      >
+        <Icon name="board" size={15} />
+      </button>
+
+      <button
+        type="button"
+        className="sf-icon-btn"
+        onClick={() => setShowBulk(true)}
+        aria-label="Vincular cartões a vários processos"
+        title="Vincular cartões a vários processos"
+      >
+        <Icon name="link" size={15} />
+      </button>
+
+      <button
+        type="button"
+        className="sf-icon-btn"
+        onClick={() => void openOptionsPage()}
         aria-label="Abrir opções"
         title="Abrir opções"
       >
@@ -182,6 +217,13 @@ export function ListToolbar() {
           lists={lists}
           onChange={setFilters}
           onClose={() => setShowFilters(false)}
+        />
+      )}
+
+      {showBulk && (
+        <BulkLinkDialog
+          onClose={() => setShowBulk(false)}
+          onDone={() => void loadList()}
         />
       )}
     </div>
