@@ -10,8 +10,8 @@ Extensão para **Chrome, Firefox e Edge** que integra o **Trello** ao **SEI (Sis
 
 ## Baixar e instalar
 
-- **Chrome / Edge:** [sei-flow-1.0.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.0.0/sei-flow-1.0.0-chrome.zip)
-- **Firefox:** [sei-flow-1.0.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.0.0/sei-flow-1.0.0-firefox.zip)
+- **Chrome / Edge:** [sei-flow-1.1.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.1.0/sei-flow-1.1.0-chrome.zip)
+- **Firefox:** [sei-flow-1.1.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.1.0/sei-flow-1.1.0-firefox.zip)
 - **Todas as versões:** [Releases](https://github.com/engleonardo/SEI/releases)
 
 Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` → **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.
@@ -25,7 +25,7 @@ A extensão original SEI+Trello só sabia **criar** cartões a partir do SEI. O 
 - **Edição completa no SEI**: nome, descrição, etiquetas, checklist, prazo, quadro e lista.
 - **Vinculação em lote**: selecione vários cartões do Trello e vincule ao processo de uma vez.
 - **Compatibilidade ampla**: funciona em qualquer domínio, pasta (`/sei/`, `/sip/`, `/web/sei/`) e versão do SEI (3.x, 4.x e 5.x), com seletores resilientes e fallbacks por texto.
-- **Ativação por site**: nada de permissão em todos os sites por padrão. Você autoriza apenas as instalações do SEI que usa — ou opta por todos, se preferir.
+- **Ativação por site**: nada de permissão em todos os sites por padrão. Você autoriza apenas as instalações do SEI que usa - ou opta por todos, se preferir.
 - **Interface isolada**: React + Shadow DOM, sem quebrar o CSS do SEI e sem conflito com o tema.
 - **Cache local**: menos chamadas à API do Trello e carregamento mais rápido.
 - **Acessibilidade**: ações visíveis, navegação por teclado, foco gerenciado e contraste.
@@ -61,13 +61,16 @@ A extensão original SEI+Trello só sabia **criar** cartões a partir do SEI. O 
 | Criar, aplicar e remover etiquetas | ✅ |
 | Editar checklist (itens, concluir, remover) | ✅ |
 | Definir/remover prazo e conclusão | ✅ |
-| Mover cartão entre quadro/lista | ✅ |
+| Mover cartão entre quadro/lista com seletor inline (sem popup) | ✅ |
+| Usuário atribuído do SEI no cabeçalho do processo | ✅ |
 | Desvincular sem excluir do Trello | ✅ |
 | Excluir cartão do Trello | ✅ |
 | Filtros por quadro, lista, etiqueta, prazo e cartão | ✅ |
 | Tema claro/escuro (claro padrão) | ✅ |
 | Cache e retry/backoff em 429/5xx | ✅ |
 | Painel SEI Flow como página inicial da extensão | ✅ |
+| Painel moderno com métricas resumidas e filtros recolhíveis | ✅ |
+| Botão Dashboard no menu de opções | ✅ |
 | Filtros do painel por etiqueta, tipo de processo, prazo, quadro, lista e atualização | ✅ |
 | Edição completa dos cartões pelo painel (nome, descrição, etiquetas, checklist, prazo e destino) | ✅ |
 | Links dos processos abrem a página correspondente no SEI | ✅ |
@@ -215,4 +218,4 @@ O SEI Flow é de **uso livre** (MIT), mas quem copiar, modificar ou redistribuir
 
 ## Licença
 
-MIT — veja [LICENSE](LICENSE).
+MIT - veja [LICENSE](LICENSE).

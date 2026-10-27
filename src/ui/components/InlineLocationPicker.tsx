@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
-import type { TrelloBoard, TrelloCard, TrelloList } from '../../../core/domain/types';
-import { callRpc, errorMessage } from '../../../core/messaging/client';
-import { Icon } from '../../icons';
-import { showToast } from '../../toast';
-import { ErrorState, Spinner } from '../common';
-import { Modal } from '../Modal';
+import type { TrelloBoard, TrelloCard, TrelloList } from '../../core/domain/types';
+import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
+import { Icon } from '../icons';
+import { showToast } from '../toast';
+import { Spinner } from './common';
 
-export function LocationDialog({
+export function InlineLocationPicker({
   card,
   onClose,
   onChanged,
@@ -22,6 +21,7 @@ export function LocationDialog({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [invalidated, setInvalidated] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -33,7 +33,9 @@ export function LocationDialog({
         if (nextBoard) setBoardId(nextBoard.id);
       })
       .catch((cause) => {
-        if (active) setError(errorMessage(cause));
+        if (!active) return;
+        setError(errorMessage(cause));
+        setInvalidated(errorCode(cause) === 'context_invalidated');
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -55,7 +57,9 @@ export function LocationDialog({
         );
       })
       .catch((cause) => {
-        if (active) setError(errorMessage(cause));
+        if (!active) return;
+        setError(errorMessage(cause));
+        setInvalidated(errorCode(cause) === 'context_invalidated');
       });
     return () => {
       active = false;
@@ -72,12 +76,12 @@ export function LocationDialog({
         patch: { idBoard: boardId, idList: listId },
       });
       onChanged(updated);
-      showToast('Localização do cartão atualizada.', 'success');
+      showToast('Cartão movido.', 'success');
       onClose();
     } catch (cause) {
-      const message = errorMessage(cause);
-      setError(message);
-      showToast(message, 'error');
+      setError(errorMessage(cause));
+      setInvalidated(errorCode(cause) === 'context_invalidated');
+      showToast(errorMessage(cause), 'error');
     } finally {
       setBusy(false);
     }
@@ -86,40 +90,35 @@ export function LocationDialog({
   const changed = boardId !== card.idBoard || listId !== card.idList;
 
   return (
-    <Modal
-      title="Mover cartão"
-      subtitle={card.name}
-      size="sm"
-      onClose={onClose}
-      footer={
-        <>
-          <button type="button" className="sf-btn" onClick={onClose} disabled={busy}>
-            Cancelar
-          </button>
-          <button
-            type="button"
-            className="sf-btn sf-btn--primary"
-            onClick={() => void save()}
-            disabled={busy || !changed || !boardId || !listId}
-          >
-            {busy ? <Spinner /> : <Icon name="arrowRight" size={14} />}
-            Mover
-          </button>
-        </>
-      }
-    >
+    <div className="sf-location-picker">
+      <div className="sf-location-picker__head">
+        <Icon name="board" size={14} />
+        <strong>Mover cartão</strong>
+        <span className="sf-location-picker__current">
+          {card.board?.name ?? 'Quadro'} » {card.list?.name ?? 'Lista'}
+        </span>
+        <button
+          type="button"
+          className="sf-icon-btn"
+          onClick={onClose}
+          aria-label="Fechar seletor de quadro e lista"
+          title="Fechar"
+        >
+          <Icon name="close" size={14} />
+        </button>
+      </div>
+
       {loading ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="sf-location-picker__loading">
           <Spinner />
           <span className="sf-hint">Carregando quadros…</span>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {error && <ErrorState message={error} />}
+        <div className="sf-location-picker__grid">
           <div className="sf-field">
-            <label htmlFor="sf-move-board">Quadro</label>
+            <label htmlFor="sf-location-board">Quadro</label>
             <select
-              id="sf-move-board"
+              id="sf-location-board"
               className="sf-select"
               value={boardId}
               onChange={(event) => {
@@ -136,9 +135,9 @@ export function LocationDialog({
             </select>
           </div>
           <div className="sf-field">
-            <label htmlFor="sf-move-list">Lista</label>
+            <label htmlFor="sf-location-list">Lista</label>
             <select
-              id="sf-move-list"
+              id="sf-location-list"
               className="sf-select"
               value={listId}
               onChange={(event) => setListId(event.target.value)}
@@ -152,11 +151,35 @@ export function LocationDialog({
               ))}
             </select>
           </div>
-          <p className="sf-hint" style={{ margin: 0 }}>
-            Atual: {card.board?.name ?? 'Quadro'} » {card.list?.name ?? 'Lista'}
-          </p>
         </div>
       )}
-    </Modal>
+
+      {error && (
+        <div className="sf-location-picker__error">
+          <Icon name="alert" size={13} />
+          <span>{error}</span>
+          {invalidated && (
+            <button type="button" className="sf-btn sf-btn--sm" onClick={() => window.location.reload()}>
+              Recarregar página
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="sf-location-picker__actions">
+        <button type="button" className="sf-btn sf-btn--sm" onClick={onClose} disabled={busy}>
+          Cancelar
+        </button>
+        <button
+          type="button"
+          className="sf-btn sf-btn--primary sf-btn--sm"
+          onClick={() => void save()}
+          disabled={busy || !changed || !boardId || !listId}
+        >
+          {busy ? <Spinner /> : <Icon name="check" size={13} />}
+          Mover
+        </button>
+      </div>
+    </div>
   );
 }

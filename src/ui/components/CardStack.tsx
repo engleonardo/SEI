@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { TrelloCard } from '../../core/domain/types';
-import { BrandMark } from '../BrandMark';
 import { Icon } from '../icons';
 import { CardItem } from './CardItem';
 import { EmptyState, ErrorState } from './common';
@@ -43,15 +42,7 @@ export function CardStack({
   return (
     <div className="sf-stack">
       {showHeader && (
-        <div className="sf-stack__head">
-          <h3 className="sf-stack__title">
-            <BrandMark size={18} />
-            SEI Flow
-            <span className="sf-stack__count">
-              {loading ? '· carregando' : `· ${cards.length} ${cards.length === 1 ? 'cartão' : 'cartões'}`}
-            </span>
-          </h3>
-          <span className="sf-stack__spacer" />
+        <div className="sf-stack__head sf-stack__head--actions">
           <button
             type="button"
             className="sf-btn sf-btn--sm"

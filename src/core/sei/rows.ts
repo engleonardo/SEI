@@ -54,10 +54,14 @@ export function findCommandBar(doc: Document = document): HTMLElement | null {
 }
 
 export function findProcessContentAnchor(doc: Document = document): HTMLElement | null {
+  // No processo aberto, montamos o painel logo abaixo da barra superior da
+  // página para ele ocupar a largura disponível (em vez de ficar preso na
+  // coluna estreita da árvore).
   return (
-    doc.querySelector<HTMLElement>('#divArvoreAcoes') ??
-    doc.querySelector<HTMLElement>('#divComandos') ??
+    doc.querySelector<HTMLElement>('#divComandosSEI') ??
     doc.querySelector<HTMLElement>('.infraBarraComandos') ??
+    doc.querySelector<HTMLElement>('#divComandos') ??
+    doc.querySelector<HTMLElement>('#divArvoreAcoes') ??
     doc.querySelector<HTMLElement>('#container') ??
     doc.body
   );

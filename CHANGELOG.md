@@ -3,7 +3,32 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
-## [1.0.0] — 2026-10-27
+## [1.1.0] - 2026-10-27
+
+Versão final aprovada com o layout A, painel redesenhado e ajustes de usabilidade.
+
+### Adicionado
+
+- Layout A nos cartões da lista: cartão inteiro arredondado, cabeçalho do processo, miolo centralizado, rodapé com ações centralizadas e 14 px de espaço entre processos.
+- Usuário atribuído do SEI permanece visível no cabeçalho do processo, como `(leonardo.oliveira.15)`.
+- Seletor inline de quadro/lista dentro do cartão, sem popup.
+- Botão **Dashboard** no menu lateral das opções.
+- Área de descrição com crescimento automático ao editar, mostrando o texto completo.
+- Selo **Atualizado** no lugar de "SEI com novidade".
+- Painel com visual mais moderno, métricas resumidas e filtros recolhíveis.
+- Botão de exportação CSV na barra de busca do painel.
+- Testes para seletor inline, descrição ampla e usuário atribuído.
+
+### Alterado
+
+- Página do processo: removida a barra de filtros do topo, removidos "SEI Flow" e a contagem de cartões, e painel ampliado para a largura da página.
+- Cartões compactos com descrição em até 3 linhas e chips de prazo menores.
+- Rodapé dos cartões com Etiquetas, Checklist, Prazo e Mover centralizados; desvincular/excluir à direita.
+- Título do painel sem degradê.
+- Travessões substituídos por hífen nos textos.
+- Correção de mensagem quando o contexto da extensão é invalidado: agora orienta recarregar a página do SEI.
+
+## [1.0.0] - 2026-10-27
 
 Primeira versão estável preparada para publicação na Chrome Web Store.
 
@@ -41,7 +66,7 @@ Primeira versão estável preparada para publicação na Chrome Web Store.
 - Links para GitHub ficaram restritos à seção **Diagnóstico** das opções, para suporte e relato de bugs.
 - README e NOTICE mantêm os créditos do projeto inspirador e exigem crédito ao autor deste projeto em trabalhos derivados.
 
-## [0.1.2] — 2026-10-26
+## [0.1.2] - 2026-10-26
 
 ### Adicionado
 
@@ -64,7 +89,7 @@ Primeira versão estável preparada para publicação na Chrome Web Store.
 - Página de opções sempre em tema claro, independentemente do sistema.
 - Cartão usa sombra mais suave e contorno vermelho apenas quando há novidade.
 
-## [0.1.1] — 2026-10-26
+## [0.1.1] - 2026-10-26
 
 ### Alterado
 
@@ -73,7 +98,7 @@ Primeira versão estável preparada para publicação na Chrome Web Store.
 - `BrandMark` agora usa o ícone oficial via `runtime.getURL` e `web_accessible_resources`.
 - Versão do pacote atualizada para 0.1.1.
 
-## [0.1.0] — 2026-10-26
+## [0.1.0] - 2026-10-26
 
 ### Adicionado
 
