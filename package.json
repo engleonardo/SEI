@@ -28,6 +28,8 @@
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
+    "prepare": "wxt prepare",
+    "precompile": "wxt prepare",
     "build": "wxt build",
     "build:firefox": "wxt build -b firefox",
     "build:edge": "wxt build -b edge",
