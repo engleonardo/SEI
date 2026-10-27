@@ -1,4 +1,4 @@
-﻿import { readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
@@ -204,4 +204,3 @@ test('filtro sem cartão esconde processos que já têm cartão', async ({ page 
   await expect(page.getByText('Cartão vinculado')).toBeHidden();
   await expect(page.getByText(OTHER)).toBeVisible();
 });
-
