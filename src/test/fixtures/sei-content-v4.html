@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <head>
+    <title>SEI - Processo</title>
+  </head>
+  <body>
+    <div id="divComandosSEI" class="infraBarraComandos"></div>
+    <div id="divArvoreAcoes" onmouseover="infraTooltipMostrar('Aquisição de material de escritório','Processo Administrativo')">
+      <span class="protocoloNR">08660.018176/2014-60</span>
+      <a class="processoNaoVisualizado" href="controlador.php?acao=procedimento_visualizar">08660.018176/2014-60</a>
+    </div>
+    <div id="container">
+      <div id="ifrVisualizacao"></div>
+    </div>
+    <script>
+      infraArvoreNo('ifrVisualizacao', '08660.018176/2014-60', 'true');
+    </script>
+  </body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+  <head>
+    <title>SEI - Controle de Processos</title>
+  </head>
+  <body>
+    <div id="divComandos" class="infraBarraComandos">
+      <button>Incluir Processo</button>
+    </div>
+    <div id="divInfraAreaTabela">
+      <table class="infraTable">
+        <thead>
+          <tr>
+            <th>Protocolo</th>
+            <th>Tipo</th>
+            <th>Especificação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <a
+                class="processoNaoVisualizado"
+                href="controlador.php?acao=procedimento_trabalhar&amp;id_procedimento=1"
+                onmouseover="infraTooltipMostrar('Aquisição de material de escritório','Processo Administrativo')"
+                >08660.018176/2014-60</a
+              >
+            </td>
+            <td>Processo Administrativo</td>
+            <td>Aquisição de material</td>
+          </tr>
+          <tr>
+            <td>
+              <a
+                class="processoAguardando"
+                href="controlador.php?acao=procedimento_trabalhar&amp;id_procedimento=2"
+                onmouseover="infraTooltipMostrar('Contratação de serviço de limpeza','Processo Administrativo')"
+                >12345.678901/2025-12</a
+              >
+            </td>
+            <td>Processo Administrativo</td>
+            <td>Contratação de limpeza</td>
+          </tr>
+          <tr>
+            <td>
+              <a href="controlador.php?acao=procedimento_trabalhar&amp;id_procedimento=3"
+                >98765.432109/2026-01</a
+              >
+            </td>
+            <td>Processo Administrativo</td>
+            <td>Sem tooltip</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>
