@@ -32,6 +32,7 @@ jobs:
           name: sei-flow-builds
           path: .output/*-mv3
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 7
 
   e2e:
