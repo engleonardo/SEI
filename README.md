@@ -4,7 +4,9 @@
   <img src="docs/brand/sei-flow.svg" width="112" alt="Logo do SEI Flow" />
 </p>
 
-Extensão para **Chrome, Firefox e Edge** que integra o **Trello** ao **SEI (Sistema Eletrônico de Informações)**. Crie, vincule e edite cartões diretamente na árvore e na lista de processos, sem alternar de aba. O **Painel SEI Flow** é a página inicial da extensão: reúne prazos, etiquetas, tipos de processo, atualizações e edição completa dos cartões.
+Extensão para **Chrome, Firefox e Edge** que integra o **Trello** ao **SEI (Sistema Eletrônico de Informações)**. Crie, vincule e edite cartões diretamente na árvore e na lista de processos, sem alternar de aba.
+
+O **Painel SEI Flow** é a página inicial da extensão: reúne prazos, etiquetas, tipos de processo, atualizações e edição completa dos cartões em um só lugar.
 
 > Projeto independente, sem afiliação ao Trello/Atlassian ou ao SEI. Licença MIT.
 
@@ -14,21 +16,22 @@ Extensão para **Chrome, Firefox e Edge** que integra o **Trello** ao **SEI (Sis
 - **Firefox:** [sei-flow-1.1.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.1.0/sei-flow-1.1.0-firefox.zip)
 - **Todas as versões:** [Releases](https://github.com/engleonardo/SEI/releases)
 
-Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` → **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.
+Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` -> **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.
 
-## Por que o SEI Flow?
+## O que você resolve com o SEI Flow
 
-A extensão original SEI+Trello só sabia **criar** cartões a partir do SEI. O SEI Flow nasceu para resolver isso e modernizar a experiência:
-
-- **Vínculo de mão dupla**: crie um cartão novo **ou vincule um cartão que já existe no Trello** ao processo do SEI.
-- **Vários cartões por processo**, empilhados e visíveis de uma vez (sem “existe mais de um cartão” escondido).
-- **Edição completa no SEI**: nome, descrição, etiquetas, checklist, prazo, quadro e lista.
-- **Vinculação em lote**: selecione vários cartões do Trello e vincule ao processo de uma vez.
-- **Compatibilidade ampla**: funciona em qualquer domínio, pasta (`/sei/`, `/sip/`, `/web/sei/`) e versão do SEI (3.x, 4.x e 5.x), com seletores resilientes e fallbacks por texto.
-- **Ativação por site**: nada de permissão em todos os sites por padrão. Você autoriza apenas as instalações do SEI que usa - ou opta por todos, se preferir.
-- **Interface isolada**: React + Shadow DOM, sem quebrar o CSS do SEI e sem conflito com o tema.
-- **Cache local**: menos chamadas à API do Trello e carregamento mais rápido.
-- **Acessibilidade**: ações visíveis, navegação por teclado, foco gerenciado e contraste.
+- **Vínculo de mão dupla:** crie um cartão novo ou vincule um cartão que já existe no Trello ao processo do SEI.
+- **Vários cartões por processo**, todos visíveis e organizados.
+- **Edição completa no SEI:** nome, descrição, etiquetas, checklist, prazo, quadro e lista.
+- **Vinculação em lote:** selecione vários cartões do Trello e vincule a um ou vários processos.
+- **Painel inicial completo:** prazos, etiquetas, tipos de processo, atualizações e busca.
+- **Mover cartão sem popup:** o seletor de quadro/lista abre dentro do próprio cartão.
+- **Usuário atribuído do SEI** visível no cabeçalho do processo.
+- **Compatibilidade ampla:** funciona em qualquer domínio, pasta (`/sei/`, `/sip/`, `/web/sei/`) e versão do SEI (3.x, 4.x e 5.x), com seletores resilientes e fallbacks por texto.
+- **Ativação por site:** você autoriza apenas as instalações do SEI que usa, ou opta por todos os sites.
+- **Interface isolada:** React + Shadow DOM, sem quebrar o CSS do SEI.
+- **Cache local:** menos chamadas à API do Trello e carregamento mais rápido.
+- **Acessibilidade:** ações visíveis, navegação por teclado, foco gerenciado e contraste.
 
 ## Capturas de tela
 
@@ -52,35 +55,35 @@ A extensão original SEI+Trello só sabia **criar** cartões a partir do SEI. O 
 
 | Recurso | SEI Flow |
 | --- | --- |
-| Criar cartão a partir do processo | ✅ |
-| Vincular cartão existente do Trello | ✅ |
-| Vincular vários cartões de uma vez | ✅ |
-| Vincular cartões a vários processos em lote | ✅ |
-| Vários cartões por processo | ✅ |
-| Editar nome e descrição | ✅ |
-| Criar, aplicar e remover etiquetas | ✅ |
-| Editar checklist (itens, concluir, remover) | ✅ |
-| Definir/remover prazo e conclusão | ✅ |
-| Mover cartão entre quadro/lista com seletor inline (sem popup) | ✅ |
-| Usuário atribuído do SEI no cabeçalho do processo | ✅ |
-| Desvincular sem excluir do Trello | ✅ |
-| Excluir cartão do Trello | ✅ |
-| Filtros por quadro, lista, etiqueta, prazo e cartão | ✅ |
-| Tema claro/escuro (claro padrão) | ✅ |
-| Cache e retry/backoff em 429/5xx | ✅ |
-| Painel SEI Flow como página inicial da extensão | ✅ |
-| Painel moderno com métricas resumidas e filtros recolhíveis | ✅ |
-| Botão Dashboard no menu de opções | ✅ |
-| Filtros do painel por etiqueta, tipo de processo, prazo, quadro, lista e atualização | ✅ |
-| Edição completa dos cartões pelo painel (nome, descrição, etiquetas, checklist, prazo e destino) | ✅ |
-| Links dos processos abrem a página correspondente no SEI | ✅ |
-| Badge com processos atualizados (não lidos no SEI) | ✅ |
-| Atualizações do Trello (7/30 dias e desde a última visita) | ✅ |
-| Notificações diárias de prazos | ✅ |
-| Barra fixa, atalho de busca e filtros persistidos | ✅ |
-| Exportação CSV dos cartões filtrados | ✅ |
+| Criar cartão a partir do processo | Sim |
+| Vincular cartão existente do Trello | Sim |
+| Vincular vários cartões de uma vez | Sim |
+| Vincular cartões a vários processos em lote | Sim |
+| Vários cartões por processo | Sim |
+| Editar nome e descrição | Sim |
+| Criar, aplicar e remover etiquetas | Sim |
+| Editar checklist (itens, concluir, remover) | Sim |
+| Definir/remover prazo e conclusão | Sim |
+| Mover cartão entre quadro/lista com seletor inline | Sim |
+| Usuário atribuído do SEI no cabeçalho do processo | Sim |
+| Desvincular sem excluir do Trello | Sim |
+| Excluir cartão do Trello | Sim |
+| Filtros por quadro, lista, etiqueta, prazo e cartão | Sim |
+| Tema claro/escuro (claro padrão) | Sim |
+| Cache e retry/backoff em 429/5xx | Sim |
+| Painel SEI Flow como página inicial da extensão | Sim |
+| Painel moderno com métricas resumidas e filtros recolhíveis | Sim |
+| Botão Dashboard no menu de opções | Sim |
+| Filtros do painel por etiqueta, tipo de processo, prazo, quadro, lista e atualização | Sim |
+| Edição completa dos cartões pelo painel | Sim |
+| Links dos processos abrem a página correspondente no SEI | Sim |
+| Badge com processos atualizados no SEI | Sim |
+| Atualizações do Trello (7/30 dias e desde a última visita) | Sim |
+| Notificações diárias de prazos | Sim |
+| Barra fixa, atalho de busca e filtros persistidos | Sim |
+| Exportação CSV dos cartões filtrados | Sim |
 
-## Instalação (desenvolvimento)
+## Instalação para desenvolvimento
 
 Requisitos: **Node.js 22+** e npm.
 
@@ -95,9 +98,9 @@ O WXT abre o navegador de desenvolvimento. Para carregar manualmente:
 npm run build
 ```
 
-- **Chrome/Edge**: `chrome://extensions` → Modo desenvolvedor → *Carregar sem compactação* → selecione `.output/chrome-mv3`.
-- **Firefox**: `about:debugging#/runtime/this-firefox` → *Carregar extensão temporária* → selecione `.output/firefox-mv3/manifest.json`.
-- **Edge**: `edge://extensions` → Modo desenvolvedor → *Carregar sem compactação* → `.output/edge-mv3`.
+- **Chrome/Edge:** `chrome://extensions` -> Modo desenvolvedor -> *Carregar sem compactação* -> selecione `.output/chrome-mv3`.
+- **Firefox:** `about:debugging#/runtime/this-firefox` -> *Carregar extensão temporária* -> selecione `.output/firefox-mv3/manifest.json`.
+- **Edge:** `edge://extensions` -> Modo desenvolvedor -> *Carregar sem compactação* -> `.output/edge-mv3`.
 
 ### Primeiro uso
 
@@ -107,8 +110,8 @@ npm run build
 4. Gere e cole o **TOKEN** pelo link exibido na própria página.
 5. Clique em **Testar conexão** e salve.
 6. Escolha o **quadro** e a **lista** padrão.
-7. Em **Sites do SEI**, ative o domínio da sua instituição (ou “todos os sites”).
-8. Abra o SEI e recarregue a página.
+7. Em **Sites do SEI**, ative o domínio da sua instituição (ou todos os sites).
+8. Abra o SEI, recarregue a página e use o botão **Dashboard** no menu de opções quando quiser voltar ao painel.
 
 > **Por que APP-KEY + TOKEN?** O Trello não oferece OAuth 2.0 para extensões sem servidor. O fluxo oficial client-side é a APP-KEY + TOKEN gerado em `trello.com/1/authorize`. A extensão monta essa URL para você e valida a conexão. Não é necessário criar backend nem configurar outro método.
 
@@ -124,19 +127,49 @@ SEI 08660.018176/2014-60
 - Um cartão pode ter vários vínculos (vários processos).
 - O texto existente da descrição é preservado.
 - Desvincular remove **apenas** a linha do processo atual; o cartão continua no Trello.
-- O vínculo é compatível com cartões criados pela extensão original.
+- O marcador `SEI <processo>` é mantido para interoperabilidade entre versões.
+
+## Painel SEI Flow
+
+O painel abre pelo ícone da extensão e pelo menu **Dashboard** das opções.
+
+- Métricas de atrasados, vencendo hoje, próximos 7 dias, atualizados e total vinculado.
+- Busca por cartão, processo, tipo, etiqueta, quadro ou lista.
+- Filtros recolhíveis por quadro, lista, tipo de processo, etiqueta, prazo, atualização no Trello e atualização no SEI.
+- Agrupamento por prazo, quadro, lista, tipo de processo, etiqueta ou lista única.
+- Detalhes e edição completa do cartão sem sair do painel.
+- Links dos processos abrem a página correspondente no SEI.
+- Exportação CSV dos cartões filtrados.
+- Atalhos `/` e `Ctrl+K`/`Cmd+K` para focar a busca.
+
+> Abra a lista de processos do SEI uma vez para o painel aprender tipo, especificação, URL e usuário atribuído de cada processo. Depois disso, os filtros por tipo e os links ficam completos.
 
 ## Privacidade, uso e responsabilidade
 
-- O SEI Flow **não mantém servidor próprio e não salva dados de usuários fora do navegador**.
-- APP-KEY, TOKEN e preferências ficam em `chrome.storage.local`, no seu navegador.
-- Nenhuma informação de processo ou cartão é enviada ao criador da extensão. As únicas requisições externas vão para `api.trello.com`.
-- Os dados de processos e cartões pertencem aos sistemas **SEI** e **Trello**. O uso da extensão é de **responsabilidade exclusiva do usuário**. O criador **não tem ingerência, controle ou responsabilidade** sobre informações inseridas, exibidas ou armazenadas nesses sistemas, nem sobre decisões tomadas a partir delas.
-- Leia a [política de privacidade completa](PRIVACY.md).
+- O SEI Flow **não mantém servidor próprio** e **não salva dados de usuários fora do seu navegador**.
+- A APP-KEY e o TOKEN do Trello ficam em `chrome.storage.local` e são usados apenas para falar com `api.trello.com`.
+- Não há telemetria, anúncios, venda ou compartilhamento de dados.
+- Os dados de processos e cartões pertencem ao SEI e ao Trello.
+- O uso é de **responsabilidade exclusiva do usuário**; o criador não tem ingerência sobre as informações desses sistemas.
+- Revogue o token quando quiser em [trello.com/app-key](https://trello.com/app-key).
+
+Leia a política completa em [PRIVACY.md](PRIVACY.md).
+
+## Publicação
+
+Os passos para Chrome Web Store, Firefox Add-ons e Edge Add-ons estão em [docs/publicacao.md](docs/publicacao.md). A publicação automática a cada release está em [docs/store/auto-publish.md](docs/store/auto-publish.md).
+
+```bash
+npm run build && npm run zip
+npm run build:firefox && npm run zip:firefox
+npm run build:edge && npm run zip:edge
+```
+
+Os arquivos ficam em `.output/`.
 
 ## Desenvolvimento
 
-### Scripts
+### Comandos
 
 ```bash
 npm run dev            # WXT em modo desenvolvimento (Chrome)
@@ -172,7 +205,7 @@ src/
     storage/             # settings, catálogo de processos e última aba
   ui/
     shadow.ts            # Shadow DOM + CSS compartilhado
-    components/          # cartões, diálogos, pickers
+    components/          # cartões, diálogos, pickers e seletor inline
     list/                # store e reconciliação da lista de processos
     styles.css           # tema claro/escuro
 ```
@@ -184,8 +217,8 @@ src/
 
 ### Testes
 
-- **Vitest**: marcador, número do processo, detecção do SEI, client HTTP, filtros, catálogo de processos, modelo do painel e componentes.
-- **Playwright**: UI injetada em fixtures de SEI 3.x/4.x, extensão real no Chromium (injeção, opções e painel) e painel com dados reais em cache (filtros, etiquetas, links do SEI, edição e badge).
+- **Vitest:** marcador, número do processo, detecção do SEI, client HTTP, filtros, catálogo de processos, modelo do painel e componentes.
+- **Playwright:** UI injetada em fixtures de SEI 3.x/4.x, extensão real no Chromium (injeção, opções e painel) e painel com dados reais em cache (filtros, etiquetas, links do SEI, edição e badge).
 
 ```bash
 npm test
@@ -193,29 +226,19 @@ npx playwright install chromium   # primeira vez
 npm run test:e2e
 ```
 
-## Publicação
-
-Os passos para Chrome Web Store, Firefox Add-ons e Edge Add-ons estão em [docs/publicacao.md](docs/publicacao.md). Para publicar automaticamente a cada release, veja [docs/store/auto-publish.md](docs/store/auto-publish.md).
-
-```bash
-npm run build && npm run zip
-npm run build:firefox && npm run zip:firefox
-npm run build:edge && npm run zip:edge
-```
-
-Os arquivos ficam em `.output/`.
-
 ## Roadmap
 
-- **Próximas melhorias**: i18n (pt-BR/en), importação de CSV, modelos de cartão e automações por etiqueta.
-- **Melhorias futuras**: suporte a múltiplas contas do Trello e relatórios por tipo de processo.
+- **Próximas melhorias:** i18n (pt-BR/en), importação de CSV, modelos de cartão e automações por etiqueta.
+- **Melhorias futuras:** suporte a múltiplas contas do Trello e relatórios por tipo de processo.
 
 ## Créditos e atribuição
 
-Este projeto é inspirado e compatível com o [SEI+Trello](https://github.com/luiscrjunior/sei-trello), criado por **Luís Carlos Reischak Júnior**, e com o fork comunitário [awlmdnitce/sei-trello](https://github.com/awlmdnitce/sei-trello). O marcador `SEI <processo>` foi mantido para interoperabilidade. Veja [NOTICE](NOTICE) e [CREDITS.md](CREDITS.md).
+Desenvolvido por **Engenheiro Leonardo Almeida de Oliveira**.
 
-O SEI Flow é de **uso livre** (MIT), mas quem copiar, modificar ou redistribuir deve **manter os créditos** ao autor original deste projeto, **Engenheiro Leonardo Almeida de Oliveira**, e um link para https://github.com/engleonardo/SEI, além dos créditos do projeto que o inspirou. Os créditos não podem ser removidos de trabalhos derivados.
+Este projeto é inspirado e compatível com o [SEI+Trello](https://github.com/luiscrjunior/sei-trello), criado por **Luís Carlos Reischak Júnior**, e com o fork comunitário [awlmdnitce/sei-trello](https://github.com/awlmdnitce/sei-trello). O marcador `SEI <processo>` é mantido para interoperabilidade. Veja [NOTICE](NOTICE) e [CREDITS.md](CREDITS.md).
+
+O SEI Flow é de **uso livre** (MIT), mas quem copiar, modificar ou redistribuir deve **manter os créditos** ao autor deste projeto, **Engenheiro Leonardo Almeida de Oliveira**, e um link para https://github.com/engleonardo/SEI, além dos créditos do projeto que o inspirou. Os créditos não podem ser removidos de trabalhos derivados.
 
 ## Licença
 
-MIT - veja [LICENSE](LICENSE).
+MIT. Veja [LICENSE](LICENSE).

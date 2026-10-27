@@ -116,7 +116,7 @@ Primeira versão estável preparada para publicação na Chrome Web Store.
 - Tema claro/escuro em Shadow DOM.
 - Testes unitários/componentes (Vitest) e testes de UI/extensão (Playwright).
 - CI e release automatizados, política de privacidade e guia de publicação.
-- Compatibilidade com o marcador legado `SEI <processo>` da extensão original.
+- Compatibilidade com o marcador legado `SEI <processo>`.
 
 ### Limitações conhecidas
 
