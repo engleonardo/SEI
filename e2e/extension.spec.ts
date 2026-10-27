@@ -1,4 +1,4 @@
-﻿import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium, expect, test } from '@playwright/test';
@@ -87,5 +87,3 @@ test('extensão carrega, injeta no SEI e abre opções/popup', async () => {
     rmSync(profileDir, { recursive: true, force: true });
   }
 });
-
-
