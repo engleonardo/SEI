@@ -8,6 +8,14 @@ Extensão para **Chrome, Firefox e Edge** que integra o **Trello** ao **SEI (Sis
 
 > Projeto independente, sem afiliação ao Trello/Atlassian ou ao SEI. Licença MIT.
 
+## Baixar e instalar
+
+- **Chrome / Edge:** [sei-flow-1.0.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.0.0/sei-flow-1.0.0-chrome.zip)
+- **Firefox:** [sei-flow-1.0.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.0.0/sei-flow-1.0.0-firefox.zip)
+- **Todas as versões:** [Releases](https://github.com/engleonardo/SEI/releases)
+
+Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` → **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.
+
 ## Por que o SEI Flow?
 
 A extensão original SEI+Trello só sabia **criar** cartões a partir do SEI. O SEI Flow nasceu para resolver isso e modernizar a experiência:
