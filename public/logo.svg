@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="SEI Flow">
+  <defs>
+    <linearGradient id="sfGreen" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#3ee06a"/>
+      <stop offset="1" stop-color="#009f4d"/>
+    </linearGradient>
+    <linearGradient id="sfRed" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ff5a4e"/>
+      <stop offset="1" stop-color="#e22222"/>
+    </linearGradient>
+    <linearGradient id="sfOrange" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ffb01f"/>
+      <stop offset="1" stop-color="#ff7a00"/>
+    </linearGradient>
+    <linearGradient id="sfYellow" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ffe234"/>
+      <stop offset="1" stop-color="#ffc400"/>
+    </linearGradient>
+    <linearGradient id="sfBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#2d8cff"/>
+      <stop offset="1" stop-color="#083fd6"/>
+    </linearGradient>
+    <linearGradient id="sfBar" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#1ab8ff"/>
+      <stop offset="1" stop-color="#0b5cff"/>
+    </linearGradient>
+    <filter id="sfShadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- Pétalas coloridas atrás do quadro -->
+  <g>
+    <path d="M72 19c9-14 29-17 40-4 7 9 6 20-2 27-10 9-23 10-31 3-9-7-12-17-7-26z" fill="url(#sfGreen)"/>
+    <path d="M107 33c16-4 28 9 23 24-4 11-15 16-26 12-11-4-17-15-13-26 3-7 8-10 16-10z" fill="url(#sfRed)"/>
+    <path d="M102 65c17-7 30 3 27 19-2 11-13 19-24 16-12-4-18-17-12-28 2-4 5-6 9-7z" fill="url(#sfOrange)"/>
+    <path d="M77 69c12-8 27-4 31 9 4 12-5 24-18 24-12 0-21-10-20-21 1-5 3-9 7-12z" fill="url(#sfYellow)"/>
+    <path d="M87 94c12 0 21 11 17 23-4 12-19 16-28 7-8-8-6-21 4-27 2-2 4-3 7-3z" fill="url(#sfBlue)"/>
+  </g>
+
+  <!-- Quadro branco -->
+  <rect x="13" y="34" width="74" height="74" rx="19" fill="#ffffff" stroke="#e8eef6" stroke-width="1" filter="url(#sfShadow)"/>
+
+  <!-- Barras do quadro -->
+  <rect x="29" y="50" width="22" height="47" rx="7" fill="url(#sfBar)"/>
+  <rect x="59" y="50" width="22" height="30" rx="7" fill="url(#sfBar)"/>
+</svg>
