@@ -17,6 +17,8 @@ export interface CardItemProps {
   showLocation?: boolean;
   compact?: boolean;
   highlight?: boolean;
+  activeLabels?: string[];
+  onToggleLabel?: (labelId: string) => void;
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
 }
@@ -30,6 +32,8 @@ export function CardItem({
   showLocation = true,
   compact = false,
   highlight = false,
+  activeLabels,
+  onToggleLabel,
   onChanged,
   onRemoved,
 }: CardItemProps) {
@@ -263,19 +267,32 @@ export function CardItem({
         </div>
 
         <div className="sf-card__labels">
-          {card.labels.map((label) => (
-            <span
-              key={label.id}
-              className="sf-label-chip"
-              style={{
-                backgroundColor: labelColorHex(label.color),
-                color: labelTextColor(label.color),
-              }}
-              title={label.name || label.color || 'Etiqueta'}
-            >
-              {label.name || label.color || 'Etiqueta'}
-            </span>
-          ))}
+          {card.labels.map((label) => {
+            const name = label.name || label.color || 'Etiqueta';
+            const active = Boolean(activeLabels?.includes(label.id));
+            const chipStyle = {
+              backgroundColor: labelColorHex(label.color),
+              color: labelTextColor(label.color),
+            };
+
+            return onToggleLabel ? (
+              <button
+                key={label.id}
+                type="button"
+                className={classNames('sf-label-chip', 'sf-label-chip--button', active && 'sf-label-chip--active')}
+                style={chipStyle}
+                onClick={() => onToggleLabel(label.id)}
+                aria-pressed={active}
+                title={`Filtrar por ${name}`}
+              >
+                {name}
+              </button>
+            ) : (
+              <span key={label.id} className="sf-label-chip" style={chipStyle} title={name}>
+                {name}
+              </span>
+            );
+          })}
           <button
             type="button"
             className="sf-label-chip sf-label-chip--add"
@@ -416,6 +433,7 @@ export function CardItem({
               className="sf-btn sf-btn--ghost sf-btn--sm"
               onClick={() => setDialog('labels')}
               disabled={busy}
+              aria-label="Etiquetas"
               title="Etiquetas"
             >
               <Icon name="tag" size={14} />
@@ -426,6 +444,7 @@ export function CardItem({
               className="sf-btn sf-btn--ghost sf-btn--sm"
               onClick={() => setDialog('checklist')}
               disabled={busy}
+              aria-label="Checklist"
               title="Checklist"
             >
               <Icon name="checklist" size={14} />
@@ -436,6 +455,7 @@ export function CardItem({
               className="sf-btn sf-btn--ghost sf-btn--sm"
               onClick={() => setDialog('due')}
               disabled={busy}
+              aria-label="Prazo"
               title="Prazo"
             >
               <Icon name="calendar" size={14} />
@@ -446,6 +466,7 @@ export function CardItem({
               className="sf-btn sf-btn--ghost sf-btn--sm"
               onClick={() => setLocationOpen((current) => !current)}
               disabled={busy}
+              aria-label="Mover cartão"
               title="Mover cartão"
             >
               <Icon name="board" size={14} />
@@ -459,6 +480,7 @@ export function CardItem({
               )}
               onClick={() => void toggleComplete()}
               disabled={busy}
+              aria-label={card.dueComplete ? 'Reabrir cartão' : 'Concluir cartão'}
               title={card.dueComplete ? 'Reabrir cartão' : 'Concluir cartão'}
             >
               <Icon name={card.dueComplete ? 'refresh' : 'check'} size={14} />

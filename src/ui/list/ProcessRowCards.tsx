@@ -1,7 +1,14 @@
 import { useStore } from '../store';
 import { CardStack } from '../components/CardStack';
 import { classNames } from '../utils';
-import { addCards, listStore, loadList, removeCard, updateCard } from './store';
+import {
+  addCards,
+  listStore,
+  loadList,
+  removeCard,
+  toggleLabelFilter,
+  updateCard,
+} from './store';
 
 export function ProcessRowCards({
   processNumber,
@@ -27,6 +34,8 @@ export function ProcessRowCards({
         compact={compact}
         highlight={highlight}
         showHeader={false}
+        activeLabels={state.filters.labelIds}
+        onToggleLabel={toggleLabelFilter}
         onReload={() => void loadList()}
         onChanged={updateCard}
         onRemoved={removeCard}

@@ -373,14 +373,19 @@
 
 .sf-card--compact .sf-card__footer {
   margin-top: 0;
-  padding: 8px 64px;
+  padding: 8px 0;
   border-top: 1px solid var(--sf-border);
   background: var(--sf-bg);
 }
 
 .sf-card--compact .sf-card__footer .sf-btn {
   min-height: 24px;
-  padding: 0 6px;
+  padding: 0 5px;
+}
+
+.sf-card--compact .sf-card__footer .sf-btn svg {
+  width: 13px;
+  height: 13px;
 }
 
 .sf-card--compact .sf-icon-btn {
@@ -516,9 +521,11 @@
 
 .sf-card__footer-actions {
   display: flex;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   justify-content: flex-start;
   gap: 2px;
+  min-width: 0;
 }
 
 .sf-card__complete {
@@ -526,13 +533,11 @@
 }
 
 .sf-card__footer-side {
-  position: absolute;
-  right: 0;
-  top: 50%;
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 2px;
-  transform: translateY(-50%);
+  margin-left: auto;
 }
 
 .sf-location-picker {
@@ -717,6 +722,41 @@
   color: var(--sf-accent);
 }
 
+.sf-label-chip--button {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.sf-label-chip--button:hover {
+  filter: brightness(1.07);
+}
+
+.sf-label-chip--active {
+  box-shadow:
+    0 0 0 2px var(--sf-bg),
+    0 0 0 3.5px var(--sf-accent);
+}
+
+.sf-label-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.sf-label-filter__label {
+  color: var(--sf-muted);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* ---------------------------------------------------------------- stack */
 
 .sf-card__body {
@@ -762,6 +802,15 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.sf-stack__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  margin-top: 2px;
+  padding-top: 6px;
 }
 
 .sf-stack__head--actions {

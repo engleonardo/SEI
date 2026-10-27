@@ -116,3 +116,11 @@ export function addCards(newCards: TrelloCard[]): void {
     return { ...previous, cards: Array.from(map.values()) };
   });
 }
+
+export function toggleLabelFilter(labelId: string): void {
+  const current = listStore.get().filters.labelIds;
+  const labelIds = current.includes(labelId)
+    ? current.filter((id) => id !== labelId)
+    : [...current, labelId];
+  setFilters({ labelIds });
+}

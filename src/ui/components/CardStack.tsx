@@ -15,11 +15,13 @@ export interface CardStackProps {
   error?: string | null;
   errorExtra?: ReactNode;
   showHeader?: boolean;
-  headerSummary?: ReactNode;
   showProcessMeta?: boolean;
   showLocation?: boolean;
   compact?: boolean;
   highlight?: boolean;
+  activeLabels?: string[];
+  emptyMessage?: ReactNode;
+  onToggleLabel?: (labelId: string) => void;
   onReload: () => void;
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
@@ -34,11 +36,13 @@ export function CardStack({
   error = null,
   errorExtra,
   showHeader = false,
-  headerSummary,
   showProcessMeta = true,
   showLocation = true,
   compact = false,
   highlight = false,
+  activeLabels,
+  emptyMessage,
+  onToggleLabel,
   onReload,
   onChanged,
   onRemoved,
@@ -49,41 +53,6 @@ export function CardStack({
 
   return (
     <div className="sf-stack">
-      {showHeader && (
-        <div className="sf-stack__head sf-stack__head--actions">
-          {headerSummary}
-          <span className="sf-stack__spacer" />
-          <button
-            type="button"
-            className="sf-icon-btn"
-            onClick={() => setShowCreate(true)}
-            aria-label="Novo cartão"
-            title="Novo cartão"
-          >
-            <Icon name="plus" size={15} />
-          </button>
-          <button
-            type="button"
-            className="sf-icon-btn"
-            onClick={() => setShowLink(true)}
-            aria-label="Vincular cartões"
-            title="Vincular cartões existentes"
-          >
-            <Icon name="link" size={15} />
-          </button>
-          <button
-            type="button"
-            className="sf-icon-btn"
-            onClick={onReload}
-            disabled={loading}
-            aria-label="Atualizar cartões"
-            title="Atualizar cartões"
-          >
-            <Icon name="refresh" size={15} />
-          </button>
-        </div>
-      )}
-
       {error && <ErrorState message={error} onRetry={onReload} extra={errorExtra} />}
 
       {loading && cards.length === 0 && !error && (
@@ -114,7 +83,7 @@ export function CardStack({
             ) : undefined
           }
         >
-          Nenhum cartão vinculado a este processo.
+          {emptyMessage ?? 'Nenhum cartão vinculado a este processo.'}
         </EmptyState>
       )}
 
@@ -127,6 +96,8 @@ export function CardStack({
           showLocation={showLocation}
           compact={compact}
           highlight={highlight}
+          activeLabels={activeLabels}
+          onToggleLabel={onToggleLabel}
           onChanged={onChanged}
           onRemoved={onRemoved}
         />
@@ -147,6 +118,39 @@ export function CardStack({
           onClose={() => setShowLink(false)}
           onLinked={(linked) => onAdded(linked)}
         />
+      )}
+
+      {showHeader && cards.length > 0 && (
+        <div className="sf-stack__actions">
+          <button
+            type="button"
+            className="sf-icon-btn"
+            onClick={() => setShowCreate(true)}
+            aria-label="Novo cartão"
+            title="Novo cartão"
+          >
+            <Icon name="plus" size={14} />
+          </button>
+          <button
+            type="button"
+            className="sf-icon-btn"
+            onClick={() => setShowLink(true)}
+            aria-label="Vincular cartões"
+            title="Vincular cartões existentes"
+          >
+            <Icon name="link" size={14} />
+          </button>
+          <button
+            type="button"
+            className="sf-icon-btn"
+            onClick={onReload}
+            disabled={loading}
+            aria-label="Atualizar cartões"
+            title="Atualizar cartões"
+          >
+            <Icon name="refresh" size={14} />
+          </button>
+        </div>
       )}
     </div>
   );

@@ -195,6 +195,14 @@ test('lista de processos mostra o cartão vinculado e o botão de ações', asyn
     return Math.abs(rect.left + rect.width / 2 - (strip.left + strip.width / 2)) < 2;
   });
   expect(centered).toBe(true);
+
+  // Etiqueta do cartão é clicável e filtra a lista, como no painel.
+  const labelChip = page.locator('.sf-label-chip--button').filter({ hasText: 'Urgente' }).first();
+  await expect(labelChip).toHaveAttribute('aria-pressed', 'false');
+  await labelChip.click();
+  await expect(labelChip).toHaveAttribute('aria-pressed', 'true');
+  await labelChip.click();
+  await expect(labelChip).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('quadro/lista abre seletor inline, sem popup', async ({ page }) => {
@@ -227,6 +235,13 @@ test('processo aberto mostra o painel completo', async ({ page }) => {
   await expect(page.getByText('Cartão vinculado')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Novo cartão' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Vincular cartões' })).toBeVisible();
+
+  // Etiqueta clicável aplica filtro dentro do painel do processo.
+  const chip = page.locator('.sf-label-chip--button').first();
+  await chip.click();
+  await expect(page.locator('.sf-label-filter')).toBeVisible();
+  await page.locator('.sf-label-filter').getByRole('button', { name: 'Limpar' }).click();
+  await expect(page.locator('.sf-label-filter')).toHaveCount(0);
 });
 
 test('diálogo de novo cartão abre com o destino padrão', async ({ page }) => {
