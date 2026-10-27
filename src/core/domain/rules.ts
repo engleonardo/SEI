@@ -146,3 +146,29 @@ export function ruleMatches(
       return false;
   }
 }
+
+/**
+ * Usado pelo "Aplicar agora": a regra só age nos cartões que já estão na
+ * condição do gatilho neste momento. Nunca aplica a ação em massa sem isso.
+ */
+export function ruleAppliesNow(
+  rule: Rule,
+  card: { idBoard: string; idList: string; dueComplete: boolean; links: string[] },
+): boolean {
+  if (card.links.length === 0) return false;
+  if (!rule.boardId || card.idBoard !== rule.boardId) return false;
+  if (ruleIssue(rule)) return false;
+
+  switch (rule.trigger.type) {
+    case 'completed':
+      return card.dueComplete;
+    case 'enterList':
+      return card.idList === rule.trigger.listId;
+    case 'enterAnyList':
+      return true;
+    case 'updated':
+      return rule.trigger.listId ? card.idList === rule.trigger.listId : true;
+    default:
+      return false;
+  }
+}

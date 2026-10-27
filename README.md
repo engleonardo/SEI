@@ -162,7 +162,7 @@ Em **Opções -> Regras** você monta regras instantâneas, sem depender de auto
 - Várias ações por regra: mover para uma lista, mover para o topo, adicionar ou remover etiquetas.
 - Regras em cadeia, com limite de 5 níveis e proteção contra loop.
 - Uma regra não pode mover para duas listas diferentes ao mesmo tempo.
-- **Aplicar agora** executa a regra nos cartões que já existem.
+- **Aplicar agora** age só nos cartões que já estão na condição do gatilho, mostra quantos serão alterados e pede confirmação antes de gravar.
 - As 4 regras iniciais vêm desativadas até você escolher as listas e etiquetas.
 
 > Abra a lista de processos do SEI uma vez para o painel aprender tipo, especificação, URL e usuário atribuído de cada processo. Depois disso, os filtros por tipo e os links ficam completos.

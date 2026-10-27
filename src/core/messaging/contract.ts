@@ -94,7 +94,10 @@ export interface RpcMap {
   'activation:last-tab': { payload: undefined; result: LastActionTab | null };
   'rules:list': { payload: undefined; result: Rule[] };
   'rules:save': { payload: { rules: Rule[] }; result: Rule[] };
-  'rules:apply-now': { payload: { ruleId: string }; result: { applied: number; total: number } };
+  'rules:apply-now': {
+    payload: { ruleId: string; dryRun?: boolean };
+    result: { applied: number; total: number };
+  };
   'processes:list': { payload: undefined; result: ProcessRecord[] };
   'processes:upsert': {
     payload: { processes: Array<Partial<ProcessRecord> & { number: string }> };

@@ -371,4 +371,64 @@ describe('TrelloRepository', () => {
     await repo.getAllLinkedCards(true);
     expect(vi.mocked(client.put).mock.calls.length).toBe(calls);
   });
+
+  it('aplicar agora respeita a condição do gatilho', async () => {
+    mocks.settings = { ...mocks.settings, defaultBoardId: '' };
+    mocks.rules = [
+      {
+        id: 'rule-done',
+        name: 'Concluído vai para concluídos',
+        enabled: true,
+        boardId: 'board-1',
+        trigger: { type: 'completed' },
+        actions: [{ type: 'moveToList', listId: 'list-done' }],
+      },
+    ];
+
+    const client = fakeClient();
+    vi.mocked(client.get).mockImplementation(async (path: string) => {
+      if (path === '/search') {
+        return {
+          cards: [
+            rawCard({ id: 'card-1', desc: `SEI ${PROCESS}`, dueComplete: true }),
+            rawCard({ id: 'card-2', desc: `SEI ${PROCESS}`, dueComplete: false }),
+          ],
+        };
+      }
+      if (path === '/boards/board-1/lists') {
+        return [
+          { id: 'list-1', name: 'Lista' },
+          { id: 'list-done', name: 'Concluídos' },
+        ];
+      }
+      if (path.startsWith('/boards/')) return [];
+      if (path === '/cards/card-1') {
+        return rawCard({
+          id: 'card-1',
+          desc: `SEI ${PROCESS}`,
+          dueComplete: true,
+          idList: 'list-done',
+          list: { id: 'list-done', name: 'Concluídos' },
+        });
+      }
+      return rawCard({ id: 'card-2', desc: `SEI ${PROCESS}` });
+    });
+    vi.mocked(client.put).mockResolvedValue({});
+
+    const repo = repository(client);
+
+    // Prévia não altera nada e conta apenas os cartões concluídos.
+    const preview = await repo.applyRuleNow('rule-done', true);
+    expect(preview).toEqual({ applied: 1, total: 2 });
+    expect(client.put).not.toHaveBeenCalled();
+
+    // Aplicação real atinge só o cartão concluído.
+    const result = await repo.applyRuleNow('rule-done');
+    expect(result.applied).toBe(1);
+    expect(client.put).toHaveBeenCalledTimes(1);
+    expect(client.put).toHaveBeenCalledWith('/cards/card-1', {
+      pos: 'bottom',
+      idList: 'list-done',
+    });
+  });
 });

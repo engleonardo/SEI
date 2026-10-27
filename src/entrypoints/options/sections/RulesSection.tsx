@@ -12,6 +12,7 @@ import {
 } from '../../../core/domain/rules';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
 import { Icon } from '../../../ui/icons';
+import { ConfirmDialog } from '../../../ui/components/Modal';
 import { SectionCard, Spinner, StatusPill, type Notice } from './shared';
 
 export function RulesSection({
@@ -26,6 +27,12 @@ export function RulesSection({
   const [lists, setLists] = useState<Record<string, TrelloList[]>>({});
   const [labels, setLabels] = useState<Record<string, TrelloLabel[]>>({});
   const [busyRule, setBusyRule] = useState<string | null>(null);
+  const [confirmApply, setConfirmApply] = useState<{
+    rule: Rule;
+    matching: number;
+    total: number;
+  } | null>(null);
+  const [applying, setApplying] = useState(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
 
   const loadBoardData = useCallback(
@@ -160,16 +167,50 @@ export function RulesSection({
     }
     setBusyRule(rule.id);
     try {
-      const result = await callRpc('rules:apply-now', { ruleId: rule.id });
-      notify({
-        kind: 'success',
-        text: `Regra aplicada em ${result.applied} de ${result.total} cartões vinculados.`,
-      });
+      const preview = await callRpc('rules:apply-now', { ruleId: rule.id, dryRun: true });
+      if (preview.applied === 0) {
+        notify({
+          kind: 'info',
+          text: 'Nenhum cartão vinculado está na condição desta regra agora. Nada foi alterado.',
+        });
+        return;
+      }
+      setConfirmApply({ rule, matching: preview.applied, total: preview.total });
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
     } finally {
       setBusyRule(null);
     }
+  };
+
+  const confirmApplyNow = async () => {
+    if (!confirmApply) return;
+    setApplying(true);
+    try {
+      const result = await callRpc('rules:apply-now', { ruleId: confirmApply.rule.id });
+      notify({
+        kind: 'success',
+        text: `Regra aplicada em ${result.applied} de ${result.total} cartões vinculados.`,
+      });
+      setConfirmApply(null);
+    } catch (cause) {
+      notify({ kind: 'error', text: errorMessage(cause) });
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const triggerSummary = (rule: Rule) => {
+    const label = RULE_TRIGGER_LABELS[rule.trigger.type];
+    if (rule.trigger.type === 'enterList') {
+      const list = boardLists(rule.boardId).find((item) => item.id === rule.trigger.listId);
+      return list ? `${label} "${list.name}"` : label;
+    }
+    if (rule.trigger.type === 'updated' && rule.trigger.listId) {
+      const list = boardLists(rule.boardId).find((item) => item.id === rule.trigger.listId);
+      return list ? `${label} (lista "${list.name}")` : label;
+    }
+    return label;
   };
 
   const toggleRule = (rule: Rule) => {
@@ -187,7 +228,8 @@ export function RulesSection({
   const boardLabels = (boardId: string) => labels[boardId] ?? [];
 
   return (
-    <SectionCard
+    <>
+      <SectionCard
       title="Regras automáticas"
       subtitle="Cada regra pertence a um quadro e só altera cartões vinculados ao SEI."
       icon="refresh"
@@ -414,7 +456,7 @@ export function RulesSection({
                         className="sfo-btn sfo-btn--sm"
                         onClick={() => void applyNow(rule)}
                         disabled={busyRule === rule.id || Boolean(issue)}
-                        title="Aplicar esta regra nos cartões que já existem"
+                        title="Aplicar esta regra apenas nos cartões que já estão na condição do gatilho"
                       >
                         {busyRule === rule.id ? <Spinner /> : <Icon name="refresh" size={13} />}
                         Aplicar agora
@@ -434,6 +476,18 @@ export function RulesSection({
           })}
         </div>
       )}
-    </SectionCard>
+      </SectionCard>
+
+      {confirmApply && (
+        <ConfirmDialog
+          title="Aplicar regra agora"
+          message={`${triggerSummary(confirmApply.rule)}. Serão alterados ${confirmApply.matching} de ${confirmApply.total} cartões vinculados. As mudanças vão direto para o Trello e não têm desfazer.`}
+          confirmLabel={`Aplicar em ${confirmApply.matching}`}
+          busy={applying}
+          onConfirm={() => void confirmApplyNow()}
+          onClose={() => setConfirmApply(null)}
+        />
+      )}
+    </>
   );
 }

@@ -151,7 +151,7 @@ const handlers = {
 
   'rules:save': ({ rules }) => saveRules(rules),
 
-  'rules:apply-now': ({ ruleId }) => repository.applyRuleNow(ruleId),
+  'rules:apply-now': ({ ruleId, dryRun }) => repository.applyRuleNow(ruleId, dryRun),
 
   'processes:list': () => listProcessRecords(),
 

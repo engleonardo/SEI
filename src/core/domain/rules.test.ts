@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createRule,
   defaultRules,
+  ruleAppliesNow,
   ruleIsConfigured,
   ruleIssue,
   ruleMatches,
@@ -114,5 +115,46 @@ describe('regras', () => {
 
   it('exige pelo menos uma ação', () => {
     expect(ruleIssue(rule({ actions: [] }))).toMatch(/pelo menos uma ação/);
+  });
+
+  describe('aplicar agora', () => {
+    const completedRule = rule({
+      trigger: { type: 'completed' },
+      actions: [{ type: 'moveToList', listId: 'list-done' }],
+    });
+
+    it('só atinge cartões já concluídos', () => {
+      expect(ruleAppliesNow(completedRule, { ...card, dueComplete: true })).toBe(true);
+      expect(ruleAppliesNow(completedRule, { ...card, dueComplete: false })).toBe(false);
+    });
+
+    it('só atinge cartões do quadro da regra e vinculados ao SEI', () => {
+      expect(
+        ruleAppliesNow(completedRule, { ...card, idBoard: 'board-2', dueComplete: true }),
+      ).toBe(false);
+      expect(ruleAppliesNow(completedRule, { ...unlinked, dueComplete: true })).toBe(false);
+    });
+
+    it('entrou na lista só atinge cartões que estão naquela lista', () => {
+      const enter = rule({
+        trigger: { type: 'enterList', listId: 'list-2' },
+        actions: [{ type: 'addLabel', labelId: 'label-1' }],
+      });
+      expect(ruleAppliesNow(enter, { ...card, dueComplete: false })).toBe(false);
+      expect(
+        ruleAppliesNow(enter, { ...card, idList: 'list-2', dueComplete: false }),
+      ).toBe(true);
+    });
+
+    it('atualizado respeita a lista configurada', () => {
+      const updated = rule({
+        trigger: { type: 'updated', listId: 'list-2' },
+        actions: [{ type: 'moveToTop' }],
+      });
+      expect(ruleAppliesNow(updated, { ...card, dueComplete: false })).toBe(false);
+      expect(
+        ruleAppliesNow(updated, { ...card, idList: 'list-2', dueComplete: false }),
+      ).toBe(true);
+    });
   });
 });

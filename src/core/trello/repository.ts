@@ -20,7 +20,7 @@ import {
   replaceSyncSnapshot,
   type CardSnapshot,
 } from '../storage/sync';
-import { ruleMatches, type Rule, type RuleEvent } from '../domain/rules';
+import { ruleAppliesNow, ruleMatches, ruleIssue, type Rule, type RuleEvent } from '../domain/rules';
 import { getSettings } from '../storage/settings';
 import { mapLimit } from '../utils/async';
 import { CACHE_TTL, cacheDelete, cacheDeleteByPrefix, cacheGet, cacheGetOrSet, cacheSet } from './cache';
@@ -594,17 +594,28 @@ export class TrelloRepository {
     };
   }
 
-  async applyRuleNow(ruleId: string): Promise<{ applied: number; total: number }> {
+  async applyRuleNow(
+    ruleId: string,
+    dryRun = false,
+  ): Promise<{ applied: number; total: number }> {
     const rules = await getRules();
     const rule = rules.find((item) => item.id === ruleId);
     if (!rule) {
       throw new TrelloError('validation', 'Regra não encontrada.');
     }
+    if (ruleIssue(rule)) {
+      throw new TrelloError('validation', ruleIssue(rule) ?? 'Regra incompleta.');
+    }
 
     const cards = await this.getAllLinkedCards();
+    const matching = cards.filter((card) => ruleAppliesNow(rule, card));
+    if (dryRun) {
+      return { applied: matching.length, total: cards.length };
+    }
+
     let applied = 0;
     const touched: TrelloCard[] = [];
-    for (const card of cards) {
+    for (const card of matching) {
       try {
         const result = await this.executeRules(
           card,
