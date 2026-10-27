@@ -1,0 +1,16 @@
+# NOTICE
+
+SEI Flow
+Copyright (c) 2026 Leonardo Oliveira
+
+Este projeto é um trabalho independente, inspirado e parcialmente compatível com o projeto original:
+
+**SEI+Trello**
+- Autor original: Luís Carlos Reischak Júnior
+- Repositório: https://github.com/luiscrjunior/sei-trello
+- Fork comunitário: https://github.com/awlmdnitce/sei-trello
+- Licença do projeto original: MIT
+
+O formato de vínculo `SEI <número-do-processo>` na descrição do cartão foi mantido para interoperabilidade com cartões criados pela extensão original.
+
+Trello é uma marca registrada da Atlassian. SEI é um sistema desenvolvido pelo TRF4. Este projeto não é afiliado, endossado ou patrocinado pela Atlassian ou pelo TRF4.
