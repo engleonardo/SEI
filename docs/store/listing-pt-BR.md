@@ -18,7 +18,7 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Veja todos os cartões de um processo, sem esconder os adicionais.
 • Edite nome, descrição, etiquetas, checklist, prazo, quadro e lista dentro do SEI.
 • Painel SEI Flow como página inicial: prazos, etiquetas, tipos de processo e atualizações.
-• Filtre por etiqueta, tipo de processo, prazo, quadro, lista, atualização no Trello e novidade no SEI.
+• Filtre por etiqueta, tipo de processo, prazo, quadro, lista, atualização no Trello e atualização no SEI.
 • Abra os detalhes e edite o cartão completo pelo painel.
 • Clique no número do processo para abrir a página correspondente no SEI.
 • Notificações diárias de prazos e badge com processos atualizados no SEI.
