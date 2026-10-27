@@ -132,7 +132,7 @@ function App() {
           <BrandMark size={40} />
           <div>
             <div className="sfo-brand__name">SEI Flow</div>
-            <div className="sfo-brand__tag">Trello dentro do SEI</div>
+            <div className="sfo-brand__tag">Gestão eficiente</div>
           </div>
         </div>
 
@@ -153,19 +153,7 @@ function App() {
 
         <div className="sfo-sidebar__footer">
           <span>Versão {version}</span>
-          <span>
-            <a href="https://github.com/engleonardo/SEI" target="_blank" rel="noreferrer">
-              GitHub
-            </a>{' '}
-            ·{' '}
-            <a
-              href="https://github.com/engleonardo/SEI/blob/main/PRIVACY.md"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Privacidade
-            </a>
-          </span>
+          <span>Suporte e privacidade em Diagnóstico</span>
         </div>
       </aside>
 
@@ -241,7 +229,10 @@ function App() {
         </div>
 
         <footer className="sfo-footer">
-          SEI Flow · projeto independente · licença MIT · não afiliado ao Trello ou ao SEI
+          <span>
+            SEI Flow · projeto independente · licença MIT · não afiliado ao Trello ou ao SEI
+          </span>
+          <span>Desenvolvido por Engenheiro Leonardo Almeida de Oliveira</span>
         </footer>
       </main>
     </div>

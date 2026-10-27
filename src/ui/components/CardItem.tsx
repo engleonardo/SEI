@@ -100,6 +100,7 @@ export function CardItem({
   };
 
   const unlink = async () => {
+    if (!processNumber) return;
     setBusy(true);
     try {
       const updated = await callRpc('trello:unlink-card', {
@@ -343,10 +344,12 @@ export function CardItem({
               Checklist
             </button>
           )}
-          <span className="sf-card__meta-item" title="Processo vinculado">
-            <Icon name="link" size={11} />
-            {processNumber}
-          </span>
+          {processNumber && (
+            <span className="sf-card__meta-item" title="Processo vinculado">
+              <Icon name="link" size={11} />
+              {processNumber}
+            </span>
+          )}
           <button
             type="button"
             className="sf-card__meta-item"
@@ -411,16 +414,18 @@ export function CardItem({
 
           <span className="sf-toolbar__spacer" />
 
-          <button
-            type="button"
-            className="sf-icon-btn"
-            onClick={() => setConfirmUnlink(true)}
-            disabled={busy}
-            aria-label="Desvincular deste processo"
-            title="Desvincular deste processo"
-          >
-            <Icon name="unlink" size={15} />
-          </button>
+          {processNumber && (
+            <button
+              type="button"
+              className="sf-icon-btn"
+              onClick={() => setConfirmUnlink(true)}
+              disabled={busy}
+              aria-label="Desvincular deste processo"
+              title="Desvincular deste processo"
+            >
+              <Icon name="unlink" size={15} />
+            </button>
+          )}
           <button
             type="button"
             className="sf-icon-btn sf-icon-btn--danger"
@@ -447,7 +452,7 @@ export function CardItem({
         <LocationDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
       )}
 
-      {confirmUnlink && (
+      {confirmUnlink && processNumber && (
         <ConfirmDialog
           title="Desvincular cartão"
           message={`O cartão continuará no Trello, mas deixará de aparecer no processo ${processNumber}.`}

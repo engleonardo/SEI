@@ -8,7 +8,7 @@ test.describe.configure({ mode: 'serial' });
 
 const EXTENSION_SOURCE = join(process.cwd(), '.output', 'chrome-mv3');
 
-test('extensão carrega, injeta no SEI e abre opções/popup', async () => {
+test('extensão carrega, injeta no SEI e abre opções/dashboard', async () => {
   const source = EXTENSION_SOURCE;
   const extensionDir = mkdtempSync(join(tmpdir(), 'sei-flow-ext-'));
   const profileDir = mkdtempSync(join(tmpdir(), 'sei-flow-profile-'));
@@ -17,7 +17,9 @@ test('extensão carrega, injeta no SEI e abre opções/popup', async () => {
   const manifestPath = join(extensionDir, 'manifest.json');
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
     host_permissions?: string[];
+    action?: { default_popup?: string };
   };
+  expect(manifest.action?.default_popup).toBeUndefined();
   manifest.host_permissions = [...(manifest.host_permissions ?? []), 'http://sei.test/*'];
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 
@@ -79,15 +81,12 @@ test('extensão carrega, injeta no SEI e abre opções/popup', async () => {
     await expect(optionsLogo).toBeVisible();
     expect(await optionsLogo.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
 
-    const popup = await context.newPage();
-    await popup.setViewportSize({ width: 380, height: 640 });
-    await popup.goto(`chrome-extension://${extensionId}/popup.html`);
-    await expect(popup.getByText('SEI Flow').first()).toBeVisible();
-    await expect(popup.getByText('Página atual')).toBeVisible();
-
     const dashboard = await context.newPage();
     await dashboard.goto(`chrome-extension://${extensionId}/dashboard.html`);
-    await expect(dashboard.getByRole('heading', { name: 'Dashboard de prazos' })).toBeVisible();
+    await expect(dashboard.getByRole('heading', { name: /Painel SEI Flow/ })).toBeVisible();
+    await expect(dashboard.getByText('Gestão eficiente de processos, prazos, etiquetas e cartões.')).toBeVisible();
+    await expect(dashboard.getByText('Desenvolvido por Engenheiro Leonardo Almeida de Oliveira')).toBeVisible();
+    await expect(dashboard.getByText('Etiquetas', { exact: true })).toBeVisible();
   } finally {
     await context.close();
     rmSync(extensionDir, { recursive: true, force: true });

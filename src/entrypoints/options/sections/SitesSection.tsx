@@ -168,7 +168,7 @@ export function SitesSection({
           <div className="sfo-empty">
             {settings.allSites
               ? 'Todos os sites estão ativados.'
-              : 'Nenhum site específico ativado. Use o campo acima ou o popup da extensão.'}
+              : 'Nenhum site específico ativado. Use o campo acima ou o painel da extensão.'}
           </div>
         ) : (
           <div className="sfo-list">
