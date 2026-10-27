@@ -30,7 +30,7 @@ jobs:
       - run: npm run build:firefox
       - run: npm run build:edge
       - name: Upload builds
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sei-flow-builds
           path: .output/*-mv3
@@ -53,7 +53,7 @@ jobs:
       - run: xvfb-run -a npx playwright test
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: |
