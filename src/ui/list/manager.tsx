@@ -3,6 +3,7 @@ import type { SeiProcessRow } from '../../core/domain/types';
 import { normalizeProcessNumber } from '../../core/domain/process';
 import { findCommandBar, findProcessRows, findProcessTable, parseTooltip } from '../../core/sei/rows';
 import { getSettings } from '../../core/storage/settings';
+import { callRpc } from '../../core/messaging/client';
 import { createShadowHost, mountReact } from '../shadow';
 import { setThemePreference } from '../theme';
 import { matchesProcess } from '../filters';
@@ -53,12 +54,21 @@ function collectRows(): SeiProcessRow[] {
       normalizeProcessNumber(anchor.textContent) ?? normalizeProcessNumber(row.textContent);
     if (!processNumber) continue;
     const tooltip = parseTooltip(anchor.getAttribute('onmouseover') ?? row.getAttribute('onmouseover'));
+    let origin = '';
+    try {
+      const url = new URL(anchor.href);
+      if (url.protocol === 'http:' || url.protocol === 'https:') origin = url.origin;
+    } catch {
+      origin = '';
+    }
     result.push({
       row,
       anchor,
       processNumber,
       specification: tooltip.specification,
       processType: tooltip.processType,
+      url: anchor.href,
+      origin,
       highlight: isHighlighted(row, anchor),
     });
   }
@@ -75,6 +85,8 @@ export class ListManager {
   private unsubscribe: (() => void) | null = null;
   private timer: number | null = null;
   private refreshTimer: number | null = null;
+  private catalogTimer: number | null = null;
+  private catalogSignature = '';
   private destroyed = false;
 
   async start(): Promise<void> {
@@ -135,6 +147,7 @@ export class ListManager {
     if (this.keyHandler) document.removeEventListener('keydown', this.keyHandler);
     this.unsubscribe?.();
     if (this.timer) window.clearTimeout(this.timer);
+    if (this.catalogTimer) window.clearTimeout(this.catalogTimer);
     if (this.refreshTimer) window.clearInterval(this.refreshTimer);
 
     for (const entry of this.entries.values()) {
@@ -142,6 +155,7 @@ export class ListManager {
       entry.cardRoot?.unmount();
       entry.actionHost.remove();
       entry.cardRow.remove();
+      this.applyHighlight(entry.row, false);
       this.restoreRow(entry.row);
       delete entry.row.dataset.seiFlowFilterHidden;
       delete entry.row.dataset.seiFlowOriginalDisplay;
@@ -193,6 +207,7 @@ export class ListManager {
 
     const infos = collectRows();
     const connected = new Set<HTMLTableRowElement>();
+    this.queueProcessCatalog(infos);
 
     for (const info of infos) {
       connected.add(info.row);
@@ -205,6 +220,7 @@ export class ListManager {
         entry.cardRoot?.unmount();
         entry.actionHost.remove();
         entry.cardRow.remove();
+        this.applyHighlight(row, false);
         this.restoreRow(row);
         this.entries.delete(row);
       }
@@ -249,6 +265,8 @@ export class ListManager {
 
     const cardRow = document.createElement('tr');
     cardRow.setAttribute('data-sei-flow-card-row', '');
+    cardRow.style.border = '0';
+    cardRow.style.background = 'transparent';
     const cell = document.createElement('td');
     cell.colSpan = Math.max(1, info.row.cells.length);
     cell.style.padding = '0';
@@ -257,7 +275,8 @@ export class ListManager {
 
     const card = createShadowHost();
     card.host.style.display = 'block';
-    card.host.style.padding = '0 0 3px 12px';
+    card.host.style.padding = '0';
+    card.host.style.margin = '0';
     cell.appendChild(card.host);
     cardRow.appendChild(cell);
     info.row.insertAdjacentElement('afterend', cardRow);
@@ -291,6 +310,7 @@ export class ListManager {
       );
 
       const highlight = isHighlighted(entry.row, entry.anchor);
+      this.applyHighlight(entry.row, highlight);
       if (highlight !== entry.highlight) {
         entry.highlight = highlight;
         entry.actionRoot.render(
@@ -349,6 +369,69 @@ export class ListManager {
         highlight={entry.highlight}
       />,
     );
+  }
+
+  private queueProcessCatalog(infos: SeiProcessRow[]): void {
+    const records = infos
+      .filter((info) => Boolean(info.processNumber))
+      .map((info) => ({
+        number: info.processNumber,
+        specification: info.specification,
+        processType: info.processType,
+        url: info.url,
+        origin: info.origin,
+        unread: info.highlight,
+      }));
+    if (records.length === 0) return;
+
+    const signature = records
+      .map(
+        (record) =>
+          `${record.number}|${record.specification}|${record.processType}|${record.url}|${record.unread ? 1 : 0}`,
+      )
+      .join('\n');
+    if (signature === this.catalogSignature) return;
+    this.catalogSignature = signature;
+
+    if (this.catalogTimer) window.clearTimeout(this.catalogTimer);
+    this.catalogTimer = window.setTimeout(() => {
+      this.catalogTimer = null;
+      void callRpc('processes:upsert', { processes: records }).catch(() => undefined);
+    }, 1_200);
+  }
+
+  /**
+   * O SEI marca processos não lidos com classes próprias. Reforçamos o
+   * destaque com um contorno vermelho nas células da linha inteira.
+   */
+  private applyHighlight(row: HTMLTableRowElement, highlight: boolean): void {
+    const cells = Array.from(row.cells);
+
+    if (highlight) {
+      if (row.dataset.seiFlowOriginalBg === undefined) {
+        row.dataset.seiFlowOriginalBg = row.style.backgroundColor;
+      }
+      row.style.backgroundColor = 'rgba(192, 57, 43, 0.07)';
+      cells.forEach((cell, index) => {
+        if (cell.dataset.seiFlowOriginalShadow === undefined) {
+          cell.dataset.seiFlowOriginalShadow = cell.style.boxShadow;
+        }
+        const parts = ['inset 0 2px 0 #c0392b', 'inset 0 -2px 0 #c0392b'];
+        if (index === 0) parts.push('inset 2px 0 0 #c0392b');
+        if (index === cells.length - 1) parts.push('inset -2px 0 0 #c0392b');
+        cell.style.boxShadow = parts.join(', ');
+      });
+      return;
+    }
+
+    if (row.dataset.seiFlowOriginalBg === undefined) return;
+    row.style.backgroundColor = row.dataset.seiFlowOriginalBg;
+    delete row.dataset.seiFlowOriginalBg;
+    for (const cell of cells) {
+      if (cell.dataset.seiFlowOriginalShadow === undefined) continue;
+      cell.style.boxShadow = cell.dataset.seiFlowOriginalShadow;
+      delete cell.dataset.seiFlowOriginalShadow;
+    }
   }
 
   private applyFilter(row: HTMLTableRowElement, visible: boolean): void {

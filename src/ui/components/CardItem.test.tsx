@@ -23,6 +23,7 @@ const card: TrelloCard = {
   list: { id: 'list-1', name: 'Em análise' },
   links: ['08660.018176/2014-60'],
   hasChecklist: false,
+  lastActivity: null,
 };
 
 describe('CardItem', () => {

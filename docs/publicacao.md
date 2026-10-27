@@ -45,8 +45,11 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Vincule cartões que já existem no Trello a um ou vários processos — inclusive em lote.
 • Veja todos os cartões de um processo, sem esconder os adicionais.
 • Edite nome, descrição, etiquetas, checklist, prazo, quadro e lista dentro do SEI.
-• Dashboard de prazos com atrasados, vencendo hoje, próximos 7 dias e sem prazo.
-• Notificações diárias de prazos e badge de atrasados.
+• Painel SEI Flow como página inicial, com prazos, etiquetas, tipos de processo e atualizações.
+• Filtre o painel por etiqueta, tipo de processo, prazo, quadro, lista e atualização no Trello/SEI.
+• Abra os detalhes e edite qualquer cartão direto pelo painel.
+• Clique no processo para abrir a página correspondente no SEI.
+• Notificações diárias de prazos e badge com processos atualizados no SEI.
 • Desvincule sem excluir o cartão do Trello.
 • Filtre a lista de processos por quadro, lista, situação, etiqueta, prazo e busca.
 • Funciona em qualquer domínio e versão do SEI (3.x, 4.x e 5.x).
@@ -64,8 +67,8 @@ Copie e adapte no formulário de revisão:
 
 - **`storage`**: salvar localmente a APP-KEY/TOKEN do Trello, o quadro/lista padrão, as preferências e o cache de cartões. Nenhum dado sai do navegador.
 - **`scripting`**: injetar a interface do SEI Flow nas páginas do SEI que o usuário autorizou explicitamente.
-- **`activeTab`**: identificar a URL da aba atual quando o usuário abre o popup, para oferecer a ativação do site correto.
-- **`alarms`**: verificar periodicamente prazos para atualizar o badge e as notificações.
+- **`activeTab`**: identificar a URL da aba atual quando o usuário clica no ícone, para oferecer a ativação do site correto no painel inicial.
+- **`alarms`**: verificar periodicamente prazos e processos atualizados para manter badge e notificações.
 - **`notifications`**: avisar uma vez por dia sobre cartões atrasados ou vencendo hoje.
 - **`https://api.trello.com/*`**: ler e gravar cartões, etiquetas, checklists e prazos na conta do Trello do próprio usuário, usando as credenciais fornecidas por ele.
 - **Permissão opcional de host (`*://*/*`)**: permitir que o usuário ative o SEI Flow em instalações do SEI de qualquer órgão/domínio. A permissão é solicitada em tempo de execução, por gesto do usuário, e o script encerra sem alterar páginas que não sejam do SEI.
@@ -87,15 +90,21 @@ Os arquivos finais em 1280×800 estão em [`docs/store/screenshots-1280x800/`](s
 
 Sugestão de imagens:
 
-1. Lista de processos com cartões compactos e filtros.
-2. Filtros por quadro, lista, etiqueta, prazo e situação.
-3. Processo aberto com o painel SEI Flow.
-4. Diálogo “Vincular cartões existentes” com seleção múltipla.
-5. Ação em lote entre processos.
-6. Página de opções (conexão/quadro/lista/sites).
-7. Popup de ativação.
+1. Painel SEI Flow com métricas, filtros por etiqueta/tipo e cartões.
+2. Lista de processos com cartões compactos e filtros.
+3. Filtros por quadro, lista, etiqueta, prazo e situação.
+4. Processo aberto com o painel SEI Flow.
+5. Diálogo “Vincular cartões existentes” com seleção múltipla.
+6. Ação em lote entre processos.
+7. Página de opções (conexão/quadro/lista/sites).
 
 Evite dados reais de processos: use números fictícios e nomes genéricos.
+
+## Atualização automática
+
+O workflow **Publish to stores** envia o pacote à Chrome Web Store e à AMO
+sempre que uma release é publicada, desde que os segredos estejam configurados.
+Passo a passo em [`store/auto-publish.md`](store/auto-publish.md).
 
 ## Firefox Add-ons (AMO)
 

@@ -53,6 +53,7 @@ export interface TrelloCardApi {
   idList?: string;
   idChecklists?: string[];
   labels?: TrelloLabel[];
+  dateLastActivity?: string | null;
   board?: { id: string; name: string } | null;
   list?: { id: string; name: string } | null;
   closed?: boolean;
@@ -74,6 +75,7 @@ export interface TrelloCard {
   list: TrelloList | null;
   links: string[];
   hasChecklist: boolean;
+  lastActivity: string | null;
 }
 
 export interface CardPatch {
@@ -124,5 +126,7 @@ export interface SeiProcessRow {
   processNumber: string;
   specification: string;
   processType: string;
+  url: string;
+  origin: string;
   highlight: boolean;
 }

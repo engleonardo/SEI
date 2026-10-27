@@ -1,5 +1,6 @@
 import { useStore } from '../store';
 import { CardStack } from '../components/CardStack';
+import { classNames } from '../utils';
 import { addCards, listStore, loadList, removeCard, updateCard } from './store';
 
 export function ProcessRowCards({
@@ -16,16 +17,18 @@ export function ProcessRowCards({
   if (cards.length === 0) return null;
 
   return (
-    <CardStack
-      processNumber={processNumber}
-      cards={cards}
-      compact={compact}
-      highlight={highlight}
-      showHeader={false}
-      onReload={() => void loadList()}
-      onChanged={updateCard}
-      onRemoved={removeCard}
-      onAdded={addCards}
-    />
+    <div className={classNames('sf-detail-strip', highlight && 'sf-detail-strip--highlight')}>
+      <CardStack
+        processNumber={processNumber}
+        cards={cards}
+        compact={compact}
+        highlight={highlight}
+        showHeader={false}
+        onReload={() => void loadList()}
+        onChanged={updateCard}
+        onRemoved={removeCard}
+        onAdded={addCards}
+      />
+    </div>
   );
 }

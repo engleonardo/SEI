@@ -9,7 +9,7 @@ export default defineConfig({
     short_name: 'SEI Flow',
     description:
       'Vincule cartões do Trello a processos do SEI, crie cartões e edite etiquetas, prazos e checklists sem sair do SEI.',
-    author: 'Leonardo Oliveira',
+    author: 'Engenheiro Leonardo Almeida de Oliveira',
     homepage_url: 'https://github.com/engleonardo/SEI',
     permissions: ['storage', 'scripting', 'activeTab', 'alarms', 'notifications'],
     optional_host_permissions: ['*://*/*'],

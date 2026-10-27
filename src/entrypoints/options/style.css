@@ -518,6 +518,9 @@ a {
 }
 
 .sfo-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   color: var(--muted);
   font-size: 11.5px;
   text-align: center;

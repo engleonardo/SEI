@@ -1,0 +1,213 @@
+import { cpSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { chromium, expect, test, type BrowserContext } from '@playwright/test';
+
+test.use({ trace: 'off' });
+test.describe.configure({ mode: 'serial' });
+test.setTimeout(90_000);
+
+const EXTENSION_SOURCE = join(process.cwd(), '.output', 'chrome-mv3');
+const PROCESS = '08660.018176/2014-60';
+const OTHER = '12345.678901/2025-12';
+
+const now = Date.now();
+const cards = [
+  {
+    id: 'card-1',
+    name: 'Revisar contrato',
+    desc: `SEI ${PROCESS}\nDescrição do contrato`,
+    description: 'Descrição do contrato',
+    shortUrl: 'https://trello.com/c/1',
+    due: new Date(now + 86_400_000).toISOString(),
+    dueComplete: false,
+    idBoard: 'board-1',
+    idList: 'list-1',
+    idChecklists: [],
+    labels: [
+      { id: 'label-red', name: 'Urgente', color: 'red' },
+      { id: 'label-light', name: 'Leonardo', color: 'green_light' },
+    ],
+    board: { id: 'board-1', name: 'Contratos' },
+    list: { id: 'list-1', name: 'Em análise' },
+    links: [PROCESS],
+    hasChecklist: false,
+    lastActivity: new Date(now - 60_000).toISOString(),
+  },
+  {
+    id: 'card-2',
+    name: 'Publicar edital',
+    desc: `SEI ${OTHER}`,
+    description: '',
+    shortUrl: 'https://trello.com/c/2',
+    due: new Date(now - 4 * 86_400_000).toISOString(),
+    dueComplete: false,
+    idBoard: 'board-1',
+    idList: 'list-1',
+    idChecklists: [],
+    labels: [],
+    board: { id: 'board-1', name: 'Contratos' },
+    list: { id: 'list-1', name: 'Em análise' },
+    links: [OTHER],
+    hasChecklist: false,
+    lastActivity: new Date(now - 10 * 86_400_000).toISOString(),
+  },
+];
+
+const settings = {
+  appKey: 'key',
+  appToken: 'token',
+  defaultBoardId: 'board-1',
+  defaultBoardName: 'Contratos',
+  defaultListId: 'list-1',
+  defaultListName: 'Em análise',
+  activatedOrigins: ['http://sei.test'],
+  allSites: false,
+  theme: 'light',
+  compact: true,
+  notificationsEnabled: true,
+  autoRefreshMinutes: 0,
+};
+
+const processes = {
+  [PROCESS]: {
+    number: PROCESS,
+    specification: 'Aquisição de material de escritório',
+    processType: 'Processo Administrativo',
+    url: 'http://sei.test/sei/controlador.php?acao=procedimento_trabalhar&id_procedimento=1',
+    origin: 'http://sei.test',
+    unread: true,
+    updatedAt: now,
+  },
+  [OTHER]: {
+    number: OTHER,
+    specification: 'Contratação de serviço de limpeza',
+    processType: 'Processo de Contratação',
+    url: 'http://sei.test/sei/controlador.php?acao=procedimento_trabalhar&id_procedimento=2',
+    origin: 'http://sei.test',
+    unread: false,
+    updatedAt: now,
+  },
+};
+
+async function seed(context: BrowserContext): Promise<void> {
+  let worker = context.serviceWorkers()[0];
+  if (!worker) worker = await context.waitForEvent('serviceworker', { timeout: 20_000 });
+  await worker.evaluate(
+    async ({ settingsData, processData, cardsData, lastTab }) => {
+      await chrome.storage.local.set({
+        'sei-flow:settings:v1': settingsData,
+        'sei-flow:processes:v1': processData,
+        'sei-flow:cache:v2:all-linked': { at: Date.now(), value: cardsData },
+      });
+      await chrome.storage.session.set({ 'sei-flow:last-action-tab': lastTab });
+    },
+    {
+      settingsData: settings,
+      processData: processes,
+      cardsData: cards,
+      lastTab: {
+        id: 1,
+        url: 'http://sei.test/sei/controlador.php?acao=procedimento_controlar',
+        title: 'SEI - Controle de Processos',
+        capturedAt: now,
+      },
+    },
+  );
+}
+
+test('dashboard é a página inicial, filtra por etiqueta/tipo e abre detalhes', async () => {
+  const extensionDir = mkdtempSync(join(tmpdir(), 'sei-flow-dash-'));
+  const profileDir = mkdtempSync(join(tmpdir(), 'sei-flow-dash-profile-'));
+  cpSync(EXTENSION_SOURCE, extensionDir, { recursive: true });
+
+  const context = await chromium.launchPersistentContext(profileDir, {
+    headless: false,
+    args: [
+      `--disable-extensions-except=${extensionDir}`,
+      `--load-extension=${extensionDir}`,
+    ],
+    viewport: { width: 1280, height: 900 },
+  });
+
+  try {
+    let worker = context.serviceWorkers()[0];
+    if (!worker) worker = await context.waitForEvent('serviceworker', { timeout: 20_000 });
+    const extensionId = new URL(worker.url()).host;
+
+    // onInstalled abre o dashboard e grava as configurações padrão.
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+    await seed(context);
+
+    const dashboard = await context.newPage();
+    await dashboard.goto(`chrome-extension://${extensionId}/dashboard.html`);
+
+    await expect(dashboard.getByRole('heading', { name: /Painel SEI Flow/ })).toBeVisible();
+    await expect(dashboard.getByText('Revisar contrato')).toBeVisible();
+    await expect(dashboard.getByText('Publicar edital')).toBeVisible();
+    await expect(
+      dashboard.getByText('Desenvolvido por Engenheiro Leonardo Almeida de Oliveira'),
+    ).toBeVisible();
+
+    // Link do processo abre a página real do SEI.
+    const processLink = dashboard.getByRole('link', {
+      name: new RegExp(PROCESS.replace('.', '\\.')),
+    });
+    await expect(processLink).toHaveAttribute(
+      'href',
+      'http://sei.test/sei/controlador.php?acao=procedimento_trabalhar&id_procedimento=1',
+    );
+
+    // Etiquetas usam as cores reais do Trello (incluindo as novas cores light/dark).
+    const lightLabel = dashboard.getByRole('button', { name: /Leonardo/ }).first();
+    expect(
+      await lightLabel.evaluate((element) => getComputedStyle(element).backgroundColor),
+    ).toBe('rgb(186, 243, 219)');
+    const redLabel = dashboard.getByRole('button', { name: /Urgente/ }).first();
+    expect(await redLabel.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
+      'rgb(248, 113, 104)',
+    );
+
+    // Filtro por etiqueta.
+    await lightLabel.click();
+    await expect(dashboard.getByText('Revisar contrato')).toBeVisible();
+    await expect(dashboard.getByText('Publicar edital')).toBeHidden();
+    await dashboard.getByRole('button', { name: 'Limpar filtros' }).first().click();
+
+    // Filtro por tipo de processo.
+    await dashboard.locator('#sdo-type').selectOption('Processo de Contratação');
+    await expect(dashboard.getByText('Publicar edital')).toBeVisible();
+    await expect(dashboard.getByText('Revisar contrato')).toBeHidden();
+    await dashboard.getByRole('button', { name: 'Limpar filtros' }).first().click();
+
+    // Filtro por atualização recente no Trello.
+    await dashboard.locator('#sdo-activity').selectOption('7d');
+    await expect(dashboard.getByText('Revisar contrato')).toBeVisible();
+    await expect(dashboard.getByText('Publicar edital')).toBeHidden();
+    await dashboard.getByRole('button', { name: 'Limpar filtros' }).first().click();
+
+    // Filtro por novidade no SEI.
+    await dashboard.locator('#sdo-sei').selectOption('unread');
+    await expect(dashboard.getByText('Revisar contrato')).toBeVisible();
+    await expect(dashboard.getByText('Publicar edital')).toBeHidden();
+    await dashboard.getByRole('button', { name: 'Limpar filtros' }).first().click();
+
+    // Detalhes/edição do cartão.
+    await dashboard.getByRole('button', { name: 'Detalhes' }).first().click();
+    const dialog = dashboard.getByRole('dialog');
+    await expect(dialog.getByText('Detalhes e edição do cartão')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Etiquetas', exact: true })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Checklist', exact: true })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Prazo', exact: true })).toBeVisible();
+    await dialog.locator('.sf-modal__footer').getByRole('button', { name: 'Fechar' }).click();
+
+    // Badge conta processos atualizados (não atrasados).
+    await expect
+      .poll(() => worker.evaluate(() => chrome.action.getBadgeText({})), { timeout: 10_000 })
+      .toBe('1');
+  } finally {
+    await context.close();
+    rmSync(extensionDir, { recursive: true, force: true });
+    rmSync(profileDir, { recursive: true, force: true });
+  }
+});

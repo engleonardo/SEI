@@ -25,6 +25,7 @@
 
 - [ ] Criar uma tag `v1.0.0` (ou a versão publicada) no GitHub.
 - [ ] Anexar o zip ao GitHub Release.
+- [ ] Configurar os segredos da loja para o envio automático (veja `auto-publish.md`).
 - [ ] Confirmar o link da loja no README.
 - [ ] Acompanhar as avaliações e issues.
 

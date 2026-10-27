@@ -20,6 +20,7 @@ function card(overrides: Partial<TrelloCard> = {}): TrelloCard {
     list: { id: 'list-1', name: 'Lista' },
     links: ['08660.018176/2014-60'],
     hasChecklist: false,
+    lastActivity: null,
     ...overrides,
   };
 }
@@ -110,8 +111,12 @@ describe('date and label helpers', () => {
     expect(toDateInputValue(iso)).toBe('2026-10-26');
   });
 
-  it('mapeia cores do Trello', () => {
-    expect(labelColorHex('red')).toBe('#eb5a46');
+  it('mapeia as 30 cores oficiais do Trello', () => {
+    expect(labelColorHex('red')).toBe('#f87168');
+    expect(labelColorHex('red_dark')).toBe('#c9372c');
+    expect(labelColorHex('red_light')).toBe('#ffd5d2');
+    expect(labelColorHex('green_light')).toBe('#baf3db');
+    expect(labelColorHex('black_dark')).toBe('#626f86');
     expect(labelColorHex(null)).toBe('#b6c2cf');
   });
 });
