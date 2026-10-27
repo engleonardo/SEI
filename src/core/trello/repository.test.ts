@@ -259,6 +259,7 @@ describe('TrelloRepository', () => {
         id: 'rule-1',
         name: 'Concluído vai para concluídos',
         enabled: true,
+        boardId: 'board-1',
         trigger: { type: 'completed' },
         actions: [
           { type: 'addLabel', labelId: 'label-done' },
@@ -267,17 +268,26 @@ describe('TrelloRepository', () => {
       },
     ];
     const client = fakeClient();
-    vi.mocked(client.get)
-      .mockResolvedValueOnce(rawCard({ desc: `SEI ${PROCESS}` }))
-      .mockResolvedValueOnce(rawCard({ desc: `SEI ${PROCESS}` }))
-      .mockResolvedValueOnce(
-        rawCard({
+    let cardFetches = 0;
+    vi.mocked(client.get).mockImplementation(async (path: string) => {
+      if (path === '/boards/board-1/lists') {
+        return [
+          { id: 'list-1', name: 'Lista' },
+          { id: 'list-done', name: 'Concluídos' },
+        ];
+      }
+      if (path.startsWith('/boards/')) return [];
+      cardFetches += 1;
+      if (cardFetches >= 3) {
+        return rawCard({
           desc: `SEI ${PROCESS}`,
           idList: 'list-done',
           list: { id: 'list-done', name: 'Concluídos' },
           labels: [{ id: 'label-done', name: 'Concluído', color: 'green' }],
-        }),
-      );
+        });
+      }
+      return rawCard({ desc: `SEI ${PROCESS}` });
+    });
     vi.mocked(client.put).mockResolvedValue({});
     vi.mocked(client.post).mockResolvedValue({});
 
@@ -300,6 +310,7 @@ describe('TrelloRepository', () => {
         id: 'rule-1',
         name: 'Concluído vai para concluídos',
         enabled: true,
+        boardId: 'board-1',
         trigger: { type: 'completed' },
         actions: [{ type: 'moveToList', listId: 'list-done' }],
       },
@@ -322,6 +333,7 @@ describe('TrelloRepository', () => {
         id: 'rule-top',
         name: 'Entrou em qualquer lista, vai para o topo',
         enabled: true,
+        boardId: 'board-1',
         trigger: { type: 'enterAnyList' },
         actions: [{ type: 'moveToTop' }],
       },

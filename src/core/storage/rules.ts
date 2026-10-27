@@ -1,9 +1,9 @@
 import { browser } from 'wxt/browser';
-import { defaultRules, newRuleId, type Rule } from '../domain/rules';
+import { defaultRules, newRuleId, type Rule, type RuleAction } from '../domain/rules';
 
 const RULES_KEY = 'sei-flow:rules:v1';
 
-function sanitizeAction(value: unknown): Rule['actions'][number] | null {
+function sanitizeAction(value: unknown): RuleAction | null {
   if (!value || typeof value !== 'object') return null;
   const action = value as Record<string, unknown>;
   const type = action.type;
@@ -17,11 +17,22 @@ function sanitizeAction(value: unknown): Rule['actions'][number] | null {
   }
   return {
     type,
-    boardId: typeof action.boardId === 'string' ? action.boardId : undefined,
     listId: typeof action.listId === 'string' ? action.listId : undefined,
     labelId: typeof action.labelId === 'string' ? action.labelId : undefined,
     labelName: typeof action.labelName === 'string' ? action.labelName : undefined,
   };
+}
+
+/** Migra regras antigas (sem quadro fixo) aproveitando o quadro que estiver salvo. */
+function legacyBoardId(rule: Record<string, unknown>, actions: RuleAction[]): string {
+  if (typeof rule.boardId === 'string' && rule.boardId) return rule.boardId;
+  const trigger = (rule.trigger ?? {}) as Record<string, unknown>;
+  if (typeof trigger.boardId === 'string' && trigger.boardId) return trigger.boardId;
+  for (const action of actions) {
+    const raw = action as unknown as Record<string, unknown>;
+    if (typeof raw.boardId === 'string' && raw.boardId) return raw.boardId;
+  }
+  return '';
 }
 
 function sanitizeRule(value: unknown): Rule | null {
@@ -38,16 +49,16 @@ function sanitizeRule(value: unknown): Rule | null {
     return null;
   }
   const actions = Array.isArray(rule.actions)
-    ? rule.actions.map(sanitizeAction).filter((action): action is Rule['actions'][number] => Boolean(action))
+    ? rule.actions.map(sanitizeAction).filter((action): action is RuleAction => Boolean(action))
     : [];
 
   return {
     id: typeof rule.id === 'string' && rule.id ? rule.id : newRuleId(),
     name: typeof rule.name === 'string' && rule.name.trim() ? rule.name.trim() : 'Regra',
     enabled: Boolean(rule.enabled),
+    boardId: legacyBoardId(rule, actions),
     trigger: {
       type: triggerType,
-      boardId: typeof trigger.boardId === 'string' ? trigger.boardId : undefined,
       listId: typeof trigger.listId === 'string' ? trigger.listId : undefined,
     },
     actions,

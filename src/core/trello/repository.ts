@@ -505,6 +505,7 @@ export class TrelloRepository {
 
     for (const rule of rules) {
       if (applied.has(rule.id)) continue;
+      if (!rule.boardId || card.idBoard !== rule.boardId) continue;
       if (only && rule.id !== only) continue;
       if (!force && !ruleMatches(rule, event, current)) continue;
       if (force && rule.actions.length === 0) continue;
@@ -536,7 +537,20 @@ export class TrelloRepository {
     rule: Rule,
   ): Promise<{ card: TrelloCard; touched: boolean; moved: boolean; fromListId: string }> {
     const fromListId = card.idList;
-    const moveAction = rule.actions.find((action) => action.type === 'moveToList' && action.listId);
+    const moveCandidate = rule.actions.find(
+      (action) => action.type === 'moveToList' && action.listId,
+    );
+    let targetListId = moveCandidate?.listId;
+    if (targetListId) {
+      // Nunca move para uma lista de outro quadro: a regra é presa ao quadro dela.
+      const boardLists = await this.getLists(rule.boardId).catch(() => null);
+      if (
+        !Array.isArray(boardLists) ||
+        !boardLists.some((list) => list.id === targetListId)
+      ) {
+        targetListId = undefined;
+      }
+    }
     const moveToTop = rule.actions.some((action) => action.type === 'moveToTop');
     const adds = rule.actions.filter(
       (action) => action.type === 'addLabel' && Boolean(action.labelId),
@@ -559,10 +573,9 @@ export class TrelloRepository {
       touched = true;
     }
 
-    const targetList = moveAction?.listId ?? card.idList;
-    if (moveAction || moveToTop) {
-      const body: Record<string, string> = { pos: moveAction ? 'bottom' : 'top' };
-      if (moveAction) body.idList = targetList;
+    if (targetListId || moveToTop) {
+      const body: Record<string, string> = { pos: targetListId ? 'bottom' : 'top' };
+      if (targetListId) body.idList = targetListId;
       await this.client.put(`/cards/${card.id}`, body);
       touched = true;
     }

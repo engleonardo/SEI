@@ -2,8 +2,7 @@ export type RuleTriggerType = 'completed' | 'enterList' | 'enterAnyList' | 'upda
 
 export interface RuleTrigger {
   type: RuleTriggerType;
-  /** Lista que dispara `enterList` ou filtra `updated`. */
-  boardId?: string;
+  /** Lista do quadro da regra que dispara `enterList` ou filtra `updated`. */
   listId?: string;
 }
 
@@ -11,7 +10,6 @@ export type RuleActionType = 'moveToList' | 'moveToTop' | 'addLabel' | 'removeLa
 
 export interface RuleAction {
   type: RuleActionType;
-  boardId?: string;
   listId?: string;
   labelId?: string;
   labelName?: string;
@@ -21,6 +19,8 @@ export interface Rule {
   id: string;
   name: string;
   enabled: boolean;
+  /** Quadro da regra: listas e etiquetas são sempre deste quadro. */
+  boardId: string;
   trigger: RuleTrigger;
   actions: RuleAction[];
 }
@@ -49,6 +49,7 @@ export function createRule(partial: Partial<Rule> = {}): Rule {
     id: newRuleId(),
     name: 'Nova regra',
     enabled: false,
+    boardId: '',
     trigger: { type: 'completed' },
     actions: [{ type: 'moveToTop' }],
     ...partial,
@@ -56,8 +57,8 @@ export function createRule(partial: Partial<Rule> = {}): Rule {
 }
 
 /**
- * Regras iniciais: ficam desativadas até o usuário escolher as listas e etiquetas.
- * São só modelos - nada roda até serem configuradas e ativadas.
+ * Regras iniciais: ficam desativadas até o usuário escolher o quadro, as listas
+ * e as etiquetas. São só modelos - nada roda até serem configuradas e ativadas.
  */
 export function defaultRules(): Rule[] {
   return [
@@ -88,32 +89,31 @@ export function defaultRules(): Rule[] {
   ];
 }
 
-/** Uma regra só pode ter uma lista de destino por execução. */
-export function ruleIsConfigured(rule: Rule): boolean {
-  if (rule.actions.length === 0) return false;
-  const moves = rule.actions.filter((action) => action.type === 'moveToList');
-  if (moves.some((action) => !action.listId)) return false;
-  if (moves.length > 1) {
-    const unique = new Set(moves.map((action) => action.listId));
-    if (unique.size > 1) return false;
-  }
-  if (rule.trigger.type === 'enterList' && !rule.trigger.listId) return false;
-  return true;
-}
-
 /** Motivo pelo qual a regra não pode rodar, ou null quando está pronta. */
 export function ruleIssue(rule: Rule): string | null {
+  if (!rule.boardId) return 'Escolha o quadro da regra.';
   if (rule.actions.length === 0) return 'Adicione pelo menos uma ação.';
+
   const moves = rule.actions.filter((action) => action.type === 'moveToList');
   if (moves.some((action) => !action.listId)) return 'Escolha a lista de destino.';
   const uniqueLists = new Set(moves.map((action) => action.listId));
   if (uniqueLists.size > 1) {
     return 'Uma regra não pode mover para duas listas diferentes.';
   }
+
+  const labels = rule.actions.filter(
+    (action) => action.type === 'addLabel' || action.type === 'removeLabel',
+  );
+  if (labels.some((action) => !action.labelId)) return 'Escolha a etiqueta da ação.';
+
   if (rule.trigger.type === 'enterList' && !rule.trigger.listId) {
     return 'Escolha a lista que dispara a regra.';
   }
   return null;
+}
+
+export function ruleIsConfigured(rule: Rule): boolean {
+  return ruleIssue(rule) === null;
 }
 
 export interface RuleEvent {
@@ -125,10 +125,11 @@ export interface RuleEvent {
 export function ruleMatches(
   rule: Rule,
   event: RuleEvent,
-  card: { idList: string; links: string[] },
+  card: { idBoard: string; idList: string; links: string[] },
 ): boolean {
   if (!rule.enabled) return false;
   if (card.links.length === 0) return false;
+  if (!rule.boardId || card.idBoard !== rule.boardId) return false;
   if (ruleIssue(rule)) return false;
 
   switch (rule.trigger.type) {

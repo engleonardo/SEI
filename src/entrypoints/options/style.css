@@ -549,6 +549,31 @@ a {
   font-size: 12.5px;
 }
 
+.sfo-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+
+.sfo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.sfo-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
 .sfo-icon-btn--danger {
   color: var(--danger);
 }

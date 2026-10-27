@@ -55,10 +55,7 @@ export function RulesSection({
         setRules(value);
         const boardIds = new Set<string>();
         for (const rule of value) {
-          if (rule.trigger.boardId) boardIds.add(rule.trigger.boardId);
-          for (const action of rule.actions) {
-            if (action.boardId) boardIds.add(action.boardId);
-          }
+          if (rule.boardId) boardIds.add(rule.boardId);
         }
         for (const boardId of boardIds) void loadBoardData(boardId);
       })
@@ -92,6 +89,20 @@ export function RulesSection({
     persist(next);
   };
 
+  const changeBoard = (rule: Rule, boardId: string) => {
+    updateRule(rule.id, {
+      boardId,
+      trigger: { ...rule.trigger, listId: undefined },
+      actions: rule.actions.map((action) => ({
+        ...action,
+        listId: undefined,
+        labelId: undefined,
+        labelName: undefined,
+      })),
+    });
+    void loadBoardData(boardId);
+  };
+
   const updateAction = (ruleId: string, index: number, patch: Partial<RuleAction>) => {
     const next = rules.map((rule) => {
       if (rule.id !== ruleId) return rule;
@@ -101,8 +112,6 @@ export function RulesSection({
       return { ...rule, actions };
     });
     persist(next);
-    const boardId = patch.boardId;
-    if (boardId) void loadBoardData(boardId);
   };
 
   const addAction = (rule: Rule) => {
@@ -174,13 +183,13 @@ export function RulesSection({
     updateRule(rule.id, { enabled: !rule.enabled });
   };
 
-  const boardLists = (boardId?: string) => (boardId ? lists[boardId] ?? [] : []);
-  const boardLabels = (boardId?: string) => (boardId ? labels[boardId] ?? [] : []);
+  const boardLists = (boardId: string) => lists[boardId] ?? [];
+  const boardLabels = (boardId: string) => labels[boardId] ?? [];
 
   return (
     <SectionCard
       title="Regras automáticas"
-      subtitle="Aplicação instantânea, só em cartões vinculados a processos do SEI."
+      subtitle="Cada regra pertence a um quadro e só altera cartões vinculados ao SEI."
       icon="refresh"
       footer={
         <div className="sfo-actions">
@@ -189,7 +198,7 @@ export function RulesSection({
             Nova regra
           </button>
           <span className="sfo-hint">
-            Cada regra roda uma vez por evento, com limite de 5 regras encadeadas.
+            Os cartões nunca saem do quadro da regra. Cadeia limitada a 5 níveis.
           </span>
         </div>
       }
@@ -241,6 +250,23 @@ export function RulesSection({
                 </header>
 
                 <div className="sfo-rule__row">
+                  <span className="sfo-rule__label">Quadro</span>
+                  <select
+                    className="sfo-select"
+                    value={rule.boardId}
+                    onChange={(event) => changeBoard(rule, event.target.value)}
+                    aria-label="Quadro da regra"
+                  >
+                    <option value="">Escolha o quadro</option>
+                    {boards.map((board) => (
+                      <option key={board.id} value={board.id}>
+                        {board.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="sfo-rule__row">
                   <span className="sfo-rule__label">Quando</span>
                   <select
                     className="sfo-select"
@@ -250,6 +276,7 @@ export function RulesSection({
                         trigger: {
                           ...rule.trigger,
                           type: event.target.value as RuleTriggerType,
+                          listId: undefined,
                         },
                       })
                     }
@@ -263,49 +290,29 @@ export function RulesSection({
                   </select>
 
                   {(rule.trigger.type === 'enterList' || rule.trigger.type === 'updated') && (
-                    <>
-                      <select
-                        className="sfo-select"
-                        value={rule.trigger.boardId ?? ''}
-                        onChange={(event) => {
-                          const boardId = event.target.value;
-                          updateRule(rule.id, {
-                            trigger: { ...rule.trigger, boardId, listId: '' },
-                          });
-                          void loadBoardData(boardId);
-                        }}
-                        aria-label="Quadro da condição"
-                      >
-                        <option value="">
-                          {rule.trigger.type === 'updated' ? 'Qualquer quadro' : 'Escolha o quadro'}
+                    <select
+                      className="sfo-select"
+                      value={rule.trigger.listId ?? ''}
+                      onChange={(event) =>
+                        updateRule(rule.id, {
+                          trigger: {
+                            ...rule.trigger,
+                            listId: event.target.value || undefined,
+                          },
+                        })
+                      }
+                      disabled={!rule.boardId}
+                      aria-label="Lista da condição"
+                    >
+                      <option value="">
+                        {rule.trigger.type === 'updated' ? 'Qualquer lista' : 'Escolha a lista'}
+                      </option>
+                      {boardLists(rule.boardId).map((list) => (
+                        <option key={list.id} value={list.id}>
+                          {list.name}
                         </option>
-                        {boards.map((board) => (
-                          <option key={board.id} value={board.id}>
-                            {board.name}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        className="sfo-select"
-                        value={rule.trigger.listId ?? ''}
-                        onChange={(event) =>
-                          updateRule(rule.id, {
-                            trigger: { ...rule.trigger, listId: event.target.value },
-                          })
-                        }
-                        disabled={!rule.trigger.boardId}
-                        aria-label="Lista da condição"
-                      >
-                        <option value="">
-                          {rule.trigger.type === 'updated' ? 'Qualquer lista' : 'Escolha a lista'}
-                        </option>
-                        {boardLists(rule.trigger.boardId).map((list) => (
-                          <option key={list.id} value={list.id}>
-                            {list.name}
-                          </option>
-                        ))}
-                      </select>
-                    </>
+                      ))}
+                    </select>
                   )}
                 </div>
 
@@ -320,6 +327,9 @@ export function RulesSection({
                           onChange={(event) =>
                             updateAction(rule.id, index, {
                               type: event.target.value as RuleActionType,
+                              listId: undefined,
+                              labelId: undefined,
+                              labelName: undefined,
                             })
                           }
                           aria-label="Ação da regra"
@@ -331,44 +341,20 @@ export function RulesSection({
                           ))}
                         </select>
 
-                        {(action.type === 'moveToList' ||
-                          action.type === 'addLabel' ||
-                          action.type === 'removeLabel') && (
-                          <select
-                            className="sfo-select"
-                            value={action.boardId ?? ''}
-                            onChange={(event) => {
-                              const boardId = event.target.value;
-                              updateAction(rule.id, index, {
-                                boardId,
-                                listId: '',
-                                labelId: '',
-                              });
-                              void loadBoardData(boardId);
-                            }}
-                            aria-label="Quadro da ação"
-                          >
-                            <option value="">Escolha o quadro</option>
-                            {boards.map((board) => (
-                              <option key={board.id} value={board.id}>
-                                {board.name}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-
                         {action.type === 'moveToList' && (
                           <select
                             className="sfo-select"
                             value={action.listId ?? ''}
                             onChange={(event) =>
-                              updateAction(rule.id, index, { listId: event.target.value })
+                              updateAction(rule.id, index, {
+                                listId: event.target.value || undefined,
+                              })
                             }
-                            disabled={!action.boardId}
+                            disabled={!rule.boardId}
                             aria-label="Lista de destino"
                           >
                             <option value="">Escolha a lista</option>
-                            {boardLists(action.boardId).map((list) => (
+                            {boardLists(rule.boardId).map((list) => (
                               <option key={list.id} value={list.id}>
                                 {list.name}
                               </option>
@@ -382,19 +368,19 @@ export function RulesSection({
                             value={action.labelId ?? ''}
                             onChange={(event) => {
                               const labelId = event.target.value;
-                              const label = boardLabels(action.boardId).find(
+                              const label = boardLabels(rule.boardId).find(
                                 (item) => item.id === labelId,
                               );
                               updateAction(rule.id, index, {
-                                labelId,
+                                labelId: labelId || undefined,
                                 labelName: label?.name ?? '',
                               });
                             }}
-                            disabled={!action.boardId}
+                            disabled={!rule.boardId}
                             aria-label="Etiqueta"
                           >
                             <option value="">Escolha a etiqueta</option>
-                            {boardLabels(action.boardId).map((label) => (
+                            {boardLabels(rule.boardId).map((label) => (
                               <option key={label.id} value={label.id}>
                                 {label.name || label.color || 'Etiqueta'}
                               </option>

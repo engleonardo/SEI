@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
 import type { Settings, TrelloBoard } from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
+import { openDashboard } from '../../core/messaging/actions';
 import { BrandMark } from '../../ui/BrandMark';
 import { Icon, type IconName } from '../../ui/icons';
 import { ConnectionSection } from './sections/ConnectionSection';
@@ -146,9 +147,7 @@ function App() {
           <button
             type="button"
             className="sfo-nav__item sfo-nav__item--dashboard"
-            onClick={() =>
-              void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') })
-            }
+            onClick={() => void openDashboard()}
           >
             <Icon name="board" size={16} />
             Dashboard

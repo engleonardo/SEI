@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser';
 import { normalizeOrigin, originPermissionPattern } from '../storage/settings';
 import { injectSeiScript } from '../activation/inject';
+import { openDashboardTab } from '../extension/dashboard-tab';
 import type { RpcMap, RpcRequest, RpcResponse, RpcType } from './contract';
 import { TrelloError } from '../trello/client';
 import { cacheClear } from '../trello/cache';
@@ -47,7 +48,7 @@ const handlers = {
   },
 
   'dashboard:open': async () => {
-    await browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') });
+    await openDashboardTab();
     return undefined;
   },
 

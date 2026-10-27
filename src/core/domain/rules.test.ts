@@ -2,30 +2,38 @@ import { describe, expect, it } from 'vitest';
 import {
   createRule,
   defaultRules,
-  ruleIssue,
   ruleIsConfigured,
+  ruleIssue,
   ruleMatches,
   type Rule,
 } from './rules';
 
-const card = { idList: 'list-1', links: ['08660.018176/2014-60'] };
-const unlinked = { idList: 'list-1', links: [] };
+const card = { idBoard: 'board-1', idList: 'list-1', links: ['08660.018176/2014-60'] };
+const unlinked = { ...card, links: [] };
 
 function rule(overrides: Partial<Rule> = {}): Rule {
-  return createRule({ enabled: true, ...overrides });
+  return createRule({ enabled: true, boardId: 'board-1', ...overrides });
 }
 
 describe('regras', () => {
-  it('cria 4 regras iniciais desativadas', () => {
+  it('cria 4 regras iniciais desativadas e sem quadro', () => {
     const rules = defaultRules();
     expect(rules).toHaveLength(4);
     expect(rules.every((item) => !item.enabled)).toBe(true);
+    expect(rules.every((item) => item.boardId === '')).toBe(true);
   });
 
   it('não aplica regras em cartões sem vínculo com o SEI', () => {
     const completed = rule({ trigger: { type: 'completed' }, actions: [{ type: 'moveToTop' }] });
     expect(ruleMatches(completed, { kind: 'completed' }, card)).toBe(true);
     expect(ruleMatches(completed, { kind: 'completed' }, unlinked)).toBe(false);
+  });
+
+  it('não aplica regras em cartões de outro quadro', () => {
+    const completed = rule({ trigger: { type: 'completed' }, actions: [{ type: 'moveToTop' }] });
+    expect(
+      ruleMatches(completed, { kind: 'completed' }, { ...card, idBoard: 'board-2' }),
+    ).toBe(false);
   });
 
   it('dispara ao concluir o cartão', () => {
@@ -86,8 +94,18 @@ describe('regras', () => {
     expect(ruleIsConfigured(combined)).toBe(true);
   });
 
+  it('exige o quadro da regra', () => {
+    expect(ruleIssue(rule({ boardId: '' }))).toMatch(/quadro da regra/);
+    expect(ruleMatches(rule({ boardId: '' }), { kind: 'completed' }, card)).toBe(false);
+  });
+
   it('exige lista de destino ao mover', () => {
     expect(ruleIssue(rule({ actions: [{ type: 'moveToList' }] }))).toMatch(/lista de destino/);
+  });
+
+  it('exige etiqueta nas ações de etiqueta', () => {
+    expect(ruleIssue(rule({ actions: [{ type: 'addLabel' }] }))).toMatch(/etiqueta da ação/);
+    expect(ruleIssue(rule({ actions: [{ type: 'removeLabel' }] }))).toMatch(/etiqueta da ação/);
   });
 
   it('exige lista no gatilho de entrada em lista', () => {
