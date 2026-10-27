@@ -27,6 +27,9 @@ describe('SEI content pages', () => {
     expect(detectPageKind(v4, 'https://sei.exemplo.gov.br/sei/controlador.php?acao=procedimento_visualizar')).toBe(
       'process-content',
     );
+    expect(detectPageKind(v4, 'https://sei.exemplo.gov.br/sei/controlador.php?acao=procedimento_trabalhar')).toBe(
+      'process-content',
+    );
     expect(detectSeiVersion(v4)).toBe('v4');
 
     const v3 = fixture('sei-content-v3.html');

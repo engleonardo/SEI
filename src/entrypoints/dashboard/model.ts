@@ -66,8 +66,8 @@ export const ACTIVITY_FILTER_OPTIONS: Array<{ value: ActivityFilter; label: stri
 
 export const PROCESS_UPDATE_OPTIONS: Array<{ value: ProcessUpdateFilter; label: string }> = [
   { value: 'any', label: 'Qualquer situação no SEI' },
-  { value: 'unread', label: 'Processos com novidade (não lidos)' },
-  { value: 'read', label: 'Processos sem novidade' },
+  { value: 'unread', label: 'Processos atualizados (não lidos)' },
+  { value: 'read', label: 'Processos sem atualização' },
 ];
 
 export const GROUP_OPTIONS: Array<{ value: GroupMode; label: string }> = [

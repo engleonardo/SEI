@@ -36,9 +36,9 @@ export function DashboardCard({ card, catalog, onEdit, onToggleLabel }: Dashboar
         <div className="sdo-card__title-row">
           <h3>{card.name}</h3>
           {unread && (
-            <span className="sdo-badge sdo-badge--danger" title="Processo do SEI com novidade">
+            <span className="sdo-badge sdo-badge--danger" title="Processo atualizado no SEI">
               <Icon name="alert" size={11} />
-              SEI com novidade
+              Atualizado
             </span>
           )}
           {card.hasChecklist && (

@@ -23,6 +23,20 @@ interface RowEntry {
   cardRow: HTMLTableRowElement;
   cardContainer: HTMLDivElement;
   cardRoot: Root | null;
+  spacerRow: HTMLTableRowElement;
+}
+
+interface CellStyleSnapshot {
+  borderTop: string;
+  borderRight: string;
+  borderBottom: string;
+  borderLeft: string;
+  borderTopLeftRadius: string;
+  borderTopRightRadius: string;
+  borderBottomLeftRadius: string;
+  borderBottomRightRadius: string;
+  backgroundColor: string;
+  overflow: string;
 }
 
 function isHighlighted(row: HTMLTableRowElement, anchor: HTMLAnchorElement): boolean {
@@ -88,12 +102,19 @@ export class ListManager {
   private catalogTimer: number | null = null;
   private catalogSignature = '';
   private destroyed = false;
+  private theme: 'light' | 'dark' = 'light';
+  private table: HTMLTableElement | null = null;
+  private originalTableStyle: { borderCollapse: string; borderSpacing: string } | null = null;
+  private originalCellStyles = new WeakMap<HTMLTableCellElement, CellStyleSnapshot>();
+  private originalRowBackgrounds = new WeakMap<HTMLTableRowElement, string>();
 
   async start(): Promise<void> {
     const settings = await getSettings();
+    this.theme = settings.theme === 'dark' ? 'dark' : 'light';
     setThemePreference(settings.theme);
 
     this.mountToolbar();
+    this.prepareTable();
     this.unsubscribe = listStore.subscribe(() => this.scheduleSync());
     this.observer = new MutationObserver(() => this.scheduleReconcile());
     this.observer.observe(document.body, { childList: true, subtree: true });
@@ -155,12 +176,14 @@ export class ListManager {
       entry.cardRoot?.unmount();
       entry.actionHost.remove();
       entry.cardRow.remove();
-      this.applyHighlight(entry.row, false);
+      entry.spacerRow.remove();
+      this.restoreCardShell(entry);
       this.restoreRow(entry.row);
       delete entry.row.dataset.seiFlowFilterHidden;
       delete entry.row.dataset.seiFlowOriginalDisplay;
     }
     this.entries.clear();
+    this.restoreTable();
 
     this.toolbarRoot?.unmount();
     this.toolbarHost?.remove();
@@ -178,6 +201,116 @@ export class ListManager {
   private scheduleSync(): void {
     if (this.destroyed) return;
     this.scheduleReconcile();
+  }
+
+  private prepareTable(): void {
+    const table = findProcessTable(document);
+    if (!table || table === this.table) return;
+    this.table = table;
+    this.originalTableStyle = {
+      borderCollapse: table.style.borderCollapse,
+      borderSpacing: table.style.borderSpacing,
+    };
+    table.style.borderCollapse = 'separate';
+    table.style.borderSpacing = '0';
+  }
+
+  private restoreTable(): void {
+    if (this.table && this.originalTableStyle) {
+      this.table.style.borderCollapse = this.originalTableStyle.borderCollapse;
+      this.table.style.borderSpacing = this.originalTableStyle.borderSpacing;
+    }
+    this.table = null;
+    this.originalTableStyle = null;
+  }
+
+  private cardColors() {
+    return this.theme === 'dark'
+      ? { border: '#3a3f47', header: '#2a2e35', body: '#1c1f24', danger: '#ff8a80', dangerBg: '#3b2323' }
+      : { border: '#d9e2ec', header: '#f1f5f9', body: '#ffffff', danger: '#c0392b', dangerBg: '#fff1f1' };
+  }
+
+  private snapshotCell(cell: HTMLTableCellElement): void {
+    if (this.originalCellStyles.has(cell)) return;
+    this.originalCellStyles.set(cell, {
+      borderTop: cell.style.borderTop,
+      borderRight: cell.style.borderRight,
+      borderBottom: cell.style.borderBottom,
+      borderLeft: cell.style.borderLeft,
+      borderTopLeftRadius: cell.style.borderTopLeftRadius,
+      borderTopRightRadius: cell.style.borderTopRightRadius,
+      borderBottomLeftRadius: cell.style.borderBottomLeftRadius,
+      borderBottomRightRadius: cell.style.borderBottomRightRadius,
+      backgroundColor: cell.style.backgroundColor,
+      overflow: cell.style.overflow,
+    });
+  }
+
+  private restoreCell(cell: HTMLTableCellElement): void {
+    const original = this.originalCellStyles.get(cell);
+    if (!original) return;
+    cell.style.borderTop = original.borderTop;
+    cell.style.borderRight = original.borderRight;
+    cell.style.borderBottom = original.borderBottom;
+    cell.style.borderLeft = original.borderLeft;
+    cell.style.borderTopLeftRadius = original.borderTopLeftRadius;
+    cell.style.borderTopRightRadius = original.borderTopRightRadius;
+    cell.style.borderBottomLeftRadius = original.borderBottomLeftRadius;
+    cell.style.borderBottomRightRadius = original.borderBottomRightRadius;
+    cell.style.backgroundColor = original.backgroundColor;
+    cell.style.overflow = original.overflow;
+    this.originalCellStyles.delete(cell);
+  }
+
+  private applyCardShell(entry: RowEntry, hasCards: boolean, highlight: boolean): void {
+    const colors = this.cardColors();
+    const border = highlight ? colors.danger : colors.border;
+    const header = highlight ? colors.dangerBg : colors.header;
+    const cells = Array.from(entry.row.cells);
+
+    if (!this.originalRowBackgrounds.has(entry.row)) {
+      this.originalRowBackgrounds.set(entry.row, entry.row.style.backgroundColor);
+    }
+    entry.row.style.backgroundColor = 'transparent';
+
+    cells.forEach((cell, index) => {
+      this.snapshotCell(cell);
+      const first = index === 0;
+      const last = index === cells.length - 1;
+      cell.style.borderTop = `1px solid ${border}`;
+      cell.style.borderLeft = first ? `1px solid ${border}` : '0';
+      cell.style.borderRight = last ? `1px solid ${border}` : '0';
+      cell.style.borderBottom = hasCards ? '0' : `1px solid ${border}`;
+      cell.style.borderTopLeftRadius = first ? '14px' : '0';
+      cell.style.borderTopRightRadius = last ? '14px' : '0';
+      cell.style.borderBottomLeftRadius = !hasCards && first ? '14px' : '0';
+      cell.style.borderBottomRightRadius = !hasCards && last ? '14px' : '0';
+      cell.style.backgroundColor = header;
+    });
+
+    const cardCell = entry.cardRow.cells[0];
+    if (cardCell) {
+      this.snapshotCell(cardCell);
+      cardCell.style.borderTop = `1px solid ${border}`;
+      cardCell.style.borderLeft = `1px solid ${border}`;
+      cardCell.style.borderRight = `1px solid ${border}`;
+      cardCell.style.borderBottom = `1px solid ${border}`;
+      cardCell.style.borderBottomLeftRadius = '14px';
+      cardCell.style.borderBottomRightRadius = '14px';
+      cardCell.style.backgroundColor = colors.body;
+      cardCell.style.overflow = 'hidden';
+    }
+  }
+
+  private restoreCardShell(entry: RowEntry): void {
+    for (const cell of Array.from(entry.row.cells)) this.restoreCell(cell);
+    const cardCell = entry.cardRow.cells[0];
+    if (cardCell) this.restoreCell(cardCell);
+    const originalBackground = this.originalRowBackgrounds.get(entry.row);
+    if (originalBackground !== undefined) {
+      entry.row.style.backgroundColor = originalBackground;
+      this.originalRowBackgrounds.delete(entry.row);
+    }
   }
 
   private mountToolbar(): void {
@@ -220,7 +353,8 @@ export class ListManager {
         entry.cardRoot?.unmount();
         entry.actionHost.remove();
         entry.cardRow.remove();
-        this.applyHighlight(row, false);
+        entry.spacerRow.remove();
+        this.restoreCardShell(entry);
         this.restoreRow(row);
         this.entries.delete(row);
       }
@@ -231,7 +365,12 @@ export class ListManager {
 
   private ensureRow(info: SeiProcessRow): void {
     const existing = this.entries.get(info.row);
-    if (existing && existing.actionHost.isConnected && existing.cardRow.isConnected) {
+    if (
+      existing &&
+      existing.actionHost.isConnected &&
+      existing.cardRow.isConnected &&
+      existing.spacerRow.isConnected
+    ) {
       existing.processNumber = info.processNumber;
       existing.specification = info.specification;
       existing.highlight = info.highlight;
@@ -243,6 +382,8 @@ export class ListManager {
       existing.cardRoot?.unmount();
       existing.actionHost.remove();
       existing.cardRow.remove();
+      existing.spacerRow.remove();
+      this.restoreCardShell(existing);
       this.entries.delete(info.row);
     }
 
@@ -281,6 +422,18 @@ export class ListManager {
     cardRow.appendChild(cell);
     info.row.insertAdjacentElement('afterend', cardRow);
 
+    const spacerRow = document.createElement('tr');
+    spacerRow.setAttribute('data-sei-flow-spacer', '');
+    spacerRow.setAttribute('aria-hidden', 'true');
+    const spacerCell = document.createElement('td');
+    spacerCell.colSpan = Math.max(1, info.row.cells.length);
+    spacerCell.style.height = '14px';
+    spacerCell.style.padding = '0';
+    spacerCell.style.border = '0';
+    spacerCell.style.background = 'transparent';
+    spacerRow.appendChild(spacerCell);
+    cardRow.insertAdjacentElement('afterend', spacerRow);
+
     this.entries.set(info.row, {
       row: info.row,
       anchor: info.anchor,
@@ -292,6 +445,7 @@ export class ListManager {
       cardRow,
       cardContainer: card.container,
       cardRoot: null,
+      spacerRow,
     });
   }
 
@@ -310,7 +464,6 @@ export class ListManager {
       );
 
       const highlight = isHighlighted(entry.row, entry.anchor);
-      this.applyHighlight(entry.row, highlight);
       if (highlight !== entry.highlight) {
         entry.highlight = highlight;
         entry.actionRoot.render(
@@ -334,6 +487,8 @@ export class ListManager {
       const shouldShowCards = visible && rowVisible && cards.length > 0;
 
       entry.cardRow.style.display = shouldShowCards ? '' : 'none';
+      entry.spacerRow.style.display = visible && rowVisible ? '' : 'none';
+      this.applyCardShell(entry, cards.length > 0, highlight);
 
       if (cards.length > 0) {
         if (!entry.cardRoot && shouldShowCards) {
@@ -398,40 +553,6 @@ export class ListManager {
       this.catalogTimer = null;
       void callRpc('processes:upsert', { processes: records }).catch(() => undefined);
     }, 1_200);
-  }
-
-  /**
-   * O SEI marca processos não lidos com classes próprias. Reforçamos o
-   * destaque com um contorno vermelho nas células da linha inteira.
-   */
-  private applyHighlight(row: HTMLTableRowElement, highlight: boolean): void {
-    const cells = Array.from(row.cells);
-
-    if (highlight) {
-      if (row.dataset.seiFlowOriginalBg === undefined) {
-        row.dataset.seiFlowOriginalBg = row.style.backgroundColor;
-      }
-      row.style.backgroundColor = 'rgba(192, 57, 43, 0.07)';
-      cells.forEach((cell, index) => {
-        if (cell.dataset.seiFlowOriginalShadow === undefined) {
-          cell.dataset.seiFlowOriginalShadow = cell.style.boxShadow;
-        }
-        const parts = ['inset 0 2px 0 #c0392b', 'inset 0 -2px 0 #c0392b'];
-        if (index === 0) parts.push('inset 2px 0 0 #c0392b');
-        if (index === cells.length - 1) parts.push('inset -2px 0 0 #c0392b');
-        cell.style.boxShadow = parts.join(', ');
-      });
-      return;
-    }
-
-    if (row.dataset.seiFlowOriginalBg === undefined) return;
-    row.style.backgroundColor = row.dataset.seiFlowOriginalBg;
-    delete row.dataset.seiFlowOriginalBg;
-    for (const cell of cells) {
-      if (cell.dataset.seiFlowOriginalShadow === undefined) continue;
-      cell.style.boxShadow = cell.dataset.seiFlowOriginalShadow;
-      delete cell.dataset.seiFlowOriginalShadow;
-    }
   }
 
   private applyFilter(row: HTMLTableRowElement, visible: boolean): void {

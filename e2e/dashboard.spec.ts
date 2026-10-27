@@ -157,6 +157,8 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e abre detalhes',
       'href',
       'http://sei.test/sei/controlador.php?acao=procedimento_trabalhar&id_procedimento=1',
     );
+    await dashboard.getByRole('button', { name: /^Filtros/ }).click();
+    await dashboard.waitForTimeout(300);
 
     // Etiquetas usam as cores reais do Trello (incluindo as novas cores light/dark).
     const lightLabel = dashboard.getByRole('button', { name: /Leonardo/ }).first();

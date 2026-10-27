@@ -6,6 +6,7 @@ import { callRpc, errorMessage } from '../../core/messaging/client';
 import { openOptionsPage } from '../../core/messaging/actions';
 import type { LastActionTab } from '../../core/storage/last-tab';
 import type { ProcessCatalog, ProcessRecord } from '../../core/storage/processes';
+import { isOriginActivated } from '../../core/storage/settings';
 import { BrandMark } from '../../ui/BrandMark';
 import { CardItem } from '../../ui/components/CardItem';
 import { Modal } from '../../ui/components/Modal';
@@ -16,7 +17,10 @@ import { ActivationCard } from './ActivationCard';
 import { DashboardCard } from './DashboardCard';
 import { DashboardFilters, type LabelFilterOption, type TypeFilterOption } from './DashboardFilters';
 import {
+  ACTIVITY_FILTER_OPTIONS,
   DEFAULT_FILTERS,
+  DUE_FILTER_OPTIONS,
+  PROCESS_UPDATE_OPTIONS,
   activeFilterCount,
   cardsToCsv,
   dueBucket,
@@ -83,6 +87,7 @@ function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   const version = browser.runtime.getManifest().version;
   const connected = Boolean(settings?.appKey && settings?.appToken);
@@ -171,7 +176,7 @@ function Dashboard() {
     const now = Date.now();
     writeLastVisit(now);
     setLastVisit(now);
-    showToast('Novidades marcadas como vistas.', 'success');
+    showToast('Atualizações marcadas como vistas.', 'success');
   }, []);
 
   const boards = useMemo(() => {
@@ -285,20 +290,82 @@ function Dashboard() {
     });
   };
   const active = activeFilterCount(filters);
+  const siteActive = Boolean(
+    lastTab?.url && settings && isOriginActivated(lastTab.url, settings),
+  );
+
+  const activeChips: string[] = [];
+  if (filters.search.trim()) activeChips.push(`Busca: ${filters.search.trim()}`);
+  if (filters.boardId) {
+    const board = boards.find((item) => item.id === filters.boardId);
+    if (board) activeChips.push(board.name);
+  }
+  if (filters.listId) {
+    const list = lists.find((item) => item.id === filters.listId);
+    if (list) activeChips.push(list.name);
+  }
+  if (filters.processType) {
+    activeChips.push(
+      filters.processType === '__none__'
+        ? 'Sem tipo de processo'
+        : types.find((item) => item.value === filters.processType)?.label ?? filters.processType,
+    );
+  }
+  for (const labelId of filters.labelIds) {
+    const label = labels.find((item) => item.label.id === labelId)?.label;
+    if (label) activeChips.push(label.name || label.color || 'Etiqueta');
+  }
+  if (filters.withoutLabels) activeChips.push('Sem etiqueta');
+  if (filters.due !== 'any') {
+    activeChips.push(
+      DUE_FILTER_OPTIONS.find((option) => option.value === filters.due)?.label ?? filters.due,
+    );
+  }
+  if (filters.activity !== 'any') {
+    activeChips.push(
+      ACTIVITY_FILTER_OPTIONS.find((option) => option.value === filters.activity)?.label ??
+        filters.activity,
+    );
+  }
+  if (filters.processUpdate !== 'any') {
+    activeChips.push(
+      PROCESS_UPDATE_OPTIONS.find((option) => option.value === filters.processUpdate)?.label ??
+        filters.processUpdate,
+    );
+  }
 
   return (
     <div className="sdo-page">
-      <header className="sdo-header">
-        <div className="sdo-brand">
-          <BrandMark size={46} />
-          <div>
-            <h1>
-              Painel SEI Flow <span className="sdo-version">v{version}</span>
-            </h1>
+      <header className="sdo-hero">
+        <div className="sdo-hero__brand">
+          <div className="sdo-hero__mark">
+            <BrandMark size={46} />
+          </div>
+          <div className="sdo-hero__copy">
+            <div className="sdo-hero__title">
+              <h1>Painel SEI Flow</h1>
+              <span className="sdo-version">v{version}</span>
+            </div>
             <p>Gestão eficiente de processos, prazos, etiquetas e cartões.</p>
+            <div className="sdo-hero__status">
+              <span className={`sdo-status ${connected ? 'sdo-status--on' : 'sdo-status--off'}`}>
+                <span className="sdo-status__dot" />
+                Trello {connected ? 'conectado' : 'não conectado'}
+              </span>
+              <span className={`sdo-status ${siteActive ? 'sdo-status--on' : 'sdo-status--off'}`}>
+                <span className="sdo-status__dot" />
+                Site {siteActive ? 'ativado' : 'não ativado'}
+              </span>
+              {settings?.defaultListName && (
+                <span className="sdo-status sdo-status--muted">
+                  <Icon name="board" size={12} />
+                  {settings.defaultBoardName} » {settings.defaultListName}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-        <div className="sdo-actions">
+        <div className="sdo-hero__actions">
           {lastTab?.url && (
             <a className="sfo-btn sfo-btn--sm" href={lastTab.url} target="_blank" rel="noreferrer">
               <Icon name="external" size={14} />
@@ -343,10 +410,7 @@ function Dashboard() {
           <Icon name="settings" size={16} />
           <div>
             <strong>Conecte sua conta do Trello.</strong>
-            <span>
-              O painel mostra os cartões vinculados aos processos do SEI. Informe a APP-KEY e o
-              TOKEN para começar.
-            </span>
+            <span>Informe a APP-KEY e o TOKEN para ver os cartões vinculados aos processos.</span>
           </div>
           <button
             type="button"
@@ -371,120 +435,178 @@ function Dashboard() {
         </div>
       )}
 
-      {settings && (
-        <ActivationCard
-          settings={settings}
-          lastTab={lastTab}
-          onChanged={setSettings}
-        />
+      {settings && !siteActive && (
+        <ActivationCard settings={settings} lastTab={lastTab} onChanged={setSettings} />
       )}
 
-      <section className="sdo-summary" aria-label="Resumo dos cartões">
+      <section className="sdo-metrics" aria-label="Resumo dos cartões">
         <button
           type="button"
-          className="sdo-summary-card sdo-summary-card--danger"
+          className="sdo-metric sdo-metric--danger"
           onClick={() => updateFilters({ due: 'overdue' })}
           title="Filtrar atrasados"
         >
-          <span>Atrasados</span>
-          <strong>{summary.overdue}</strong>
+          <span className="sdo-metric__icon">
+            <Icon name="alert" size={16} />
+          </span>
+          <span className="sdo-metric__body">
+            <span>Atrasados</span>
+            <strong>{summary.overdue}</strong>
+            <small>precisam de atenção</small>
+          </span>
         </button>
         <button
           type="button"
-          className="sdo-summary-card sdo-summary-card--warning"
+          className="sdo-metric sdo-metric--warning"
           onClick={() => updateFilters({ due: 'today' })}
           title="Filtrar vencendo hoje"
         >
-          <span>Vencem hoje</span>
-          <strong>{summary.today}</strong>
+          <span className="sdo-metric__icon">
+            <Icon name="calendar" size={16} />
+          </span>
+          <span className="sdo-metric__body">
+            <span>Vencem hoje</span>
+            <strong>{summary.today}</strong>
+            <small>prazos do dia</small>
+          </span>
         </button>
         <button
           type="button"
-          className="sdo-summary-card sdo-summary-card--accent"
+          className="sdo-metric sdo-metric--accent"
           onClick={() => updateFilters({ due: 'soon' })}
           title="Filtrar próximos 7 dias"
         >
-          <span>Próximos 7 dias</span>
-          <strong>{summary.soon}</strong>
+          <span className="sdo-metric__icon">
+            <Icon name="clock" size={16} />
+          </span>
+          <span className="sdo-metric__body">
+            <span>Próximos 7 dias</span>
+            <strong>{summary.soon}</strong>
+            <small>no radar</small>
+          </span>
         </button>
         <button
           type="button"
-          className="sdo-summary-card"
-          onClick={() => updateFilters({ due: 'none' })}
-          title="Filtrar sem prazo"
-        >
-          <span>Sem prazo</span>
-          <strong>{summary.none}</strong>
-        </button>
-        <button
-          type="button"
-          className="sdo-summary-card sdo-summary-card--success"
-          onClick={() => updateFilters({ due: 'complete' })}
-          title="Filtrar concluídos"
-        >
-          <span>Concluídos</span>
-          <strong>{summary.done}</strong>
-        </button>
-        <button
-          type="button"
-          className="sdo-summary-card sdo-summary-card--accent"
-          onClick={() => updateFilters({ activity: '7d' })}
-          title="Filtrar atualizados nos últimos 7 dias"
-        >
-          <span>Atualizados · 7 dias</span>
-          <strong>{summary.updated7d}</strong>
-        </button>
-        <button
-          type="button"
-          className="sdo-summary-card sdo-summary-card--danger"
+          className="sdo-metric sdo-metric--updated"
           onClick={() => updateFilters({ processUpdate: 'unread' })}
-          title="Filtrar processos com novidade no SEI"
+          title="Filtrar processos atualizados no SEI"
         >
-          <span>SEI com novidade</span>
-          <strong>{summary.unread}</strong>
+          <span className="sdo-metric__icon">
+            <Icon name="refresh" size={16} />
+          </span>
+          <span className="sdo-metric__body">
+            <span>Atualizados</span>
+            <strong>{summary.unread}</strong>
+            <small>atualizações no SEI</small>
+          </span>
         </button>
         <button
           type="button"
-          className="sdo-summary-card"
+          className="sdo-metric sdo-metric--total"
           onClick={clearFilters}
           title="Mostrar todos os cartões"
         >
-          <span>Total vinculado</span>
-          <strong>{summary.total}</strong>
+          <span className="sdo-metric__icon">
+            <Icon name="link" size={16} />
+          </span>
+          <span className="sdo-metric__body">
+            <span>Total vinculado</span>
+            <strong>{summary.total}</strong>
+            <small>cartões no painel</small>
+          </span>
         </button>
       </section>
 
-      <div className="sdo-secondary">
+      <div className="sdo-mini-metrics">
+        <button type="button" onClick={() => updateFilters({ due: 'none' })}>
+          <Icon name="calendar" size={12} /> Sem prazo <strong>{summary.none}</strong>
+        </button>
+        <button type="button" onClick={() => updateFilters({ due: 'complete' })}>
+          <Icon name="check" size={12} /> Concluídos <strong>{summary.done}</strong>
+        </button>
+        <button type="button" onClick={() => updateFilters({ activity: '7d' })}>
+          <Icon name="refresh" size={12} /> Trello 7 dias <strong>{summary.updated7d}</strong>
+        </button>
         <span>
-          <Icon name="link" size={13} /> {summary.processes} processo(s) vinculado(s)
+          <Icon name="link" size={12} /> {summary.processes} processos
         </span>
         <span>
-          <Icon name="tag" size={13} /> {summary.labels} etiqueta(s)
+          <Icon name="tag" size={12} /> {summary.labels} etiquetas
         </span>
         <span>
-          <Icon name="board" size={13} /> {boards.length} quadro(s)
+          <Icon name="board" size={12} /> {boards.length} quadros
         </span>
-        {active > 0 && (
-          <span className="sdo-secondary__active">
-            <Icon name="filter" size={13} /> {active} filtro(s) ativo(s)
-          </span>
-        )}
       </div>
 
-      <DashboardFilters
-        filters={filters}
-        boards={boards}
-        lists={lists}
-        labels={labels}
-        types={types}
-        visibleCount={visibleCards.length}
-        totalCount={cards.length}
-        lastVisit={lastVisit}
-        onChange={updateFilters}
-        onClear={clearFilters}
-        onMarkSeen={markSeen}
-        onExport={exportCsv}
-      />
+      <section className="sdo-command" aria-label="Busca e filtros">
+        <div className="sdo-search">
+          <Icon name="search" size={16} />
+          <input
+            id="sdo-search"
+            className="sdo-search__input"
+            value={filters.search}
+            onChange={(event) => updateFilters({ search: event.target.value })}
+            placeholder="Buscar cartão, processo, tipo, etiqueta, quadro ou lista…"
+            aria-label="Buscar cartão, processo, tipo, etiqueta, quadro ou lista"
+            title="Atalho: / ou Ctrl+K"
+          />
+          {filters.search && (
+            <button
+              type="button"
+              className="sdo-search__clear"
+              onClick={() => updateFilters({ search: '' })}
+              aria-label="Limpar busca"
+            >
+              <Icon name="close" size={14} />
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          className={`sdo-filter-toggle${showFilters ? ' sdo-filter-toggle--open' : ''}`}
+          onClick={() => setShowFilters((current) => !current)}
+          aria-expanded={showFilters}
+        >
+          <Icon name="filter" size={15} />
+          Filtros
+          {active > 0 && <span className="sdo-filter-count">{active}</span>}
+        </button>
+        <button type="button" className="sdo-icon-action" onClick={exportCsv} title="Exportar CSV" aria-label="Exportar CSV">
+          <Icon name="external" size={15} />
+        </button>
+      </section>
+
+      {activeChips.length > 0 && (
+        <div className="sdo-active-chips">
+          <span className="sdo-active-chips__label">Filtros ativos</span>
+          {activeChips.map((chip, index) => (
+            <span key={`${chip}-${index}`} className="sdo-chip">
+              {chip}
+            </span>
+          ))}
+          <button type="button" className="sdo-chip sdo-chip--clear" onClick={clearFilters}>
+            <Icon name="close" size={11} /> Limpar
+          </button>
+        </div>
+      )}
+
+      {showFilters && (
+        <DashboardFilters
+          filters={filters}
+          boards={boards}
+          lists={lists}
+          labels={labels}
+          types={types}
+          visibleCount={visibleCards.length}
+          totalCount={cards.length}
+          lastVisit={lastVisit}
+          onChange={updateFilters}
+          onClear={clearFilters}
+          onMarkSeen={markSeen}
+          onExport={exportCsv}
+          showSearch={false}
+        />
+      )}
 
       {loading ? (
         <div className="sdo-loading">

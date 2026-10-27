@@ -21,7 +21,7 @@ A Chrome Web Store precisa do item criado e do `extension ID` antes de aceitar
 envios pela API.
 
 1. Acesse o [Developer Dashboard](https://chrome.google.com/webstore/devconsole).
-2. Envie o `sei-flow-1.0.0-chrome.zip` e preencha a listagem.
+2. Envie o `sei-flow-1.1.0-chrome.zip` e preencha a listagem.
 3. Publique e copie o **ID da extensão** exibido no painel.
 
 ### 2. Crie as credenciais OAuth
@@ -80,7 +80,7 @@ Chrome Web Store e publica. A revisão da Google é assíncrona (normalmente de
 algumas horas a alguns dias). Depois de aprovada, o Chrome atualiza os usuários
 automaticamente.
 
-## Firefox Add-ons (AMO) — opcional
+## Firefox Add-ons (AMO) - opcional
 
 1. Crie as credenciais em [addons.mozilla.org/developers/addon/api/key](https://addons.mozilla.org/developers/addon/api/key/).
 2. Adicione os segredos:
@@ -96,7 +96,7 @@ aprova a versão.
 O Edge usa um portal e uma API próprios (Azure AD). O envio continua manual:
 
 1. Acesse o [Partner Center](https://partner.microsoft.com/dashboard/microsoftedge/overview).
-2. Envie o `sei-flow-1.0.0-edge.zip`.
+2. Envie o `sei-flow-1.1.0-edge.zip`.
 3. Após aprovação, o Edge atualiza os usuários automaticamente.
 
 ## Observações

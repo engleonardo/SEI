@@ -25,7 +25,7 @@ describe('process number', () => {
   });
 
   it('extrai processo de textos com ruído', () => {
-    expect(extractProcessNumber('Processo nº 11111.111111/2024-60 — assunto')).toBe(
+    expect(extractProcessNumber('Processo nº 11111.111111/2024-60 - assunto')).toBe(
       '11111.111111/2024-60',
     );
     expect(extractProcessNumber('sem número aqui')).toBeNull();

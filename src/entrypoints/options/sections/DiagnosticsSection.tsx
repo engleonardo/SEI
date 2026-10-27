@@ -79,14 +79,14 @@ export function DiagnosticsSection({
             <code>{browser.runtime.id}</code>
           </dd>
           <dt>Permissões</dt>
-          <dd>{permissions.join(', ') || '—'}</dd>
+          <dd>{permissions.join(', ') || '-'}</dd>
           <dt>Permissões opcionais</dt>
-          <dd>{optional.join(', ') || '—'}</dd>
+          <dd>{optional.join(', ') || '-'}</dd>
           <dt>Sites ativados</dt>
           <dd>{settings.allSites ? 'Todos os sites' : settings.activatedOrigins.join(', ') || 'Nenhum'}</dd>
           <dt>Quadro / lista padrão</dt>
           <dd>
-            {settings.defaultBoardName || '—'} / {settings.defaultListName || '—'}
+            {settings.defaultBoardName || '-'} / {settings.defaultListName || '-'}
           </dd>
           <dt>Armazenamento</dt>
           <dd>

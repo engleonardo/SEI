@@ -1,4 +1,4 @@
-# SEI Flow — listagem para a Chrome Web Store
+# SEI Flow - listagem para a Chrome Web Store
 
 ## Nome
 
@@ -14,7 +14,7 @@ Crie, vincule e edite cartões do Trello no SEI. Painel com prazos, etiquetas, t
 O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para você trabalhar sem alternar de aba.
 
 • Crie cartões no Trello a partir de um processo do SEI.
-• Vincule cartões que já existem no Trello a um ou vários processos — inclusive em lote.
+• Vincule cartões que já existem no Trello a um ou vários processos - inclusive em lote.
 • Veja todos os cartões de um processo, sem esconder os adicionais.
 • Edite nome, descrição, etiquetas, checklist, prazo, quadro e lista dentro do SEI.
 • Painel SEI Flow como página inicial: prazos, etiquetas, tipos de processo e atualizações.
@@ -76,11 +76,11 @@ Integrar cartões do Trello a processos do SEI, permitindo criar, vincular, visu
 
 Os arquivos estão em `docs/store/screenshots-1280x800/`. A Chrome Web Store aceita até 5 imagens; a ordem recomendada é:
 
-1. `dashboard-1280x800.png` — painel inicial com métricas e filtros.
-2. `list-1280x800.png` — cartões anexados à lista de processos.
-3. `filter-1280x800.png` — filtros por quadro, lista, etiqueta e prazo.
-4. `process-1280x800.png` — processo aberto com o painel completo.
-5. `bulk-1280x800.png` — vinculação em lote entre processos.
+1. `dashboard-1280x800.png` - painel inicial com métricas e filtros.
+2. `list-1280x800.png` - cartões anexados à lista de processos.
+3. `filter-1280x800.png` - filtros por quadro, lista, etiqueta e prazo.
+4. `process-1280x800.png` - processo aberto com o painel completo.
+5. `bulk-1280x800.png` - vinculação em lote entre processos.
 
 Imagens adicionais para documentação: `link-dialog-1280x800.png`, `create-dialog-1280x800.png` e `options-1280x800.png`.
 

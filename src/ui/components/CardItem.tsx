@@ -1,14 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CardPatch, TrelloCard } from '../../core/domain/types';
 import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import { Icon } from '../icons';
 import { showToast } from '../toast';
 import { classNames, formatDue, isOverdue, labelColorHex, labelTextColor, locationLabel } from '../utils';
 import { ConfirmDialog } from './Modal';
+import { InlineLocationPicker } from './InlineLocationPicker';
 import { ChecklistDialog } from './dialogs/ChecklistDialog';
 import { DueDialog } from './dialogs/DueDialog';
 import { LabelsDialog } from './dialogs/LabelsDialog';
-import { LocationDialog } from './dialogs/LocationDialog';
 
 export interface CardItemProps {
   card: TrelloCard;
@@ -19,7 +19,7 @@ export interface CardItemProps {
   onRemoved: (cardId: string) => void;
 }
 
-type DialogKind = 'due' | 'labels' | 'checklist' | 'location' | null;
+type DialogKind = 'due' | 'labels' | 'checklist' | null;
 
 export function CardItem({
   card,
@@ -37,6 +37,17 @@ export function CardItem({
   const [descDraft, setDescDraft] = useState(card.description);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!editingDesc) return;
+    const textarea = descriptionRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight + 2}px`;
+    textarea.style.overflow = 'hidden';
+  }, [editingDesc, descDraft]);
 
   const due = formatDue(card.due, card.dueComplete);
   const overdue = isOverdue(card);
@@ -151,7 +162,8 @@ export function CardItem({
           </div>
         )}
 
-        <div className="sf-card__head">
+        <div className="sf-card__body">
+          <div className="sf-card__head">
           <div style={{ flex: 1, minWidth: 0 }}>
             {editingName ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -197,18 +209,21 @@ export function CardItem({
                 </div>
               </div>
             ) : (
-              <button
-                type="button"
-                className="sf-card__title-button"
-                onClick={() => {
-                  setNameDraft(card.name);
-                  setEditingName(true);
-                }}
-                title="Editar nome"
-                aria-label="Editar nome"
-              >
-                <h3 className="sf-card__title">{card.name}</h3>
-              </button>
+              <div className="sf-card__title-row">
+                <button
+                  type="button"
+                  className="sf-card__title-button"
+                  onClick={() => {
+                    setNameDraft(card.name);
+                    setEditingName(true);
+                  }}
+                  title="Editar nome"
+                  aria-label="Editar nome"
+                >
+                  <h3 className="sf-card__title">{card.name}</h3>
+                </button>
+                {highlight && <span className="sf-card__status">Atualizado</span>}
+              </div>
             )}
           </div>
 
@@ -264,6 +279,7 @@ export function CardItem({
         {editingDesc ? (
           <div style={{ marginTop: 8 }}>
             <textarea
+              ref={descriptionRef}
               className="sf-textarea"
               value={descDraft}
               onChange={(event) => setDescDraft(event.target.value)}
@@ -353,7 +369,7 @@ export function CardItem({
           <button
             type="button"
             className="sf-card__meta-item"
-            onClick={() => setDialog('location')}
+            onClick={() => setLocationOpen((current) => !current)}
             title="Mover cartão"
             style={{ border: 0, background: 'transparent', cursor: 'pointer', padding: 0 }}
           >
@@ -366,6 +382,15 @@ export function CardItem({
               {card.links.length} processos
             </span>
           )}
+        </div>
+
+        {locationOpen && (
+          <InlineLocationPicker
+            card={card}
+            onClose={() => setLocationOpen(false)}
+            onChanged={onChanged}
+          />
+        )}
         </div>
 
         <div className="sf-card__footer">
@@ -403,7 +428,7 @@ export function CardItem({
             <button
               type="button"
               className="sf-btn sf-btn--ghost sf-btn--sm"
-              onClick={() => setDialog('location')}
+              onClick={() => setLocationOpen((current) => !current)}
               disabled={busy}
               title="Mover cartão"
             >
@@ -412,30 +437,30 @@ export function CardItem({
             </button>
           </div>
 
-          <span className="sf-toolbar__spacer" />
-
-          {processNumber && (
+          <div className="sf-card__footer-side">
+            {processNumber && (
+              <button
+                type="button"
+                className="sf-icon-btn"
+                onClick={() => setConfirmUnlink(true)}
+                disabled={busy}
+                aria-label="Desvincular deste processo"
+                title="Desvincular deste processo"
+              >
+                <Icon name="unlink" size={15} />
+              </button>
+            )}
             <button
               type="button"
-              className="sf-icon-btn"
-              onClick={() => setConfirmUnlink(true)}
+              className="sf-icon-btn sf-icon-btn--danger"
+              onClick={() => setConfirmDelete(true)}
               disabled={busy}
-              aria-label="Desvincular deste processo"
-              title="Desvincular deste processo"
+              aria-label="Excluir cartão"
+              title="Excluir cartão"
             >
-              <Icon name="unlink" size={15} />
+              <Icon name="trash" size={15} />
             </button>
-          )}
-          <button
-            type="button"
-            className="sf-icon-btn sf-icon-btn--danger"
-            onClick={() => setConfirmDelete(true)}
-            disabled={busy}
-            aria-label="Excluir cartão"
-            title="Excluir cartão"
-          >
-            <Icon name="trash" size={15} />
-          </button>
+          </div>
         </div>
       </div>
 
@@ -448,10 +473,6 @@ export function CardItem({
       {dialog === 'checklist' && (
         <ChecklistDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
       )}
-      {dialog === 'location' && (
-        <LocationDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
-      )}
-
       {confirmUnlink && processNumber && (
         <ConfirmDialog
           title="Desvincular cartão"

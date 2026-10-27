@@ -1,4 +1,4 @@
-# Política de Privacidade — SEI Flow
+# Política de Privacidade - SEI Flow
 
 **Última atualização:** 26 de outubro de 2026
 
@@ -65,6 +65,6 @@ Abra uma issue em [github.com/engleonardo/SEI/issues](https://github.com/engleon
 
 ---
 
-# Privacy Policy — SEI Flow (English)
+# Privacy Policy - SEI Flow (English)
 
 SEI Flow is a browser extension that integrates SEI with Trello. It does **not** collect personal data, has **no backend**, and does **not** sell or share data. Trello APP-KEY/TOKEN, preferences, and temporary cache are stored locally in the browser and used only to call the official Trello API (`https://api.trello.com`). Host permissions are optional and granted by the user per site or for all sites; the injected script exits on pages that are not SEI. To revoke access, remove the token at [trello.com/app-key](https://trello.com/app-key) or clear the extension data in your browser. Contact: GitHub issues.

@@ -1,4 +1,4 @@
-# Publicação — SEI Flow
+# Publicação - SEI Flow
 
 Guia para publicar na Chrome Web Store, Firefox Add-ons (AMO) e Edge Add-ons.
 
@@ -42,7 +42,7 @@ Os arquivos ficam em `.output/`:
 O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para você trabalhar sem alternar de aba.
 
 • Crie cartões no Trello a partir de um processo do SEI.
-• Vincule cartões que já existem no Trello a um ou vários processos — inclusive em lote.
+• Vincule cartões que já existem no Trello a um ou vários processos - inclusive em lote.
 • Veja todos os cartões de um processo, sem esconder os adicionais.
 • Edite nome, descrição, etiquetas, checklist, prazo, quadro e lista dentro do SEI.
 • Painel SEI Flow como página inicial, com prazos, etiquetas, tipos de processo e atualizações.
@@ -121,7 +121,7 @@ Passo a passo em [`store/auto-publish.md`](store/auto-publish.md).
 
 ## Versionamento e release
 
-1. Atualize a versão em `package.json` (ex.: `1.0.0` → `1.0.1`).
+1. Atualize a versão em `package.json` (ex.: `1.1.0` para `1.1.1`).
 2. Atualize o `CHANGELOG.md` (se existir) ou as notas da release.
 3. Rode `npm run verify`.
 4. Commit e tag:

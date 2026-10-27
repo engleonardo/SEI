@@ -137,6 +137,18 @@ function App() {
         </div>
 
         <nav className="sfo-nav" aria-label="Seções das opções">
+          <button
+            type="button"
+            className="sfo-nav__item sfo-nav__item--dashboard"
+            onClick={() =>
+              void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') })
+            }
+          >
+            <Icon name="board" size={16} />
+            Dashboard
+            <span className="sfo-nav__badge">abrir</span>
+          </button>
+          <div className="sfo-nav__sep" />
           {TABS.map((item) => (
             <button
               key={item.id}
