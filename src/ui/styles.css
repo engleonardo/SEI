@@ -856,11 +856,11 @@
 .sf-process-panel {
   max-width: 1040px;
   margin: 0 auto;
-  padding: 0 14px 8px;
+  padding: 0 14px;
 }
 
 .sf-process-panel .sf-stack {
-  gap: 14px;
+  gap: 10px;
 }
 
 .sf-process-panel .sf-card:not(.sf-card--compact) {
@@ -891,10 +891,20 @@
 .sf-stack__actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 2px;
-  margin-top: 2px;
-  padding-top: 6px;
+  margin: 0 0 2px;
+  padding: 0;
+}
+
+.sf-stack__actions .sf-icon-btn {
+  width: 24px;
+  height: 24px;
+  color: var(--sf-muted);
+}
+
+.sf-stack__actions .sf-icon-btn:hover:not(:disabled) {
+  color: var(--sf-accent);
 }
 
 .sf-stack__head--actions {

@@ -53,6 +53,39 @@ export function CardStack({
 
   return (
     <div className="sf-stack">
+      {showHeader && cards.length > 0 && (
+        <div className="sf-stack__actions">
+          <button
+            type="button"
+            className="sf-icon-btn"
+            onClick={() => setShowCreate(true)}
+            aria-label="Novo cartão"
+            title="Novo cartão"
+          >
+            <Icon name="plus" size={13} />
+          </button>
+          <button
+            type="button"
+            className="sf-icon-btn"
+            onClick={() => setShowLink(true)}
+            aria-label="Vincular cartões"
+            title="Vincular cartões existentes"
+          >
+            <Icon name="link" size={13} />
+          </button>
+          <button
+            type="button"
+            className="sf-icon-btn"
+            onClick={onReload}
+            disabled={loading}
+            aria-label="Atualizar cartões"
+            title="Atualizar cartões"
+          >
+            <Icon name="refresh" size={13} />
+          </button>
+        </div>
+      )}
+
       {error && <ErrorState message={error} onRetry={onReload} extra={errorExtra} />}
 
       {loading && cards.length === 0 && !error && (
@@ -118,39 +151,6 @@ export function CardStack({
           onClose={() => setShowLink(false)}
           onLinked={(linked) => onAdded(linked)}
         />
-      )}
-
-      {showHeader && cards.length > 0 && (
-        <div className="sf-stack__actions">
-          <button
-            type="button"
-            className="sf-icon-btn"
-            onClick={() => setShowCreate(true)}
-            aria-label="Novo cartão"
-            title="Novo cartão"
-          >
-            <Icon name="plus" size={14} />
-          </button>
-          <button
-            type="button"
-            className="sf-icon-btn"
-            onClick={() => setShowLink(true)}
-            aria-label="Vincular cartões"
-            title="Vincular cartões existentes"
-          >
-            <Icon name="link" size={14} />
-          </button>
-          <button
-            type="button"
-            className="sf-icon-btn"
-            onClick={onReload}
-            disabled={loading}
-            aria-label="Atualizar cartões"
-            title="Atualizar cartões"
-          >
-            <Icon name="refresh" size={14} />
-          </button>
-        </div>
       )}
     </div>
   );

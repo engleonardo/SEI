@@ -24,7 +24,7 @@ function mountPanel(processNumber: string): void {
   const created = createShadowHost();
   created.host.setAttribute('data-sei-flow-process-host', '');
   created.host.style.display = 'block';
-  created.host.style.margin = '10px 0 18px';
+  created.host.style.margin = '6px 0 8px';
 
   if (!anchor || anchor === document.body || anchor.id === 'container') {
     (anchor ?? document.body).prepend(created.host);
