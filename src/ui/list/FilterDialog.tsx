@@ -1,18 +1,42 @@
 import type { TrelloLabel } from '../../core/domain/types';
-import { activeFilterCount, type ListFilters } from '../filters';
-import { Icon } from '../icons';
-import { classNames } from '../utils';
+import { activeFilterCount, type DueFilter, type ListFilters } from '../filters';
+import { Icon, type IconName } from '../icons';
+import { classNames, labelColorHex, labelTextColor } from '../utils';
 import { Modal } from '../components/Modal';
+
+export interface FilterOption {
+  id: string;
+  name: string;
+}
+
+export interface ListOption extends FilterOption {
+  boardId: string;
+}
 
 export interface FilterDialogProps {
   filters: ListFilters;
   labels: TrelloLabel[];
-  locations: Array<{ key: string; label: string }>;
+  boards: FilterOption[];
+  lists: ListOption[];
   onChange: (patch: Partial<ListFilters>) => void;
   onClose: () => void;
 }
 
-export function FilterDialog({ filters, labels, locations, onChange, onClose }: FilterDialogProps) {
+const DUE_OPTIONS: Array<{ key: DueFilter; label: string; icon: IconName }> = [
+  { key: 'open', label: 'Em aberto', icon: 'clock' },
+  { key: 'overdue', label: 'Atrasados', icon: 'alert' },
+  { key: 'complete', label: 'Concluídos', icon: 'check' },
+  { key: 'none', label: 'Sem prazo', icon: 'calendar' },
+];
+
+export function FilterDialog({
+  filters,
+  labels,
+  boards,
+  lists,
+  onChange,
+  onClose,
+}: FilterDialogProps) {
   const toggleLabel = (labelId: string) => {
     const next = filters.labelIds.includes(labelId)
       ? filters.labelIds.filter((id) => id !== labelId)
@@ -20,19 +44,32 @@ export function FilterDialog({ filters, labels, locations, onChange, onClose }: 
     onChange({ labelIds: next });
   };
 
-  const toggleLocation = (key: string) => {
-    const next = filters.locations.includes(key)
-      ? filters.locations.filter((item) => item !== key)
-      : [...filters.locations, key];
-    onChange({ locations: next });
+  const toggleList = (listId: string) => {
+    const next = filters.listIds.includes(listId)
+      ? filters.listIds.filter((id) => id !== listId)
+      : [...filters.listIds, listId];
+    onChange({ listIds: next });
   };
+
+  const selectBoard = (boardId: string) => {
+    onChange({
+      boardId: filters.boardId === boardId ? '' : boardId,
+      listIds: [],
+    });
+  };
+
+  const availableLists = filters.boardId
+    ? lists.filter((list) => list.boardId === filters.boardId)
+    : [];
 
   const clear = () =>
     onChange({
       noCard: false,
+      withCard: false,
       due: 'any',
       labelIds: [],
-      locations: [],
+      boardId: '',
+      listIds: [],
     });
 
   return (
@@ -62,51 +99,74 @@ export function FilterDialog({ filters, labels, locations, onChange, onClose }: 
             value={filters.search}
             onChange={(event) => onChange({ search: event.target.value })}
             placeholder="Número, especificação ou nome do cartão…"
+            data-autofocus
+            autoFocus
           />
         </div>
 
         <div className="sf-filter-group">
-          <h3 className="sf-filter-group__title">Situação</h3>
+          <h3 className="sf-filter-group__title">Quadro</h3>
           <div className="sf-filter-options">
             <button
               type="button"
-              className={classNames('sf-filter-option', filters.noCard && 'sf-filter-option--active')}
-              onClick={() => onChange({ noCard: !filters.noCard })}
-              aria-pressed={filters.noCard}
-            >
-              <Icon name={filters.noCard ? 'check' : 'plus'} size={12} />
-              Sem cartão
-            </button>
-            <button
-              type="button"
               className={classNames(
                 'sf-filter-option',
-                filters.due === 'overdue' && 'sf-filter-option--active',
+                !filters.boardId && 'sf-filter-option--active',
               )}
-              onClick={() => onChange({ due: filters.due === 'overdue' ? 'any' : 'overdue' })}
-              aria-pressed={filters.due === 'overdue'}
+              onClick={() => onChange({ boardId: '', listIds: [] })}
+              aria-pressed={!filters.boardId}
             >
-              <Icon name="clock" size={12} />
-              Atrasados
+              <Icon name="board" size={12} />
+              Todos os quadros
             </button>
-            <button
-              type="button"
-              className={classNames(
-                'sf-filter-option',
-                filters.due === 'withDue' && 'sf-filter-option--active',
-              )}
-              onClick={() => onChange({ due: filters.due === 'withDue' ? 'any' : 'withDue' })}
-              aria-pressed={filters.due === 'withDue'}
-            >
-              <Icon name="calendar" size={12} />
-              Com prazo
-            </button>
+            {boards.map((board) => (
+              <button
+                key={board.id}
+                type="button"
+                className={classNames(
+                  'sf-filter-option',
+                  filters.boardId === board.id && 'sf-filter-option--active',
+                )}
+                onClick={() => selectBoard(board.id)}
+                aria-pressed={filters.boardId === board.id}
+              >
+                <Icon name="board" size={12} />
+                {board.name}
+              </button>
+            ))}
           </div>
+        </div>
+
+        <div className="sf-filter-group">
+          <h3 className="sf-filter-group__title">Lista</h3>
+          {!filters.boardId ? (
+            <span className="sf-hint">Selecione um quadro acima para filtrar por lista.</span>
+          ) : availableLists.length === 0 ? (
+            <span className="sf-hint">Nenhuma lista encontrada neste quadro.</span>
+          ) : (
+            <div className="sf-filter-options">
+              {availableLists.map((list) => (
+                <button
+                  key={list.id}
+                  type="button"
+                  className={classNames(
+                    'sf-filter-option',
+                    filters.listIds.includes(list.id) && 'sf-filter-option--active',
+                  )}
+                  onClick={() => toggleList(list.id)}
+                  aria-pressed={filters.listIds.includes(list.id)}
+                >
+                  <Icon name="list" size={12} />
+                  {list.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {labels.length > 0 && (
           <div className="sf-filter-group">
-            <h3 className="sf-filter-group__title">Etiquetas nos cartões</h3>
+            <h3 className="sf-filter-group__title">Etiquetas</h3>
             <div className="sf-filter-options">
               {labels.map((label) => (
                 <button
@@ -120,42 +180,67 @@ export function FilterDialog({ filters, labels, locations, onChange, onClose }: 
                   aria-pressed={filters.labelIds.includes(label.id)}
                 >
                   <span
+                    className="sf-label-chip"
                     style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 999,
-                      background: label.color ? 'var(--sf-accent)' : 'var(--sf-muted)',
+                      backgroundColor: labelColorHex(label.color),
+                      color: labelTextColor(label.color),
                     }}
-                  />
-                  {label.name || label.color || 'Etiqueta'}
+                  >
+                    {label.name || label.color || 'Etiqueta'}
+                  </span>
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {locations.length > 0 && (
-          <div className="sf-filter-group">
-            <h3 className="sf-filter-group__title">Quadro / lista</h3>
-            <div className="sf-filter-options">
-              {locations.map((location) => (
-                <button
-                  key={location.key}
-                  type="button"
-                  className={classNames(
-                    'sf-filter-option',
-                    filters.locations.includes(location.key) && 'sf-filter-option--active',
-                  )}
-                  onClick={() => toggleLocation(location.key)}
-                  aria-pressed={filters.locations.includes(location.key)}
-                >
-                  <Icon name="board" size={12} />
-                  {location.label}
-                </button>
-              ))}
-            </div>
+        <div className="sf-filter-group">
+          <h3 className="sf-filter-group__title">Data de entrega</h3>
+          <div className="sf-filter-options">
+            {DUE_OPTIONS.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                className={classNames(
+                  'sf-filter-option',
+                  filters.due === option.key && 'sf-filter-option--active',
+                )}
+                onClick={() => onChange({ due: filters.due === option.key ? 'any' : option.key })}
+                aria-pressed={filters.due === option.key}
+              >
+                <Icon name={option.icon} size={12} />
+                {option.label}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
+
+        <div className="sf-filter-group">
+          <h3 className="sf-filter-group__title">Processos</h3>
+          <div className="sf-filter-options">
+            <button
+              type="button"
+              className={classNames('sf-filter-option', filters.noCard && 'sf-filter-option--active')}
+              onClick={() => onChange({ noCard: !filters.noCard, withCard: false })}
+              aria-pressed={filters.noCard}
+            >
+              <Icon name={filters.noCard ? 'check' : 'plus'} size={12} />
+              Sem cartão
+            </button>
+            <button
+              type="button"
+              className={classNames(
+                'sf-filter-option',
+                filters.withCard && 'sf-filter-option--active',
+              )}
+              onClick={() => onChange({ withCard: !filters.withCard, noCard: false })}
+              aria-pressed={filters.withCard}
+            >
+              <Icon name={filters.withCard ? 'check' : 'plus'} size={12} />
+              Com cartão
+            </button>
+          </div>
+        </div>
       </div>
     </Modal>
   );

@@ -45,6 +45,12 @@ Não compartilhamos dados com terceiros. A única comunicação externa é com a
 - Nenhum token é registrado em logs da extensão.
 - A interface é isolada em Shadow DOM para não interferir no SEI.
 
+## Uso e responsabilidade
+
+O SEI Flow é uma ferramenta de apoio. Ele **não salva dados de usuários em servidores do criador** e não tem ingerência sobre o conteúdo do SEI ou do Trello.
+
+Os dados de processos, documentos, cartões e informações pessoais pertencem aos sistemas SEI e Trello e às instituições responsáveis por eles. **O uso da extensão é de responsabilidade exclusiva do usuário.** O criador não controla, valida, corrige ou se responsabiliza por informações inseridas, exibidas, alteradas ou armazenadas nesses sistemas, nem por decisões administrativas, jurídicas ou de qualquer natureza tomadas com base nelas.
+
 ## Crianças
 
 A extensão é destinada a servidores públicos e profissionais que usam SEI e Trello. Não é direcionada a crianças.

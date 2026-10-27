@@ -91,6 +91,7 @@ export const TRELLO_LABEL_COLORS = [
 
 export function labelColorHex(color: string | null | undefined): string {
   if (!color) return '#b6c2cf';
+  if (color.startsWith('#')) return color;
   return LABEL_COLORS[color] ?? '#b6c2cf';
 }
 

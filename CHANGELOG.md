@@ -3,6 +3,29 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.1.2] — 2026-10-26
+
+### Adicionado
+
+- Filtros hierárquicos: primeiro o quadro, depois a lista, sem misturar as opções.
+- Filtros de data de entrega: em aberto, atrasados, concluídos e sem prazo.
+- Filtros de processos: com cartão e sem cartão.
+- Chips de filtros ativos na barra de ferramentas, com botão de limpar.
+- Destaque com contorno vermelho para cartões de processos com informação nova/não lidos.
+- Aviso de privacidade e responsabilidade nas opções, README, PRIVACY e NOTICE.
+
+### Alterado
+
+- Tema claro agora é o padrão para todos; preferências antigas em “automático” migram para claro.
+- Cartões da lista ficaram compactos, com fundo cinza, sombra e aparência anexada ao processo.
+- Botão de ação do processo agora é apenas um ícone discreto, com contador quando há cartões.
+- Etiquetas do filtro usam as cores reais do Trello.
+- Busca e filtros foram alinhados à esquerda na barra de ferramentas.
+- Corrigido o foco do campo de busca no modal de filtros (não pula mais para o “X” a cada letra).
+- Logo atualizada para usar melhor a área útil do ícone.
+- Página de opções sempre em tema claro, independentemente do sistema.
+- Cartão usa sombra mais suave e contorno vermelho apenas quando há novidade.
+
 ## [0.1.1] — 2026-10-26
 
 ### Alterado

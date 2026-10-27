@@ -27,12 +27,17 @@ export function Modal({
   const titleId = useId();
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     previousFocus.current = document.activeElement as HTMLElement | null;
     const modal = modalRef.current;
     const focusable = modal?.querySelector<HTMLElement>(
-      'input, textarea, select, button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+      '[data-autofocus], input:not([type="hidden"]), textarea, select, button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
     );
     focusable?.focus();
 
@@ -40,7 +45,7 @@ export function Modal({
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
       }
     };
     document.addEventListener('keydown', onKeyDown, true);
@@ -48,7 +53,7 @@ export function Modal({
       document.removeEventListener('keydown', onKeyDown, true);
       previousFocus.current?.focus?.();
     };
-  }, [onClose]);
+  }, []);
 
   return createPortal(
     <div

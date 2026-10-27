@@ -5,9 +5,11 @@ import { addCards, listStore, loadList, removeCard, updateCard } from './store';
 export function ProcessRowCards({
   processNumber,
   compact = true,
+  highlight = false,
 }: {
   processNumber: string;
   compact?: boolean;
+  highlight?: boolean;
 }) {
   const state = useStore(listStore);
   const cards = state.cards.filter((card) => card.links.includes(processNumber));
@@ -18,6 +20,7 @@ export function ProcessRowCards({
       processNumber={processNumber}
       cards={cards}
       compact={compact}
+      highlight={highlight}
       showHeader={false}
       onReload={() => void loadList()}
       onChanged={updateCard}

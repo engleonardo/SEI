@@ -39,31 +39,44 @@ describe('list filters', () => {
     expect(matchesProcess({ ...base, cards: [card()] }, { ...EMPTY_FILTERS, noCard: true })).toBe(false);
   });
 
-  it('filtra atrasados e com prazo', () => {
+  it('filtra atrasados, em aberto, concluídos e sem prazo', () => {
     const overdue = card({ due: '2020-01-01T12:00:00.000Z' });
-    const withDue = card({ due: '2030-01-01T12:00:00.000Z' });
+    const future = card({ due: '2030-01-01T12:00:00.000Z' });
+    const complete = card({ due: '2020-01-01T12:00:00.000Z', dueComplete: true });
+    const withoutDue = card({ due: null });
     const base = { processNumber: '1', specification: '', cards: [overdue] };
     expect(matchesProcess(base, { ...EMPTY_FILTERS, due: 'overdue' })).toBe(true);
-    expect(matchesProcess(base, { ...EMPTY_FILTERS, due: 'withDue' })).toBe(true);
-    expect(matchesProcess({ ...base, cards: [withDue] }, { ...EMPTY_FILTERS, due: 'overdue' })).toBe(false);
+    expect(matchesProcess(base, { ...EMPTY_FILTERS, due: 'open' })).toBe(true);
+    expect(matchesProcess({ ...base, cards: [future] }, { ...EMPTY_FILTERS, due: 'overdue' })).toBe(false);
+    expect(matchesProcess({ ...base, cards: [complete] }, { ...EMPTY_FILTERS, due: 'complete' })).toBe(true);
+    expect(matchesProcess({ ...base, cards: [withoutDue] }, { ...EMPTY_FILTERS, due: 'none' })).toBe(true);
   });
 
-  it('filtra por etiqueta e localização', () => {
+  it('filtra por etiqueta, quadro e lista', () => {
     const labelled = card({
       labels: [{ id: 'label-1', name: 'Urgente', color: 'red' }],
     });
     const base = { processNumber: '1', specification: '', cards: [labelled] };
     expect(matchesProcess(base, { ...EMPTY_FILTERS, labelIds: ['label-1'] })).toBe(true);
     expect(matchesProcess(base, { ...EMPTY_FILTERS, labelIds: ['label-2'] })).toBe(false);
-    expect(matchesProcess(base, { ...EMPTY_FILTERS, locations: ['board-1:list-1'] })).toBe(true);
-    expect(matchesProcess(base, { ...EMPTY_FILTERS, locations: ['board-2:list-2'] })).toBe(false);
+    expect(matchesProcess(base, { ...EMPTY_FILTERS, boardId: 'board-1' })).toBe(true);
+    expect(matchesProcess(base, { ...EMPTY_FILTERS, boardId: 'board-2' })).toBe(false);
+    expect(matchesProcess(base, { ...EMPTY_FILTERS, listIds: ['list-1'] })).toBe(true);
+    expect(matchesProcess(base, { ...EMPTY_FILTERS, listIds: ['list-2'] })).toBe(false);
   });
 
   it('conta filtros ativos', () => {
     expect(activeFilterCount(EMPTY_FILTERS)).toBe(0);
     expect(
-      activeFilterCount({ ...EMPTY_FILTERS, noCard: true, due: 'overdue', labelIds: ['1', '2'] }),
-    ).toBe(4);
+      activeFilterCount({
+        ...EMPTY_FILTERS,
+        noCard: true,
+        due: 'overdue',
+        labelIds: ['1', '2'],
+        boardId: 'board-1',
+        listIds: ['list-1'],
+      }),
+    ).toBe(6);
   });
 });
 

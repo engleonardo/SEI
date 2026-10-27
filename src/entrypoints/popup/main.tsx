@@ -242,7 +242,7 @@ function App() {
         >
           Privacidade
         </a>
-        <span>Feito para o SEI</span>
+        <span>Sem coleta de dados</span>
       </footer>
     </div>
   );

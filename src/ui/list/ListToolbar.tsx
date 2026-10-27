@@ -4,10 +4,17 @@ import type { TrelloLabel } from '../../core/domain/types';
 import { BrandMark } from '../BrandMark';
 import { Icon } from '../icons';
 import { useStore } from '../store';
-import { activeFilterCount } from '../filters';
-import { locationKey, locationLabel } from '../utils';
-import { FilterDialog } from './FilterDialog';
+import { activeFilterCount, type DueFilter } from '../filters';
+import { FilterDialog, type FilterOption, type ListOption } from './FilterDialog';
 import { listStore, loadList, setFilters } from './store';
+
+const DUE_LABELS: Record<DueFilter, string> = {
+  any: '',
+  open: 'Em aberto',
+  overdue: 'Atrasados',
+  complete: 'Concluídos',
+  none: 'Sem prazo',
+};
 
 export function ListToolbar() {
   const state = useStore(listStore);
@@ -23,21 +30,64 @@ export function ListToolbar() {
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [state.cards]);
 
-  const locations = useMemo(() => {
+  const boards = useMemo<FilterOption[]>(() => {
     const map = new Map<string, string>();
     for (const card of state.cards) {
-      const key = locationKey(card);
-      if (!map.has(key)) map.set(key, locationLabel(card));
+      if (card.idBoard && !map.has(card.idBoard)) {
+        map.set(card.idBoard, card.board?.name ?? 'Quadro');
+      }
     }
     return Array.from(map.entries())
-      .map(([key, label]) => ({ key, label }))
-      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [state.cards]);
+
+  const lists = useMemo<ListOption[]>(() => {
+    const map = new Map<string, ListOption>();
+    for (const card of state.cards) {
+      if (card.idList && !map.has(card.idList)) {
+        map.set(card.idList, {
+          id: card.idList,
+          name: card.list?.name ?? 'Lista',
+          boardId: card.idBoard,
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [state.cards]);
 
   const active = activeFilterCount(state.filters);
   const updated = state.lastUpdated
     ? new Date(state.lastUpdated).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     : null;
+
+  const activeChips: string[] = [];
+  if (state.filters.noCard) activeChips.push('Sem cartão');
+  if (state.filters.withCard) activeChips.push('Com cartão');
+  if (state.filters.due !== 'any') activeChips.push(DUE_LABELS[state.filters.due]);
+  for (const labelId of state.filters.labelIds) {
+    const label = labels.find((item) => item.id === labelId);
+    if (label) activeChips.push(label.name || label.color || 'Etiqueta');
+  }
+  if (state.filters.boardId) {
+    const board = boards.find((item) => item.id === state.filters.boardId);
+    if (board) activeChips.push(board.name);
+  }
+  for (const listId of state.filters.listIds) {
+    const list = lists.find((item) => item.id === listId);
+    if (list) activeChips.push(list.name);
+  }
+
+  const clearFilters = () =>
+    setFilters({
+      search: '',
+      noCard: false,
+      withCard: false,
+      due: 'any',
+      labelIds: [],
+      boardId: '',
+      listIds: [],
+    });
 
   return (
     <div className="sf-toolbar">
@@ -51,8 +101,6 @@ export function ListToolbar() {
           ? 'sincronizando…'
           : `${state.cards.length} cartão(ões)${updated ? ` · ${updated}` : ''}`}
       </span>
-
-      <span className="sf-toolbar__spacer" />
 
       <div className="sf-toolbar__search">
         <Icon name="search" size={13} className="sf-toolbar__search-icon" />
@@ -97,6 +145,8 @@ export function ListToolbar() {
         <Icon name="settings" size={15} />
       </button>
 
+      <span className="sf-toolbar__spacer" />
+
       {state.error && (
         <button
           type="button"
@@ -110,11 +160,26 @@ export function ListToolbar() {
         </button>
       )}
 
+      {activeChips.length > 0 && (
+        <div className="sf-toolbar__active">
+          <span className="sf-toolbar__active-label">Filtros ativos:</span>
+          {activeChips.map((chip, index) => (
+            <span key={`${chip}-${index}`} className="sf-chip sf-chip--accent">
+              {chip}
+            </span>
+          ))}
+          <button type="button" className="sf-btn sf-btn--ghost sf-btn--sm" onClick={clearFilters}>
+            Limpar
+          </button>
+        </div>
+      )}
+
       {showFilters && (
         <FilterDialog
           filters={state.filters}
           labels={labels}
-          locations={locations}
+          boards={boards}
+          lists={lists}
           onChange={setFilters}
           onClose={() => setShowFilters(false)}
         />
