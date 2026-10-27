@@ -9,11 +9,15 @@ import { LinkCardsDialog } from './LinkCardsDialog';
 
 export interface CardStackProps {
   processNumber: string;
+  processUrl?: string;
   cards: TrelloCard[];
   loading?: boolean;
   error?: string | null;
   errorExtra?: ReactNode;
   showHeader?: boolean;
+  headerSummary?: ReactNode;
+  showProcessMeta?: boolean;
+  showLocation?: boolean;
   compact?: boolean;
   highlight?: boolean;
   onReload: () => void;
@@ -24,11 +28,15 @@ export interface CardStackProps {
 
 export function CardStack({
   processNumber,
+  processUrl,
   cards,
   loading = false,
   error = null,
   errorExtra,
   showHeader = false,
+  headerSummary,
+  showProcessMeta = true,
+  showLocation = true,
   compact = false,
   highlight = false,
   onReload,
@@ -43,23 +51,25 @@ export function CardStack({
     <div className="sf-stack">
       {showHeader && (
         <div className="sf-stack__head sf-stack__head--actions">
+          {headerSummary}
+          <span className="sf-stack__spacer" />
           <button
             type="button"
-            className="sf-btn sf-btn--sm"
+            className="sf-icon-btn"
             onClick={() => setShowCreate(true)}
-            title="Criar cartão no Trello"
+            aria-label="Novo cartão"
+            title="Novo cartão"
           >
-            <Icon name="plus" size={13} />
-            Novo cartão
+            <Icon name="plus" size={15} />
           </button>
           <button
             type="button"
-            className="sf-btn sf-btn--sm"
+            className="sf-icon-btn"
             onClick={() => setShowLink(true)}
-            title="Vincular cartões existentes do Trello"
+            aria-label="Vincular cartões"
+            title="Vincular cartões existentes"
           >
-            <Icon name="link" size={13} />
-            Vincular cartões
+            <Icon name="link" size={15} />
           </button>
           <button
             type="button"
@@ -113,6 +123,8 @@ export function CardStack({
           key={card.id}
           card={card}
           processNumber={processNumber}
+          showProcessMeta={showProcessMeta}
+          showLocation={showLocation}
           compact={compact}
           highlight={highlight}
           onChanged={onChanged}
@@ -123,6 +135,7 @@ export function CardStack({
       {showCreate && (
         <CreateCardDialog
           processNumber={processNumber}
+          processUrl={processUrl}
           onClose={() => setShowCreate(false)}
           onCreated={(card) => onAdded([card])}
         />

@@ -12,9 +12,11 @@ import type {
 } from '../domain/types';
 import { normalizeProcessNumber, sanitizeProcessForQuery } from '../domain/process';
 import { addLink, hasLink, parseLinks, removeLink, stripLinks } from '../link/marker';
+import { getRules } from '../storage/rules';
+import { ruleMatches, type Rule, type RuleEvent } from '../domain/rules';
 import { getSettings } from '../storage/settings';
 import { mapLimit } from '../utils/async';
-import { CACHE_TTL, cacheDelete, cacheDeleteByPrefix, cacheGetOrSet } from './cache';
+import { CACHE_TTL, cacheDelete, cacheDeleteByPrefix, cacheGetOrSet, cacheSet } from './cache';
 import { TrelloClient, TrelloError, type TrelloCredentials } from './client';
 import { toCard, toCards } from './normalize';
 
@@ -243,28 +245,41 @@ export class TrelloRepository {
     name: string;
     description?: string;
     processNumber?: string;
+    processUrl?: string;
     boardId?: string;
     listId?: string;
+    start?: string | null;
+    due?: string | null;
   }): Promise<TrelloCard> {
     const settings = await this.settings();
     const listId = input.listId || settings.defaultListId;
     if (!listId) {
       throw new TrelloError(
         'not_configured',
-        'Escolha um quadro e uma lista padrão antes de criar cartões.',
+        'Escolha um quadro e uma lista antes de criar cartões.',
       );
     }
 
-    const description = input.processNumber
-      ? addLink(input.description ?? '', input.processNumber)
-      : stripLinks(input.description ?? '');
+    const clean = stripLinks(input.description ?? '').trimEnd();
+    const linkLine = input.processUrl ? `Processo SEI: ${input.processUrl}` : '';
+    const description = [
+      clean,
+      linkLine,
+      input.processNumber ? `SEI ${input.processNumber}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
 
-    const raw = await this.client.post<TrelloCardApi>('/cards', {
+    const body: Record<string, string> = {
       name: input.name.trim() || (input.processNumber ? `SEI ${input.processNumber}` : 'Novo cartão'),
       desc: description,
       idList: listId,
       pos: 'bottom',
-    });
+    };
+    if (input.start) body.start = input.start;
+    if (input.due) body.due = input.due;
+
+    const raw = await this.client.post<TrelloCardApi>('/cards', body);
 
     await this.invalidateCardCaches();
     return this.getCard(raw.id, true);
@@ -293,7 +308,9 @@ export class TrelloRepository {
     if (patch.description !== undefined) {
       const links = parseLinks(current.desc);
       const clean = stripLinks(patch.description);
-      body.desc = [...links.map((process) => `SEI ${process}`), clean].filter(Boolean).join('\n');
+      body.desc = [clean, ...links.map((process) => `SEI ${process}`)]
+        .filter(Boolean)
+        .join('\n');
     }
 
     if (patch.due !== undefined) body.due = patch.due === null ? 'null' : patch.due;
@@ -305,7 +322,150 @@ export class TrelloRepository {
 
     await this.client.put(`/cards/${cardId}`, body);
     await this.invalidateCardCaches();
-    return this.getCard(cardId, true);
+
+    let updated = await this.getCard(cardId, true);
+    if (updated.links.length === 0) return updated;
+
+    const event: RuleEvent =
+      patch.idList && patch.idList !== current.idList
+        ? { kind: 'moved', fromListId: current.idList, toListId: patch.idList }
+        : patch.dueComplete === true && !current.dueComplete
+          ? { kind: 'completed' }
+          : { kind: 'updated' };
+
+    updated = await this.runRules(updated, event);
+    return updated;
+  }
+
+  /**
+   * Aplica as regras em cadeia a um cartão vinculado ao SEI.
+   * Nunca roda em cartões sem vínculo. Proteção contra loop: no máximo 5
+   * níveis e cada regra roda uma única vez na mesma cadeia.
+   */
+  private async runRules(card: TrelloCard, event: RuleEvent): Promise<TrelloCard> {
+    const { card: result } = await this.executeRules(card, event, new Set<string>(), 0, false);
+    return result;
+  }
+
+  private async executeRules(
+    card: TrelloCard,
+    event: RuleEvent,
+    applied: Set<string>,
+    depth: number,
+    force: boolean,
+    only?: string,
+  ): Promise<{ card: TrelloCard; touched: boolean }> {
+    if (depth >= 5) return { card, touched: false };
+    if (card.links.length === 0) return { card, touched: false };
+
+    const rules = await getRules();
+    let current = card;
+    let touched = false;
+
+    for (const rule of rules) {
+      if (applied.has(rule.id)) continue;
+      if (only && rule.id !== only) continue;
+      if (!force && !ruleMatches(rule, event, current)) continue;
+      if (force && rule.actions.length === 0) continue;
+
+      applied.add(rule.id);
+      const appliedRule = await this.executeRule(current, rule);
+      if (!appliedRule.touched) continue;
+
+      touched = true;
+      current = appliedRule.card;
+
+      if (appliedRule.moved) {
+        const chained = await this.executeRules(
+          current,
+          { kind: 'moved', fromListId: appliedRule.fromListId, toListId: current.idList },
+          applied,
+          depth + 1,
+          false,
+        );
+        current = chained.card;
+      }
+    }
+
+    return { card: current, touched };
+  }
+
+  private async executeRule(
+    card: TrelloCard,
+    rule: Rule,
+  ): Promise<{ card: TrelloCard; touched: boolean; moved: boolean; fromListId: string }> {
+    const fromListId = card.idList;
+    const moveAction = rule.actions.find((action) => action.type === 'moveToList' && action.listId);
+    const moveToTop = rule.actions.some((action) => action.type === 'moveToTop');
+    const adds = rule.actions.filter(
+      (action) => action.type === 'addLabel' && Boolean(action.labelId),
+    );
+    const removes = rule.actions.filter(
+      (action) => action.type === 'removeLabel' && Boolean(action.labelId),
+    );
+
+    let touched = false;
+
+    for (const action of adds) {
+      if (card.labels.some((label) => label.id === action.labelId)) continue;
+      await this.client.post(`/cards/${card.id}/idLabels`, { value: action.labelId });
+      touched = true;
+    }
+
+    for (const action of removes) {
+      if (!card.labels.some((label) => label.id === action.labelId)) continue;
+      await this.client.delete(`/cards/${card.id}/idLabels/${action.labelId}`);
+      touched = true;
+    }
+
+    const targetList = moveAction?.listId ?? card.idList;
+    if (moveAction || moveToTop) {
+      const body: Record<string, string> = { pos: moveAction ? 'bottom' : 'top' };
+      if (moveAction) body.idList = targetList;
+      await this.client.put(`/cards/${card.id}`, body);
+      touched = true;
+    }
+
+    if (!touched) {
+      return { card, touched: false, moved: false, fromListId };
+    }
+
+    await this.invalidateCardCaches();
+    const updated = await this.getCard(card.id, true);
+    return {
+      card: updated,
+      touched: true,
+      moved: updated.idList !== fromListId,
+      fromListId,
+    };
+  }
+
+  async applyRuleNow(ruleId: string): Promise<{ applied: number; total: number }> {
+    const rules = await getRules();
+    const rule = rules.find((item) => item.id === ruleId);
+    if (!rule) {
+      throw new TrelloError('validation', 'Regra não encontrada.');
+    }
+
+    const cards = await this.getAllLinkedCards();
+    let applied = 0;
+    for (const card of cards) {
+      try {
+        const result = await this.executeRules(
+          card,
+          { kind: 'updated', toListId: card.idList },
+          new Set<string>(),
+          0,
+          true,
+          rule.id,
+        );
+        if (result.touched) applied += 1;
+      } catch {
+        // Uma falha isolada não interrompe a aplicação nas demais cartões.
+      }
+    }
+    await this.invalidateCardCaches();
+    return { applied, total: cards.length };
   }
 
   async deleteCard(cardId: string): Promise<void> {
@@ -365,7 +525,7 @@ export class TrelloRepository {
         }
         const links = [...newLinks, ...existing];
         const description = stripLinks(current.desc);
-        const desc = [...links.map((process) => `SEI ${process}`), description]
+        const desc = [description, ...links.map((process) => `SEI ${process}`)]
           .filter(Boolean)
           .join('\n');
         await this.client.put(`/cards/${cardId}`, { desc });
@@ -394,14 +554,22 @@ export class TrelloRepository {
     return this.getCard(cardId, true);
   }
 
-  async getBoardLabels(boardId: string): Promise<TrelloLabel[]> {
-    return cacheGetOrSet(`labels:${boardId}`, CACHE_TTL.boardLabels, async () => {
+  async getBoardLabels(boardId: string, fresh = false): Promise<TrelloLabel[]> {
+    const load = async () => {
       const labels = await this.client.get<TrelloLabel[]>(`/boards/${boardId}/labels`, {
         fields: LABEL_FIELDS,
         limit: MAX_CARDS,
       });
       return (labels ?? []).filter((label) => Boolean(label?.id));
-    });
+    };
+
+    if (fresh) {
+      const labels = await load();
+      await cacheSet(`labels:${boardId}`, labels);
+      return labels;
+    }
+
+    return cacheGetOrSet(`labels:${boardId}`, CACHE_TTL.boardLabels, load);
   }
 
   async createLabel(boardId: string, name: string, color: string): Promise<TrelloLabel> {

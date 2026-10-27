@@ -22,9 +22,11 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 
 - **Vínculo de mão dupla:** crie um cartão novo ou vincule um cartão que já existe no Trello ao processo do SEI.
 - **Vários cartões por processo**, todos visíveis e organizados.
-- **Edição completa no SEI:** nome, descrição, etiquetas, checklist, prazo, quadro e lista.
+- **Edição completa no SEI:** nome, descrição, etiquetas, checklist, prazo, quadro e lista, com botão **Concluir** no cartão.
+- **Criação com contexto:** escolha etiquetas, quadro, lista, início e término na hora de criar o cartão.
+- **Regras automáticas:** mova, etiquete e reorganize cartões vinculados ao SEI, com várias ações por regra e aplicação em cadeia.
 - **Vinculação em lote:** selecione vários cartões do Trello e vincule a um ou vários processos.
-- **Painel inicial completo:** prazos, etiquetas, tipos de processo, atualizações e busca.
+- **Painel inicial completo:** prazos, etiquetas, tipos de processo, atualizações e busca, com edição direto no cartão.
 - **Mover cartão sem popup:** o seletor de quadro/lista abre dentro do próprio cartão.
 - **Usuário atribuído do SEI** visível no cabeçalho do processo.
 - **Compatibilidade ampla:** funciona em qualquer domínio, pasta (`/sei/`, `/sip/`, `/web/sei/`) e versão do SEI (3.x, 4.x e 5.x), com seletores resilientes e fallbacks por texto.
@@ -61,6 +63,10 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 | Vincular cartões a vários processos em lote | Sim |
 | Vários cartões por processo | Sim |
 | Editar nome e descrição | Sim |
+| Concluir e reabrir cartão sem exigir prazo | Sim |
+| Criar cartão com etiquetas, quadro/lista, início e término | Sim |
+| Regras automáticas com várias ações e execução em cadeia | Sim |
+| Aplicar regra agora nos cartões vinculados | Sim |
 | Criar, aplicar e remover etiquetas | Sim |
 | Editar checklist (itens, concluir, remover) | Sim |
 | Definir/remover prazo e conclusão | Sim |
@@ -75,7 +81,8 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 | Painel moderno com métricas resumidas e filtros recolhíveis | Sim |
 | Botão Dashboard no menu de opções | Sim |
 | Filtros do painel por etiqueta, tipo de processo, prazo, quadro, lista e atualização | Sim |
-| Edição completa dos cartões pelo painel | Sim |
+| Edição completa dos cartões pelo painel, sem modal | Sim |
+| Métricas do painel refletem os filtros aplicados | Sim |
 | Links dos processos abrem a página correspondente no SEI | Sim |
 | Badge com processos atualizados no SEI | Sim |
 | Atualizações do Trello (7/30 dias e desde a última visita) | Sim |
@@ -134,13 +141,27 @@ SEI 08660.018176/2014-60
 O painel abre pelo ícone da extensão e pelo menu **Dashboard** das opções.
 
 - Métricas de atrasados, vencendo hoje, próximos 7 dias, atualizados e total vinculado.
-- Busca por cartão, processo, tipo, etiqueta, quadro ou lista.
+- As métricas refletem os filtros aplicados e mostram o total de referência (por exemplo, `3 de 12 cartões`).
+- Busca por cartão, processo, tipo, etiqueta, quadro, lista e também pela descrição do cartão.
 - Filtros recolhíveis por quadro, lista, tipo de processo, etiqueta, prazo, atualização no Trello e atualização no SEI.
 - Agrupamento por prazo, quadro, lista, tipo de processo, etiqueta ou lista única.
-- Detalhes e edição completa do cartão sem sair do painel.
+- Edição direto no cartão, sem modal: clique no título, na descrição, nas etiquetas, no prazo, no checklist ou no destino.
+- Botões **Concluir/Reabrir**, **Etiquetas**, **Checklist**, **Prazo** e **Mover** no rodapé do cartão, alinhados à esquerda.
 - Links dos processos abrem a página correspondente no SEI.
 - Exportação CSV dos cartões filtrados.
 - Atalhos `/` e `Ctrl+K`/`Cmd+K` para focar a busca.
+
+## Regras automáticas
+
+Em **Opções -> Regras** você monta regras instantâneas, sem depender de automações do Trello.
+
+- Valem **somente para cartões vinculados** a processos do SEI.
+- Gatilhos: cartão concluído, entrada em uma lista, entrada em qualquer lista e atualização do cartão.
+- Várias ações por regra: mover para uma lista, mover para o topo, adicionar ou remover etiquetas.
+- Regras em cadeia, com limite de 5 níveis e proteção contra loop.
+- Uma regra não pode mover para duas listas diferentes ao mesmo tempo.
+- **Aplicar agora** executa a regra nos cartões que já existem.
+- As 4 regras iniciais vêm desativadas até você escolher as listas e etiquetas.
 
 > Abra a lista de processos do SEI uma vez para o painel aprender tipo, especificação, URL e usuário atribuído de cada processo. Depois disso, os filtros por tipo e os links ficam completos.
 

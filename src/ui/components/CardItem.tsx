@@ -13,6 +13,8 @@ import { LabelsDialog } from './dialogs/LabelsDialog';
 export interface CardItemProps {
   card: TrelloCard;
   processNumber: string;
+  showProcessMeta?: boolean;
+  showLocation?: boolean;
   compact?: boolean;
   highlight?: boolean;
   onChanged: (card: TrelloCard) => void;
@@ -24,6 +26,8 @@ type DialogKind = 'due' | 'labels' | 'checklist' | null;
 export function CardItem({
   card,
   processNumber,
+  showProcessMeta = true,
+  showLocation = true,
   compact = false,
   highlight = false,
   onChanged,
@@ -107,6 +111,13 @@ export function CardItem({
       }
     } finally {
       setBusy(false);
+    }
+  };
+
+  const toggleComplete = async () => {
+    const next = !card.dueComplete;
+    if (await update({ dueComplete: next })) {
+      showToast(next ? 'Cartão concluído.' : 'Cartão reaberto.', 'success');
     }
   };
 
@@ -336,6 +347,9 @@ export function CardItem({
         )}
 
         <div className="sf-card__meta">
+          {card.dueComplete && !card.due && (
+            <span className="sf-chip sf-chip--success">Concluído</span>
+          )}
           {due && (
             <button
               type="button"
@@ -360,22 +374,24 @@ export function CardItem({
               Checklist
             </button>
           )}
-          {processNumber && (
+          {showProcessMeta && processNumber && (
             <span className="sf-card__meta-item" title="Processo vinculado">
               <Icon name="link" size={11} />
               {processNumber}
             </span>
           )}
-          <button
-            type="button"
-            className="sf-card__meta-item"
-            onClick={() => setLocationOpen((current) => !current)}
-            title="Mover cartão"
-            style={{ border: 0, background: 'transparent', cursor: 'pointer', padding: 0 }}
-          >
-            <Icon name="board" size={11} />
-            {locationLabel(card)}
-          </button>
+          {showLocation && (
+            <button
+              type="button"
+              className="sf-card__meta-item"
+              onClick={() => setLocationOpen((current) => !current)}
+              title="Mover cartão"
+              style={{ border: 0, background: 'transparent', cursor: 'pointer', padding: 0 }}
+            >
+              <Icon name="board" size={11} />
+              {locationLabel(card)}
+            </button>
+          )}
           {card.links.length > 1 && (
             <span className="sf-chip sf-chip--accent" title={card.links.join(', ')}>
               <Icon name="link" size={11} />
@@ -434,6 +450,19 @@ export function CardItem({
             >
               <Icon name="board" size={14} />
               {actionLabel('Mover')}
+            </button>
+            <button
+              type="button"
+              className={classNames(
+                'sf-btn sf-btn--ghost sf-btn--sm',
+                !card.dueComplete && 'sf-card__complete',
+              )}
+              onClick={() => void toggleComplete()}
+              disabled={busy}
+              title={card.dueComplete ? 'Reabrir cartão' : 'Concluir cartão'}
+            >
+              <Icon name={card.dueComplete ? 'refresh' : 'check'} size={14} />
+              {actionLabel(card.dueComplete ? 'Reabrir' : 'Concluir')}
             </button>
           </div>
 

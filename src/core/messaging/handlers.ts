@@ -14,6 +14,7 @@ import {
 } from '../storage/settings';
 import { getLastActionTab } from '../storage/last-tab';
 import { listProcessRecords, upsertProcessRecords } from '../storage/processes';
+import { getRules, saveRules } from '../storage/rules';
 
 const repository = new TrelloRepository();
 
@@ -67,7 +68,7 @@ const handlers = {
   'trello:link-cards-bulk': ({ cardIds, processNumbers }) =>
     repository.linkCardsToProcesses(cardIds, processNumbers),
   'trello:unlink-card': ({ cardId, processNumber }) => repository.unlinkCard(cardId, processNumber),
-  'trello:board-labels': ({ boardId }) => repository.getBoardLabels(boardId),
+  'trello:board-labels': ({ boardId, fresh }) => repository.getBoardLabels(boardId, fresh),
   'trello:create-label': ({ boardId, name, color }) => repository.createLabel(boardId, name, color),
   'trello:add-label': ({ cardId, labelId }) => repository.addLabelToCard(cardId, labelId),
   'trello:remove-label': ({ cardId, labelId }) => repository.removeLabelFromCard(cardId, labelId),
@@ -143,6 +144,12 @@ const handlers = {
   },
 
   'activation:last-tab': () => getLastActionTab(),
+
+  'rules:list': () => getRules(),
+
+  'rules:save': ({ rules }) => saveRules(rules),
+
+  'rules:apply-now': ({ ruleId }) => repository.applyRuleNow(ruleId),
 
   'processes:list': () => listProcessRecords(),
 

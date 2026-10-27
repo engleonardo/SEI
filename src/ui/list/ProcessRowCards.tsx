@@ -5,10 +5,12 @@ import { addCards, listStore, loadList, removeCard, updateCard } from './store';
 
 export function ProcessRowCards({
   processNumber,
+  processUrl,
   compact = true,
   highlight = false,
 }: {
   processNumber: string;
+  processUrl?: string;
   compact?: boolean;
   highlight?: boolean;
 }) {
@@ -20,6 +22,7 @@ export function ProcessRowCards({
     <div className={classNames('sf-detail-strip', highlight && 'sf-detail-strip--highlight')}>
       <CardStack
         processNumber={processNumber}
+        processUrl={processUrl}
         cards={cards}
         compact={compact}
         highlight={highlight}

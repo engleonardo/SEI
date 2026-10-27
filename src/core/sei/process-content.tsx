@@ -35,7 +35,12 @@ function mountPanel(processNumber: string): void {
   currentProcess = processNumber;
   host = created.host;
   root = createRoot(created.container);
-  root.render(<ProcessPanel processNumber={processNumber} />);
+  root.render(
+    <ProcessPanel
+      processNumber={processNumber}
+      processUrl={window.location.href.split('#')[0]}
+    />,
+  );
 }
 
 function ensurePanel(): void {

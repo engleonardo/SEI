@@ -12,6 +12,7 @@ import type {
 } from '../domain/types';
 import type { LastActionTab } from '../storage/last-tab';
 import type { ProcessRecord } from '../storage/processes';
+import type { Rule } from '../domain/rules';
 
 export interface RpcMap {
   'settings:get': { payload: undefined; result: Settings };
@@ -32,8 +33,11 @@ export interface RpcMap {
       name: string;
       description?: string;
       processNumber?: string;
+      processUrl?: string;
       boardId?: string;
       listId?: string;
+      start?: string | null;
+      due?: string | null;
     };
     result: TrelloCard;
   };
@@ -51,7 +55,7 @@ export interface RpcMap {
     payload: { cardId: string; processNumber: string };
     result: TrelloCard;
   };
-  'trello:board-labels': { payload: { boardId: string }; result: TrelloLabel[] };
+  'trello:board-labels': { payload: { boardId: string; fresh?: boolean }; result: TrelloLabel[] };
   'trello:create-label': {
     payload: { boardId: string; name: string; color: string };
     result: TrelloLabel;
@@ -85,6 +89,9 @@ export interface RpcMap {
     result: { activated: boolean; allSites: boolean; origin: string | null };
   };
   'activation:last-tab': { payload: undefined; result: LastActionTab | null };
+  'rules:list': { payload: undefined; result: Rule[] };
+  'rules:save': { payload: { rules: Rule[] }; result: Rule[] };
+  'rules:apply-now': { payload: { ruleId: string }; result: { applied: number; total: number } };
   'processes:list': { payload: undefined; result: ProcessRecord[] };
   'processes:upsert': {
     payload: { processes: Array<Partial<ProcessRecord> & { number: string }> };

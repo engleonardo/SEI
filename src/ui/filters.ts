@@ -44,7 +44,16 @@ export function matchesProcess(
 
   if (filters.search.trim()) {
     const needle = filters.search.trim().toLowerCase();
-    const haystack = [processNumber, specification, ...cards.map((card) => card.name)]
+    const haystack = [
+      processNumber,
+      specification,
+      ...cards.flatMap((card) => [
+        card.name,
+        card.description,
+        ...card.links,
+        ...card.labels.map((label) => label.name),
+      ]),
+    ]
       .join(' ')
       .toLowerCase();
     if (!haystack.includes(needle)) return false;

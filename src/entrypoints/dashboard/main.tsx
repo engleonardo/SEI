@@ -8,8 +8,6 @@ import type { LastActionTab } from '../../core/storage/last-tab';
 import type { ProcessCatalog, ProcessRecord } from '../../core/storage/processes';
 import { isOriginActivated } from '../../core/storage/settings';
 import { BrandMark } from '../../ui/BrandMark';
-import { CardItem } from '../../ui/components/CardItem';
-import { Modal } from '../../ui/components/Modal';
 import { Icon } from '../../ui/icons';
 import { showToast } from '../../ui/toast';
 import { setThemePreference } from '../../ui/theme';
@@ -46,6 +44,7 @@ function summarize(cards: TrelloCard[], catalog: ProcessCatalog) {
   let unread = 0;
   const processes = new Set<string>();
   const labels = new Set<string>();
+  const boards = new Set<string>();
   const sevenDays = Date.now() - 7 * 86_400_000;
 
   for (const card of cards) {
@@ -60,6 +59,7 @@ function summarize(cards: TrelloCard[], catalog: ProcessCatalog) {
     if (card.links.some((number) => catalog[number]?.unread)) unread += 1;
     for (const process of card.links) processes.add(process);
     for (const label of card.labels) labels.add(label.id);
+    if (card.idBoard) boards.add(card.idBoard);
   }
 
   return {
@@ -73,6 +73,7 @@ function summarize(cards: TrelloCard[], catalog: ProcessCatalog) {
     unread,
     processes: processes.size,
     labels: labels.size,
+    boards: boards.size,
   };
 }
 
@@ -86,7 +87,6 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
   const version = browser.runtime.getManifest().version;
@@ -240,19 +240,17 @@ function Dashboard() {
       .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
   }, [cards, catalog]);
 
-  const summary = useMemo(() => summarize(cards, catalog), [cards, catalog]);
-
   const visibleCards = useMemo(
     () => cards.filter((card) => matchesFilters(card, filters, catalog, lastVisit)),
     [cards, catalog, filters, lastVisit],
   );
 
+  const summary = useMemo(() => summarize(visibleCards, catalog), [visibleCards, catalog]);
+
   const groups = useMemo(
     () => groupCards(visibleCards, filters.group, filters.sort, catalog),
     [visibleCards, filters.group, filters.sort, catalog],
   );
-
-  const editingCard = editingId ? cards.find((card) => card.id === editingId) ?? null : null;
 
   const exportCsv = () => {
     if (visibleCards.length === 0) {
@@ -278,7 +276,6 @@ function Dashboard() {
 
   const handleRemoved = (cardId: string) => {
     setCards((previous) => previous.filter((card) => card.id !== cardId));
-    if (editingId === cardId) setEditingId(null);
   };
 
   const handleToggleLabel = (labelId: string) => {
@@ -290,8 +287,9 @@ function Dashboard() {
     });
   };
   const active = activeFilterCount(filters);
+  const lastTabWeb = Boolean(lastTab?.url && /^https?:\/\//i.test(lastTab.url));
   const siteActive = Boolean(
-    lastTab?.url && settings && isOriginActivated(lastTab.url, settings),
+    lastTabWeb && lastTab?.url && settings && isOriginActivated(lastTab.url, settings),
   );
 
   const activeChips: string[] = [];
@@ -435,7 +433,7 @@ function Dashboard() {
         </div>
       )}
 
-      {settings && !siteActive && (
+      {settings && !siteActive && lastTabWeb && (
         <ActivationCard settings={settings} lastTab={lastTab} onChanged={setSettings} />
       )}
 
@@ -512,7 +510,7 @@ function Dashboard() {
           <span className="sdo-metric__body">
             <span>Total vinculado</span>
             <strong>{summary.total}</strong>
-            <small>cartões no painel</small>
+            <small>de {cards.length} cartões</small>
           </span>
         </button>
       </section>
@@ -534,7 +532,7 @@ function Dashboard() {
           <Icon name="tag" size={12} /> {summary.labels} etiquetas
         </span>
         <span>
-          <Icon name="board" size={12} /> {boards.length} quadros
+          <Icon name="board" size={12} /> {summary.boards} quadros
         </span>
       </div>
 
@@ -645,7 +643,8 @@ function Dashboard() {
                   key={`${group.key}:${card.id}`}
                   card={card}
                   catalog={catalog}
-                  onEdit={() => setEditingId(card.id)}
+                  onChanged={handleChanged}
+                  onRemoved={handleRemoved}
                   onToggleLabel={handleToggleLabel}
                 />
               ))}
@@ -658,30 +657,6 @@ function Dashboard() {
         <span>SEI Flow · painel de controle · Desenvolvido por Engenheiro Leonardo Almeida de Oliveira</span>
         <span className="sdo-footer__links">Sem coleta de dados · suporte em Opções → Diagnóstico</span>
       </footer>
-
-      {editingCard && (
-        <Modal
-          title="Detalhes e edição do cartão"
-          subtitle={editingCard.name}
-          onClose={() => setEditingId(null)}
-          footer={
-            <button
-              type="button"
-              className="sf-btn"
-              onClick={() => setEditingId(null)}
-            >
-              Fechar
-            </button>
-          }
-        >
-          <CardItem
-            card={editingCard}
-            processNumber={editingCard.links[0] ?? ''}
-            onChanged={handleChanged}
-            onRemoved={handleRemoved}
-          />
-        </Modal>
-      )}
     </div>
   );
 }

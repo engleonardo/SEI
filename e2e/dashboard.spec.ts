@@ -116,7 +116,7 @@ async function seed(context: BrowserContext): Promise<void> {
   );
 }
 
-test('dashboard é a página inicial, filtra por etiqueta/tipo e abre detalhes', async () => {
+test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão inline', async () => {
   const extensionDir = mkdtempSync(join(tmpdir(), 'sei-flow-dash-'));
   const profileDir = mkdtempSync(join(tmpdir(), 'sei-flow-dash-profile-'));
   cpSync(EXTENSION_SOURCE, extensionDir, { recursive: true });
@@ -194,14 +194,26 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e abre detalhes',
     await expect(dashboard.getByText('Publicar edital')).toBeHidden();
     await dashboard.getByRole('button', { name: 'Limpar filtros' }).first().click();
 
-    // Detalhes/edição do cartão.
-    await dashboard.getByRole('button', { name: 'Detalhes' }).first().click();
+    // Edição inline no próprio cartão (sem modal de detalhes).
+    const firstCard = dashboard.locator('.sdo-card').filter({ hasText: 'Revisar contrato' }).first();
+    await firstCard.locator('.sdo-card__title-button').click();
+    await expect(dashboard.getByLabel('Nome do cartão')).toBeVisible();
+    await dashboard.getByLabel('Nome do cartão').press('Escape');
+    await expect(dashboard.getByLabel('Nome do cartão')).toHaveCount(0);
+
+    // Ações ficam no rodapé do cartão, alinhadas à esquerda.
+    const footer = firstCard.locator('.sdo-card__footer');
+    await expect(footer.getByRole('button', { name: 'Etiquetas' })).toBeVisible();
+    await expect(footer.getByRole('button', { name: 'Checklist' })).toBeVisible();
+    await expect(footer.getByRole('button', { name: 'Prazo' })).toBeVisible();
+    await expect(footer.getByRole('button', { name: 'Mover' })).toBeVisible();
+    await expect(footer.getByRole('button', { name: 'Concluir' })).toBeVisible();
+    await expect(dashboard.getByRole('button', { name: 'Detalhes' })).toHaveCount(0);
+
+    await footer.getByRole('button', { name: 'Prazo' }).click();
     const dialog = dashboard.getByRole('dialog');
-    await expect(dialog.getByText('Detalhes e edição do cartão')).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Etiquetas', exact: true })).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Checklist', exact: true })).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Prazo', exact: true })).toBeVisible();
-    await dialog.locator('.sf-modal__footer').getByRole('button', { name: 'Fechar' }).click();
+    await expect(dialog.getByText('Data de entrega')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Cancelar' }).click();
 
     // Badge conta processos atualizados (não atrasados).
     await expect

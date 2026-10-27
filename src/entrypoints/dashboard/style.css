@@ -299,7 +299,6 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   text-align: left;
   transition:
-    transform 0.15s ease,
     box-shadow 0.15s ease,
     border-color 0.15s ease;
 }
@@ -313,7 +312,6 @@
 }
 
 .sdo-metric:hover {
-  transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--metric-color, var(--accent)) 30%, var(--border));
   box-shadow:
     0 20px 50px rgba(15, 23, 42, 0.1),
@@ -896,7 +894,6 @@
   box-shadow: 0 5px 20px rgba(15, 23, 42, 0.05);
   backdrop-filter: blur(12px);
   transition:
-    transform 0.15s ease,
     box-shadow 0.15s ease,
     border-color 0.15s ease;
 }
@@ -910,7 +907,6 @@
 }
 
 .sdo-card:hover {
-  transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
   box-shadow: 0 12px 34px rgba(15, 23, 42, 0.09);
 }
@@ -1058,6 +1054,168 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 5px;
+}
+
+.sdo-card--done {
+  border-color: color-mix(in srgb, var(--success) 26%, var(--border));
+}
+
+.sdo-card__title-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: text;
+  text-align: left;
+}
+
+.sdo-card__title-button svg {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.sdo-card__title-button:hover svg,
+.sdo-card__title-button:focus-visible svg {
+  opacity: 0.55;
+}
+
+.sdo-card__title-button:hover h3 {
+  color: var(--accent);
+}
+
+.sdo-card__desc-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: text;
+  text-align: left;
+}
+
+.sdo-card__desc-button:hover {
+  color: var(--text);
+}
+
+.sdo-card__empty-desc {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sdo-card__empty-desc:hover {
+  color: var(--accent);
+}
+
+.sdo-card__desc-edit {
+  margin-top: 7px;
+}
+
+.sdo-inline-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sdo-inline-input,
+.sdo-inline-textarea {
+  flex: 1;
+  min-width: 180px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.sdo-inline-textarea {
+  min-height: 62px;
+  width: 100%;
+  resize: none;
+  margin-bottom: 6px;
+}
+
+.sdo-inline-input:focus,
+.sdo-inline-textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+.sdo-label--add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 19px;
+  padding: 0;
+  border: 1px dashed var(--border-strong);
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--muted);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.sdo-label--add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  filter: none;
+}
+
+.sdo-meta-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sdo-meta-button:hover {
+  color: var(--accent);
+}
+
+.sdo-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex: 1 0 100%;
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.sdo-card__footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+}
+
+.sdo-card__complete {
+  color: var(--success);
 }
 
 .sdo-pill {

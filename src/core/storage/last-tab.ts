@@ -29,6 +29,12 @@ export async function saveLastActionTab(tab: {
   title?: string;
 }): Promise<void> {
   if (!tab.url) return;
+  try {
+    const parsed = new URL(tab.url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return;
+  } catch {
+    return;
+  }
   const value: LastActionTab = {
     id: tab.id,
     url: tab.url,
@@ -53,6 +59,14 @@ export async function getLastActionTab(): Promise<LastActionTab | null> {
       if (!value || typeof value !== 'object') return null;
       const raw = value as Partial<LastActionTab>;
       if (typeof raw.url !== 'string' || !raw.url) return null;
+      const protocol = (() => {
+        try {
+          return new URL(raw.url).protocol;
+        } catch {
+          return '';
+        }
+      })();
+      if (protocol !== 'http:' && protocol !== 'https:') return null;
       return {
         id: typeof raw.id === 'number' ? raw.id : undefined,
         url: raw.url,

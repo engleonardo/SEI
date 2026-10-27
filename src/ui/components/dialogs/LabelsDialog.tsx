@@ -24,6 +24,7 @@ export function LabelsDialog({
   const [selected, setSelected] = useState<TrelloLabel[]>(card.labels);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [color, setColor] = useState<string>('blue');
@@ -35,7 +36,7 @@ export function LabelsDialog({
       setError('O cartão não está associado a um quadro.');
       return;
     }
-    callRpc('trello:board-labels', { boardId: card.idBoard })
+    callRpc('trello:board-labels', { boardId: card.idBoard, fresh: true })
       .then((value) => {
         if (active) setLabels(value);
       })
@@ -51,6 +52,22 @@ export function LabelsDialog({
   }, [card.idBoard]);
 
   const isSelected = (labelId: string) => selected.some((label) => label.id === labelId);
+
+  const refreshLabels = async () => {
+    setRefreshing(true);
+    setError(null);
+    try {
+      const value = await callRpc('trello:board-labels', {
+        boardId: card.idBoard,
+        fresh: true,
+      });
+      setLabels(value);
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const toggle = async (label: TrelloLabel) => {
     setBusy(true);
@@ -102,6 +119,15 @@ export function LabelsDialog({
       footer={
         <>
           <span className="sf-modal__footer-left">{selected.length} aplicada(s)</span>
+          <button
+            type="button"
+            className="sf-btn sf-btn--sm"
+            onClick={() => void refreshLabels()}
+            disabled={refreshing || busy}
+          >
+            {refreshing ? <Spinner /> : <Icon name="refresh" size={13} />}
+            Atualizar etiquetas
+          </button>
           <button type="button" className="sf-btn" onClick={onClose} disabled={busy}>
             Fechar
           </button>

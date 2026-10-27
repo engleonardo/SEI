@@ -34,6 +34,17 @@ describe('list filters', () => {
     expect(matchesProcess(base, { ...EMPTY_FILTERS, search: 'inexistente' })).toBe(false);
   });
 
+  it('filtra por busca na descrição e nas etiquetas do cartão', () => {
+    const detailed = card({
+      description: 'Aguardando parecer jurídico',
+      labels: [{ id: 'label-1', name: 'Urgente', color: 'red' }],
+    });
+    const base = { processNumber: '1', specification: '', cards: [detailed] };
+    expect(matchesProcess(base, { ...EMPTY_FILTERS, search: 'jurídico' })).toBe(true);
+    expect(matchesProcess(base, { ...EMPTY_FILTERS, search: 'urgente' })).toBe(true);
+    expect(matchesProcess(base, { ...EMPTY_FILTERS, search: 'inexistente' })).toBe(false);
+  });
+
   it('filtra processos sem cartão', () => {
     const base = { processNumber: '1', specification: '', cards: [] };
     expect(matchesProcess(base, { ...EMPTY_FILTERS, noCard: true })).toBe(true);

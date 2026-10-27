@@ -3,6 +3,7 @@ import type { TrelloCard } from '../../core/domain/types';
 import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import { openOptionsPage } from '../../core/messaging/actions';
 import { Icon } from '../icons';
+import { locationLabel } from '../utils';
 import { CardStack } from '../components/CardStack';
 
 function mergeCards(current: TrelloCard[], incoming: TrelloCard[]): TrelloCard[] {
@@ -11,7 +12,13 @@ function mergeCards(current: TrelloCard[], incoming: TrelloCard[]): TrelloCard[]
   return Array.from(map.values());
 }
 
-export function ProcessPanel({ processNumber }: { processNumber: string }) {
+export function ProcessPanel({
+  processNumber,
+  processUrl,
+}: {
+  processNumber: string;
+  processUrl?: string;
+}) {
   const [cards, setCards] = useState<TrelloCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,13 +62,34 @@ export function ProcessPanel({ processNumber }: { processNumber: string }) {
     setCards((previous) => mergeCards(previous, newCards).filter((card) => card.links.includes(processNumber)));
   };
 
+  const first = cards[0];
+  const sameLocation =
+    !first ||
+    cards.every((card) => card.idBoard === first.idBoard && card.idList === first.idList);
+  const locationSummary = first
+    ? sameLocation
+      ? locationLabel(first)
+      : 'Vários destinos'
+    : null;
+
   return (
     <div className="sf-process-panel">
       <CardStack
         processNumber={processNumber}
+        processUrl={processUrl}
         cards={cards}
         loading={loading}
         error={error}
+        headerSummary={
+          locationSummary ? (
+            <span className="sf-stack__summary">
+              <Icon name="board" size={13} />
+              {locationSummary}
+            </span>
+          ) : undefined
+        }
+        showProcessMeta={false}
+        showLocation={false}
         errorExtra={
           needsSetup ? (
             <button

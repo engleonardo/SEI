@@ -102,6 +102,15 @@ async function stubExtension(page: Page) {
               case 'trello:board-cards':
                 response = ok([freeCardData, cardData]);
                 break;
+              case 'trello:board-labels':
+                response = ok([
+                  { id: 'label-red', name: 'Urgente', color: 'red' },
+                  { id: 'label-light', name: 'Leonardo', color: 'green_light' },
+                ]);
+                break;
+              case 'trello:create-label':
+                response = ok({ id: 'label-new', name: 'Nova', color: 'blue' });
+                break;
               case 'trello:link-cards':
                 response = ok(
                   (message.payload?.cardIds ?? []).map((cardId) => {
@@ -226,8 +235,12 @@ test('diálogo de novo cartão abre com o destino padrão', async ({ page }) => 
 
   await expect(page.getByText('Novo cartão no Trello')).toBeVisible();
   await expect(page.getByRole('dialog').getByLabel('Nome')).toHaveValue(PROCESS);
-  await expect(page.getByText('Contratos').first()).toBeVisible();
-  await expect(page.getByText('Em análise').first()).toBeVisible();
+  await expect(page.getByRole('dialog').getByLabel('Quadro')).toHaveValue('board-1');
+  await expect(page.getByRole('dialog').getByLabel('Lista')).toHaveValue('list-1');
+  await expect(page.getByRole('dialog').getByLabel('Início (opcional)')).toHaveValue('');
+  await expect(page.getByRole('dialog').getByLabel('Término (opcional)')).toHaveValue('');
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Nova etiqueta' })).toBeVisible();
+  await expect(page.getByRole('dialog').getByRole('button', { name: /Urgente/ })).toBeVisible();
 });
 
 test('diálogo de vínculo lista cartões do quadro e permite seleção múltipla', async ({ page }) => {

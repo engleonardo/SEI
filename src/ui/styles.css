@@ -507,7 +507,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 4px 8px;
   margin-top: 9px;
   padding-top: 8px;
@@ -517,8 +517,12 @@
 .sf-card__footer-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 2px;
+}
+
+.sf-card__complete {
+  color: var(--sf-success);
 }
 
 .sf-card__footer-side {
@@ -762,6 +766,19 @@
 
 .sf-stack__head--actions {
   justify-content: flex-end;
+}
+
+.sf-stack__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: var(--sf-text-soft);
+  font-size: 11.5px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sf-stack__title {
@@ -1316,6 +1333,92 @@
 .sf-color-swatch--active {
   border-color: var(--sf-text);
   box-shadow: 0 0 0 2px var(--sf-bg);
+}
+
+.sf-create {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sf-create__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sf-create__labels {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--sf-border);
+}
+
+.sf-create__labels-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sf-create__label-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 148px;
+  overflow-y: auto;
+}
+
+.sf-create__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px 4px 5px;
+  border: 1px solid var(--sf-border);
+  border-radius: 999px;
+  background: var(--sf-bg);
+  color: var(--sf-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sf-create__label:hover {
+  background: var(--sf-bg-soft);
+}
+
+.sf-create__label--active {
+  border-color: var(--sf-accent);
+  box-shadow: 0 0 0 1px var(--sf-accent) inset;
+}
+
+.sf-create__label .sf-label-option__swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.sf-create__label-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--sf-border);
+  border-radius: 10px;
+  background: var(--sf-bg-soft);
+}
+
+.sf-create__label-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+@media (max-width: 640px) {
+  .sf-create__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .sf-due-row {

@@ -17,10 +17,15 @@ const mocks = vi.hoisted(() => ({
     compact: true,
     autoRefreshMinutes: 0,
   },
+  rules: [] as Array<Record<string, unknown>>,
 }));
 
 vi.mock('../storage/settings', () => ({
   getSettings: async () => mocks.settings,
+}));
+
+vi.mock('../storage/rules', () => ({
+  getRules: async () => mocks.rules,
 }));
 
 vi.mock('./cache', () => ({
@@ -72,6 +77,7 @@ function repository(client: TrelloClient) {
 }
 
 beforeEach(() => {
+  mocks.rules = [];
   mocks.settings = {
     ...mocks.settings,
     defaultBoardId: 'board-1',
@@ -99,7 +105,7 @@ describe('TrelloRepository', () => {
       expect.objectContaining({
         name: 'Novo',
         idList: 'list-1',
-        desc: `SEI ${PROCESS}\nDescrição`,
+        desc: `Descrição\nSEI ${PROCESS}`,
       }),
     );
     expect(card.links).toEqual([PROCESS]);
@@ -109,14 +115,14 @@ describe('TrelloRepository', () => {
     const client = fakeClient();
     vi.mocked(client.get)
       .mockResolvedValueOnce(rawCard({ desc: `SEI ${PROCESS}\nSEI ${OTHER}\nAntiga` }))
-      .mockResolvedValueOnce(rawCard({ desc: `SEI ${PROCESS}\nSEI ${OTHER}\nNova` }));
+      .mockResolvedValueOnce(rawCard({ desc: `Nova\nSEI ${PROCESS}\nSEI ${OTHER}` }));
     vi.mocked(client.put).mockResolvedValue({});
 
     const repo = repository(client);
     const updated = await repo.updateCard('card-1', { description: 'Nova' });
 
     expect(client.put).toHaveBeenCalledWith('/cards/card-1', {
-      desc: `SEI ${PROCESS}\nSEI ${OTHER}\nNova`,
+      desc: `Nova\nSEI ${PROCESS}\nSEI ${OTHER}`,
     });
     expect(updated.description).toBe('Nova');
   });
@@ -134,8 +140,8 @@ describe('TrelloRepository', () => {
     const client = fakeClient();
     vi.mocked(client.get)
       .mockResolvedValueOnce(rawCard({ desc: 'Descrição' }))
-      .mockResolvedValueOnce(rawCard({ desc: `SEI ${PROCESS}\nDescrição` }))
-      .mockResolvedValueOnce(rawCard({ desc: `SEI ${PROCESS}\nDescrição` }));
+      .mockResolvedValueOnce(rawCard({ desc: `Descrição\nSEI ${PROCESS}` }))
+      .mockResolvedValueOnce(rawCard({ desc: `Descrição\nSEI ${PROCESS}` }));
     vi.mocked(client.put).mockResolvedValue({});
 
     const repo = repository(client);
@@ -144,7 +150,7 @@ describe('TrelloRepository', () => {
     expect(results).toHaveLength(1);
     expect(results[0]?.status).toBe('linked');
     expect(client.put).toHaveBeenCalledWith('/cards/card-1', {
-      desc: `SEI ${PROCESS}\nDescrição`,
+      desc: `Descrição\nSEI ${PROCESS}`,
     });
   });
 
@@ -163,7 +169,7 @@ describe('TrelloRepository', () => {
     vi.mocked(client.get)
       .mockResolvedValueOnce(rawCard({ desc: 'Descrição' }))
       .mockResolvedValueOnce(
-        rawCard({ desc: `SEI ${PROCESS}\nSEI ${OTHER}\nSEI ${third}\nDescrição` }),
+        rawCard({ desc: `Descrição\nSEI ${PROCESS}\nSEI ${OTHER}\nSEI ${third}` }),
       );
     vi.mocked(client.put).mockResolvedValue({});
 
@@ -173,22 +179,22 @@ describe('TrelloRepository', () => {
     expect(results[0]?.status).toBe('linked');
     expect(client.put).toHaveBeenCalledTimes(1);
     expect(client.put).toHaveBeenCalledWith('/cards/card-1', {
-      desc: `SEI ${PROCESS}\nSEI ${OTHER}\nSEI ${third}\nDescrição`,
+      desc: `Descrição\nSEI ${PROCESS}\nSEI ${OTHER}\nSEI ${third}`,
     });
   });
 
   it('desvincula apenas o processo atual', async () => {
     const client = fakeClient();
     vi.mocked(client.get)
-      .mockResolvedValueOnce(rawCard({ desc: `SEI ${PROCESS}\nSEI ${OTHER}\nDescrição` }))
-      .mockResolvedValueOnce(rawCard({ desc: `SEI ${OTHER}\nDescrição` }));
+      .mockResolvedValueOnce(rawCard({ desc: `Descrição\n\nSEI ${PROCESS}\nSEI ${OTHER}` }))
+      .mockResolvedValueOnce(rawCard({ desc: `Descrição\n\nSEI ${OTHER}` }));
     vi.mocked(client.put).mockResolvedValue({});
 
     const repo = repository(client);
     const updated = await repo.unlinkCard('card-1', PROCESS);
 
     expect(client.put).toHaveBeenCalledWith('/cards/card-1', {
-      desc: `SEI ${OTHER}\nDescrição`,
+      desc: `Descrição\n\nSEI ${OTHER}`,
     });
     expect(updated.links).toEqual([OTHER]);
   });
@@ -200,5 +206,67 @@ describe('TrelloRepository', () => {
     await expect(repo.createCard({ name: 'Sem destino' })).rejects.toMatchObject({
       code: 'not_configured',
     });
+  });
+
+  it('aplica regra de conclusão apenas em cartão vinculado', async () => {
+    mocks.rules = [
+      {
+        id: 'rule-1',
+        name: 'Concluído vai para concluídos',
+        enabled: true,
+        trigger: { type: 'completed' },
+        actions: [
+          { type: 'addLabel', labelId: 'label-done' },
+          { type: 'moveToList', listId: 'list-done' },
+        ],
+      },
+    ];
+    const client = fakeClient();
+    vi.mocked(client.get)
+      .mockResolvedValueOnce(rawCard({ desc: `SEI ${PROCESS}` }))
+      .mockResolvedValueOnce(rawCard({ desc: `SEI ${PROCESS}` }))
+      .mockResolvedValueOnce(
+        rawCard({
+          desc: `SEI ${PROCESS}`,
+          idList: 'list-done',
+          list: { id: 'list-done', name: 'Concluídos' },
+          labels: [{ id: 'label-done', name: 'Concluído', color: 'green' }],
+        }),
+      );
+    vi.mocked(client.put).mockResolvedValue({});
+    vi.mocked(client.post).mockResolvedValue({});
+
+    const repo = repository(client);
+    const updated = await repo.updateCard('card-1', { dueComplete: true });
+
+    expect(client.post).toHaveBeenCalledWith('/cards/card-1/idLabels', {
+      value: 'label-done',
+    });
+    expect(client.put).toHaveBeenCalledWith('/cards/card-1', {
+      pos: 'bottom',
+      idList: 'list-done',
+    });
+    expect(updated.list?.id).toBe('list-done');
+  });
+
+  it('não aplica regras em cartão sem vínculo com o SEI', async () => {
+    mocks.rules = [
+      {
+        id: 'rule-1',
+        name: 'Concluído vai para concluídos',
+        enabled: true,
+        trigger: { type: 'completed' },
+        actions: [{ type: 'moveToList', listId: 'list-done' }],
+      },
+    ];
+    const client = fakeClient();
+    vi.mocked(client.get).mockResolvedValue(rawCard({ desc: 'Sem vínculo' }));
+    vi.mocked(client.put).mockResolvedValue({});
+
+    const repo = repository(client);
+    await repo.updateCard('card-1', { dueComplete: true });
+
+    expect(client.put).toHaveBeenCalledTimes(1);
+    expect(client.put).toHaveBeenCalledWith('/cards/card-1', { dueComplete: true });
   });
 });
