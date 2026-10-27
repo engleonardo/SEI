@@ -45,7 +45,11 @@ const handlers = {
   },
 
   'options:open': async () => {
-    await browser.runtime.openOptionsPage();
+    if (typeof browser.runtime.openOptionsPage === 'function') {
+      await browser.runtime.openOptionsPage();
+      return undefined;
+    }
+    await browser.tabs.create({ url: browser.runtime.getURL('/options.html') });
     return undefined;
   },
 
