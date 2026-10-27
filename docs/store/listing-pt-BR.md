@@ -66,9 +66,9 @@ Integrar cartões do Trello a processos do SEI, permitindo criar, vincular, visu
 
 ## Práticas de dados (Chrome Web Store)
 
-- A extensão não coleta dados pessoais.
+- O SEI Flow não envia dados ao desenvolvedor e não mantém servidor próprio.
 - Credenciais e preferências ficam em `chrome.storage.local`.
-- A única transferência externa é para `api.trello.com`, por ação do usuário.
+- Para funcionar, as credenciais e os dados dos cartões são processados no navegador e transmitidos apenas à API do Trello, por ação do usuário.
 - Não há analytics, anúncios, venda ou compartilhamento de dados.
 - O uso é de responsabilidade exclusiva do usuário; o criador não tem ingerência sobre informações do SEI/Trello.
 
