@@ -13,6 +13,7 @@ import type {
 import type { LastActionTab } from '../storage/last-tab';
 import type { ProcessRecord } from '../storage/processes';
 import type { Rule, RuleRun } from '../domain/rules';
+import type { RuleStats } from '../storage/rule-stats';
 
 export interface RpcMap {
   'settings:get': { payload: undefined; result: Settings };
@@ -99,6 +100,8 @@ export interface RpcMap {
     result: { applied: number; total: number };
   };
   'rules:last-run': { payload: undefined; result: RuleRun | null };
+  'rules:stats': { payload: undefined; result: RuleStats };
+  'rules:clear-stats': { payload: undefined; result: RuleStats };
   'rules:undo': {
     payload: undefined;
     result: { reverted: number; total: number; cards: number };

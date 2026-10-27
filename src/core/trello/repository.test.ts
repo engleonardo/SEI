@@ -44,6 +44,27 @@ vi.mock('../storage/rule-runs', () => ({
   },
 }));
 
+const statsState = vi.hoisted(() => ({
+  stats: {} as Record<string, { applied: number; lastAt: number; lastSource: 'auto' | 'manual' }>,
+}));
+
+vi.mock('../storage/rule-stats', () => ({
+  recordRuleApplications: async (counts: Map<string, number>, source: 'auto' | 'manual') => {
+    for (const [id, count] of counts) {
+      const previous = statsState.stats[id]?.applied ?? 0;
+      statsState.stats[id] = {
+        applied: previous + count,
+        lastAt: Date.now(),
+        lastSource: source,
+      };
+    }
+  },
+  getRuleStats: async () => ({ ...statsState.stats }),
+  clearRuleStats: async () => {
+    statsState.stats = {};
+  },
+}));
+
 const syncState = vi.hoisted(() => ({
   snapshot: {} as Record<string, unknown>,
 }));
@@ -140,6 +161,7 @@ beforeEach(() => {
   mocks.rules = [];
   syncState.snapshot = {};
   runState.runs = [];
+  statsState.stats = {};
   mocks.settings = {
     ...mocks.settings,
     defaultBoardId: 'board-1',
@@ -319,6 +341,7 @@ describe('TrelloRepository', () => {
       idList: 'list-done',
     });
     expect(updated.list?.id).toBe('list-done');
+    expect(statsState.stats['rule-1']).toMatchObject({ applied: 1, lastSource: 'auto' });
   });
 
   it('não aplica regras em cartão sem vínculo com o SEI', async () => {
@@ -451,6 +474,7 @@ describe('TrelloRepository', () => {
       ruleId: 'rule-done',
       moves: [{ cardId: 'card-1', fromListId: 'list-1', toListId: 'list-done' }],
     });
+    expect(statsState.stats['rule-done']).toMatchObject({ applied: 1, lastSource: 'manual' });
   });
 
   it('desfaz a última aplicação devolvendo o cartão à lista original', async () => {

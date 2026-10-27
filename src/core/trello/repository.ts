@@ -22,6 +22,7 @@ import {
 } from '../storage/sync';
 import { ruleAppliesNow, ruleMatches, ruleIssue, ruleRunCardCount, type Rule, type RuleEvent, type RuleRunLabel, type RuleRunMove } from '../domain/rules';
 import { dropLastRuleRun, getLastRuleRun, pushRuleRun } from '../storage/rule-runs';
+import { recordRuleApplications } from '../storage/rule-stats';
 import { getSettings } from '../storage/settings';
 import { mapLimit } from '../utils/async';
 import { CACHE_TTL, cacheDelete, cacheDeleteByPrefix, cacheGet, cacheGetOrSet, cacheSet } from './cache';
@@ -472,10 +473,12 @@ export class TrelloRepository {
 
     let current = card;
     const applied = new Set<string>();
+    const counts = new Map<string, number>();
     for (const event of events) {
-      const state = await this.executeRules(current, event, applied, 0, false);
+      const state = await this.executeRules(current, event, applied, 0, false, undefined, counts);
       current = state.card;
     }
+    await recordRuleApplications(counts, 'auto');
     return current;
   }
 
@@ -485,7 +488,17 @@ export class TrelloRepository {
    * níveis e cada regra roda uma única vez na mesma cadeia.
    */
   private async runRules(card: TrelloCard, event: RuleEvent): Promise<TrelloCard> {
-    const { card: result } = await this.executeRules(card, event, new Set<string>(), 0, false);
+    const counts = new Map<string, number>();
+    const { card: result } = await this.executeRules(
+      card,
+      event,
+      new Set<string>(),
+      0,
+      false,
+      undefined,
+      counts,
+    );
+    await recordRuleApplications(counts, 'auto');
     return result;
   }
 
@@ -496,6 +509,7 @@ export class TrelloRepository {
     depth: number,
     force: boolean,
     only?: string,
+    counts?: Map<string, number>,
   ): Promise<{ card: TrelloCard; touched: boolean }> {
     if (depth >= 5) return { card, touched: false };
     if (card.links.length === 0) return { card, touched: false };
@@ -517,6 +531,7 @@ export class TrelloRepository {
 
       touched = true;
       current = appliedRule.card;
+      if (counts) counts.set(rule.id, (counts.get(rule.id) ?? 0) + 1);
 
       if (appliedRule.moved) {
         const chained = await this.executeRules(
@@ -525,6 +540,8 @@ export class TrelloRepository {
           applied,
           depth + 1,
           false,
+          undefined,
+          counts,
         );
         current = chained.card;
       }
@@ -618,6 +635,7 @@ export class TrelloRepository {
     const touched: TrelloCard[] = [];
     const moves: RuleRunMove[] = [];
     const labels: RuleRunLabel[] = [];
+    const counts = new Map<string, number>();
 
     for (const card of matching) {
       const beforeListId = card.idList;
@@ -630,6 +648,7 @@ export class TrelloRepository {
           0,
           true,
           rule.id,
+          counts,
         );
         if (!result.touched) continue;
 
@@ -643,6 +662,7 @@ export class TrelloRepository {
 
     await this.invalidateCardCaches();
     if (touched.length > 0) await mergeSyncSnapshot(touched);
+    await recordRuleApplications(counts, 'manual');
 
     if (moves.length > 0 || labels.length > 0) {
       await pushRuleRun({

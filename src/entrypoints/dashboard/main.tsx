@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
 import type { Settings, TrelloCard, TrelloLabel } from '../../core/domain/types';
@@ -134,6 +134,19 @@ function Dashboard() {
     if (settings) setThemePreference(settings.theme);
   }, [settings]);
 
+  const defaultBoardApplied = useRef(false);
+  useEffect(() => {
+    if (defaultBoardApplied.current) return;
+    if (!settings?.defaultBoardId) return;
+    defaultBoardApplied.current = true;
+    setFilters((previous) => {
+      if (previous.boardId) return previous;
+      const next = { ...previous, boardId: settings.defaultBoardId };
+      saveFilters(next);
+      return next;
+    });
+  }, [settings]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.composedPath()[0];
@@ -246,6 +259,20 @@ function Dashboard() {
   );
 
   const summary = useMemo(() => summarize(visibleCards, catalog), [visibleCards, catalog]);
+
+  const listCounts = useMemo(() => {
+    if (!filters.boardId) return [];
+    const base = cards.filter((card) =>
+      matchesFilters(card, { ...filters, listId: '' }, catalog, lastVisit),
+    );
+    const counts = new Map<string, number>();
+    for (const card of base) counts.set(card.idList, (counts.get(card.idList) ?? 0) + 1);
+    return lists
+      .filter((list) => list.boardId === filters.boardId)
+      .map((list) => ({ id: list.id, name: list.name, count: counts.get(list.id) ?? 0 }));
+  }, [cards, filters, catalog, lastVisit, lists]);
+
+  const listTotal = listCounts.reduce((sum, item) => sum + item.count, 0);
 
   const groups = useMemo(
     () => groupCards(visibleCards, filters.group, filters.sort, catalog),
@@ -573,6 +600,34 @@ function Dashboard() {
           <Icon name="external" size={15} />
         </button>
       </section>
+
+      {filters.boardId && listCounts.length > 0 && (
+        <div className="sdo-list-chips" aria-label="Cartões por lista">
+          <span className="sdo-list-chips__label">Listas</span>
+          <button
+            type="button"
+            className={`sdo-list-chip${filters.listId ? '' : ' sdo-list-chip--on'}`}
+            onClick={() => updateFilters({ listId: '' })}
+          >
+            Todas
+            <span className="sdo-list-chip__count">{listTotal}</span>
+          </button>
+          {listCounts.map((list) => (
+            <button
+              key={list.id}
+              type="button"
+              className={`sdo-list-chip${filters.listId === list.id ? ' sdo-list-chip--on' : ''}`}
+              onClick={() =>
+                updateFilters({ listId: filters.listId === list.id ? '' : list.id })
+              }
+              title={`Ver ${list.count} cartão(ões) em ${list.name}`}
+            >
+              {list.name}
+              <span className="sdo-list-chip__count">{list.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {activeChips.length > 0 && (
         <div className="sdo-active-chips">

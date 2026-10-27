@@ -145,6 +145,7 @@ O painel abre pelo ícone da extensão e pelo menu **Dashboard** das opções.
 - As métricas refletem os filtros aplicados e mostram o total de referência (por exemplo, `3 de 12 cartões`).
 - Busca por cartão, processo, tipo, etiqueta, quadro, lista e também pela descrição do cartão.
 - Filtros recolhíveis por quadro, lista, tipo de processo, etiqueta, prazo, atualização no Trello e atualização no SEI.
+- Chips de lista com contagem por lista do quadro selecionado; o quadro padrão já vem escolhido.
 - Agrupamento por prazo, quadro, lista, tipo de processo, etiqueta ou lista única.
 - Edição direto no cartão, sem modal: clique no título, na descrição, nas etiquetas, no prazo, no checklist ou no destino.
 - Botões **Concluir/Reabrir**, **Etiquetas**, **Checklist**, **Prazo** e **Mover** no rodapé do cartão, alinhados à esquerda.
@@ -159,6 +160,8 @@ Em **Opções -> Regras** você monta regras instantâneas, sem depender de auto
 - Valem **somente para cartões vinculados** a processos do SEI.
 - Gatilhos: cartão concluído, entrada em uma lista, entrada em qualquer lista e atualização do cartão.
 - Funcionam nos dois sentidos: quando a extensão grava no Trello e também quando a mudança é feita no Trello e você atualiza (botão **Atualizar**, ao abrir o painel ou pela atualização automática das preferências).
+- "Atualizado" considera nome, descrição, prazo e etiquetas. Checklist não conta como atualização.
+- Cada regra mostra um contador de quantas vezes já foi aplicada (com data e se foi automática ou manual). O botão **Zerar contadores** limpa esse histórico.
 - Várias ações por regra: mover para uma lista, mover para o topo, adicionar ou remover etiquetas.
 - Regras em cadeia, com limite de 5 níveis e proteção contra loop.
 - Uma regra não pode mover para duas listas diferentes ao mesmo tempo.

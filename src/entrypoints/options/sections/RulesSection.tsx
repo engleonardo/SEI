@@ -13,6 +13,7 @@ import {
   type RuleTriggerType,
 } from '../../../core/domain/rules';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
+import type { RuleStats } from '../../../core/storage/rule-stats';
 import { Icon } from '../../../ui/icons';
 import { ConfirmDialog } from '../../../ui/components/Modal';
 import { SectionCard, Spinner, StatusPill, type Notice } from './shared';
@@ -36,6 +37,7 @@ export function RulesSection({
   } | null>(null);
   const [applying, setApplying] = useState(false);
   const [lastRun, setLastRun] = useState<RuleRun | null>(null);
+  const [stats, setStats] = useState<RuleStats>({});
   const [undoOpen, setUndoOpen] = useState(false);
   const [undoing, setUndoing] = useState(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
@@ -45,6 +47,14 @@ export function RulesSection({
       setLastRun(await callRpc('rules:last-run', undefined));
     } catch {
       setLastRun(null);
+    }
+  }, []);
+
+  const loadStats = useCallback(async () => {
+    try {
+      setStats(await callRpc('rules:stats', undefined));
+    } catch {
+      setStats({});
     }
   }, []);
 
@@ -86,10 +96,11 @@ export function RulesSection({
         if (active) setLoading(false);
       });
     void loadLastRun();
+    void loadStats();
     return () => {
       active = false;
     };
-  }, [loadBoardData, loadLastRun, notify]);
+  }, [loadBoardData, loadLastRun, loadStats, notify]);
 
   const persist = (next: Rule[], message?: string) => {
     setRules(next);
@@ -207,7 +218,7 @@ export function RulesSection({
         text: `Regra aplicada em ${result.applied} de ${result.total} cartões vinculados.`,
       });
       setConfirmApply(null);
-      await loadLastRun();
+      await Promise.all([loadLastRun(), loadStats()]);
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
     } finally {
@@ -224,7 +235,7 @@ export function RulesSection({
         text: `${result.reverted} de ${result.total} alterações revertidas em ${result.cards} cartões.`,
       });
       setUndoOpen(false);
-      await loadLastRun();
+      await Promise.all([loadLastRun(), loadStats()]);
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
     } finally {
@@ -243,6 +254,15 @@ export function RulesSection({
       return list ? `${label} (lista "${list.name}")` : label;
     }
     return label;
+  };
+
+  const clearStats = async () => {
+    try {
+      setStats(await callRpc('rules:clear-stats', undefined));
+      notify({ kind: 'success', text: 'Contadores zerados.' });
+    } catch (cause) {
+      notify({ kind: 'error', text: errorMessage(cause) });
+    }
   };
 
   const toggleRule = (rule: Rule) => {
@@ -274,6 +294,11 @@ export function RulesSection({
           <span className="sfo-hint">
             Os cartões nunca saem do quadro da regra. Cadeia limitada a 5 níveis.
           </span>
+          {Object.keys(stats).length > 0 && (
+            <button type="button" className="sfo-btn sfo-btn--sm" onClick={() => void clearStats()}>
+              Zerar contadores
+            </button>
+          )}
         </div>
       }
     >
@@ -307,6 +332,7 @@ export function RulesSection({
         <div className="sfo-rules">
           {rules.map((rule) => {
             const issue = ruleIssue(rule);
+            const stat = stats[rule.id];
             return (
               <article key={rule.id} className={`sfo-rule${rule.enabled ? ' sfo-rule--on' : ''}`}>
                 <header className="sfo-rule__head">
@@ -330,6 +356,15 @@ export function RulesSection({
                     <StatusPill tone="success">Ativa</StatusPill>
                   ) : (
                     <StatusPill tone="warning">Inativa</StatusPill>
+                  )}
+                  {stat && (
+                    <span
+                      className="sfo-rule__count"
+                      title={`Aplicada ${stat.applied} ${stat.applied === 1 ? 'vez' : 'vezes'} · última em ${new Date(stat.lastAt).toLocaleString('pt-BR')} (${stat.lastSource === 'manual' ? 'manual' : 'automática'})`}
+                    >
+                      <Icon name="refresh" size={11} />
+                      {stat.applied}x
+                    </span>
                   )}
                   <button
                     type="button"
