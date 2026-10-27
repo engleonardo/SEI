@@ -128,7 +128,6 @@ export function ProcessPanel({
         loading={loading}
         error={error}
         showProcessMeta={false}
-        showLocation={false}
         compact
         activeLabels={labelFilter}
         onToggleLabel={toggleLabel}

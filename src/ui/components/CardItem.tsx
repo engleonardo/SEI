@@ -397,18 +397,6 @@ export function CardItem({
               {processNumber}
             </span>
           )}
-          {showLocation && (
-            <button
-              type="button"
-              className="sf-card__meta-item"
-              onClick={() => setLocationOpen((current) => !current)}
-              title="Mover cartão"
-              style={{ border: 0, background: 'transparent', cursor: 'pointer', padding: 0 }}
-            >
-              <Icon name="board" size={11} />
-              {locationLabel(card)}
-            </button>
-          )}
           {card.links.length > 1 && (
             <span className="sf-chip sf-chip--accent" title={card.links.join(', ')}>
               <Icon name="link" size={11} />
@@ -425,6 +413,18 @@ export function CardItem({
           />
         )}
         </div>
+
+        {showLocation && (
+          <button
+            type="button"
+            className="sf-card__path"
+            onClick={() => setLocationOpen((current) => !current)}
+            title="Mover cartão"
+          >
+            <Icon name="board" size={11} />
+            <span>{locationLabel(card)}</span>
+          </button>
+        )}
 
         <div className="sf-card__footer">
           <div className="sf-card__footer-actions">
