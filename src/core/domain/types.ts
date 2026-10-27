@@ -123,4 +123,5 @@ export interface SeiProcessRow {
   processNumber: string;
   specification: string;
   processType: string;
+  highlight: boolean;
 }

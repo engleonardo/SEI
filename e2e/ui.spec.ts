@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+﻿import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
@@ -154,7 +154,9 @@ test('lista de processos mostra o cartão vinculado e o botão de ações', asyn
   await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
 
   await expect(page.getByText('Cartão vinculado')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Cartões/ }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /Abrir ações do processo/ }).first()).toBeVisible();
+  await expect(page.locator('.sf-card--highlight')).toHaveCount(1);
+  await expect(page.getByText('+ Cartão')).toHaveCount(0);
   await expect(page.getByText('SEI Flow').first()).toBeVisible();
 });
 
@@ -194,6 +196,33 @@ test('diálogo de vínculo lista cartões do quadro e permite seleção múltipl
   await expect(page.getByRole('button', { name: /Vincular \(1\)/ })).toBeVisible();
 });
 
+test('filtros: busca com foco estável, cores do Trello e quadro/lista separados', async ({ page }) => {
+  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
+
+  await page.getByRole('button', { name: 'Abrir filtros' }).click();
+  const dialog = page.getByRole('dialog');
+  const search = dialog.getByLabel('Buscar processo ou cartão');
+  await search.click();
+  await search.pressSequentially('08660', { delay: 40 });
+  await expect(search).toHaveValue('08660');
+  await expect(dialog).toBeVisible();
+  await search.fill('');
+
+  const labelChip = dialog.locator('.sf-label-chip').filter({ hasText: 'Urgente' });
+  await expect(labelChip).toBeVisible();
+  expect(
+    await labelChip.evaluate((element) => getComputedStyle(element).backgroundColor),
+  ).toBe('rgb(235, 90, 70)');
+
+  await dialog.getByRole('button', { name: 'Contratos' }).click();
+  await expect(dialog.getByRole('button', { name: 'Em análise' })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Em análise' }).click();
+  await page.getByRole('button', { name: 'Aplicar' }).click();
+
+  await expect(page.getByText('Filtros ativos:')).toBeVisible();
+  await expect(page.getByText('Contratos').first()).toBeVisible();
+});
+
 test('filtro sem cartão esconde processos que já têm cartão', async ({ page }) => {
   await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
 
@@ -204,3 +233,6 @@ test('filtro sem cartão esconde processos que já têm cartão', async ({ page 
   await expect(page.getByText('Cartão vinculado')).toBeHidden();
   await expect(page.getByText(OTHER)).toBeVisible();
 });
+
+
+

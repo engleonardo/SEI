@@ -68,11 +68,10 @@ export function PreferencesSection({
           <select
             id="sfo-theme"
             className="sfo-select"
-            value={theme}
+            value={theme === 'dark' ? 'dark' : 'light'}
             onChange={(event) => setTheme(event.target.value as ThemePreference)}
           >
-            <option value="auto">Automático (segue o sistema)</option>
-            <option value="light">Claro</option>
+            <option value="light">Claro (padrão)</option>
             <option value="dark">Escuro</option>
           </select>
           <span className="sfo-hint">O tema é aplicado dentro do Shadow DOM, sem alterar o SEI.</span>

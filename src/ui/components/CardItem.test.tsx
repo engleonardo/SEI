@@ -89,4 +89,18 @@ describe('CardItem', () => {
 
     expect(screen.getByRole('button', { name: /Adicionar descrição/i })).toBeInTheDocument();
   });
+
+  it('aplica contorno vermelho quando o processo tem informação nova', () => {
+    const { container } = render(
+      <CardItem
+        card={card}
+        processNumber="08660.018176/2014-60"
+        highlight
+        onChanged={vi.fn()}
+        onRemoved={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelector('.sf-card--highlight')).toBeInTheDocument();
+  });
 });

@@ -12,7 +12,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultListName: '',
   activatedOrigins: [],
   allSites: false,
-  theme: 'auto',
+  theme: 'light',
   compact: true,
   autoRefreshMinutes: 0,
 };
@@ -21,6 +21,7 @@ function sanitize(value: Partial<Settings> | null | undefined): Settings {
   return {
     ...DEFAULT_SETTINGS,
     ...(value ?? {}),
+    theme: value?.theme === 'dark' ? 'dark' : 'light',
     activatedOrigins: Array.isArray(value?.activatedOrigins)
       ? [...new Set(value.activatedOrigins.filter((origin) => typeof origin === 'string' && origin.length > 0))]
       : [],

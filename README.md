@@ -26,14 +26,17 @@ A extensão original SEI+Trello só sabia **criar** cartões a partir do SEI. O 
 
 <p align="center">
   <img src="docs/screenshots/list.png" width="48%" alt="Lista de processos com cartões do Trello" />
+  <img src="docs/screenshots/filter.png" width="48%" alt="Filtros por quadro, lista, etiqueta, prazo e cartão" />
+</p>
+<p align="center">
   <img src="docs/screenshots/process.png" width="48%" alt="Processo aberto com o painel do SEI Flow" />
-</p>
-<p align="center">
   <img src="docs/screenshots/link-dialog.png" width="48%" alt="Vincular cartões existentes em lote" />
-  <img src="docs/screenshots/create-dialog.png" width="48%" alt="Criar cartão a partir do processo" />
 </p>
 <p align="center">
+  <img src="docs/screenshots/create-dialog.png" width="48%" alt="Criar cartão a partir do processo" />
   <img src="docs/screenshots/options.png" width="48%" alt="Página de opções" />
+</p>
+<p align="center">
   <img src="docs/screenshots/popup.png" width="30%" alt="Popup de ativação" />
 </p>
 
@@ -103,11 +106,12 @@ SEI 08660.018176/2014-60
 - Desvincular remove **apenas** a linha do processo atual; o cartão continua no Trello.
 - O vínculo é compatível com cartões criados pela extensão original.
 
-## Privacidade
+## Privacidade, uso e responsabilidade
 
-- Sem servidor próprio, sem telemetria e sem anúncios.
-- APP-KEY e TOKEN ficam em `chrome.storage.local`, no seu navegador.
-- As únicas requisições externas vão para `api.trello.com`.
+- O SEI Flow **não mantém servidor próprio e não salva dados de usuários fora do navegador**.
+- APP-KEY, TOKEN e preferências ficam em `chrome.storage.local`, no seu navegador.
+- Nenhuma informação de processo ou cartão é enviada ao criador da extensão. As únicas requisições externas vão para `api.trello.com`.
+- Os dados de processos e cartões pertencem aos sistemas **SEI** e **Trello**. O uso da extensão é de **responsabilidade exclusiva do usuário**. O criador **não tem ingerência, controle ou responsabilidade** sobre informações inseridas, exibidas ou armazenadas nesses sistemas, nem sobre decisões tomadas a partir delas.
 - Leia a [política de privacidade completa](PRIVACY.md).
 
 ## Desenvolvimento

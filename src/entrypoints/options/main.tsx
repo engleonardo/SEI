@@ -230,6 +230,16 @@ function App() {
 
         {tab === 'diagnostics' && <DiagnosticsSection settings={settings} notify={notify} />}
 
+        <div className="sfo-alert sfo-alert--warning">
+          <Icon name="alert" size={16} />
+          <div>
+            <strong>Privacidade e responsabilidade:</strong> o SEI Flow não mantém servidor próprio
+            e não salva dados de usuários fora do seu navegador. Os dados de processos e cartões
+            pertencem ao SEI e ao Trello. O uso é de responsabilidade exclusiva do usuário; o
+            criador não tem ingerência sobre as informações desses sistemas.
+          </div>
+        </div>
+
         <footer className="sfo-footer">
           SEI Flow · projeto independente · licença MIT · não afiliado ao Trello ou ao SEI
         </footer>

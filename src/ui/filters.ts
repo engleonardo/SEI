@@ -1,30 +1,35 @@
 import type { TrelloCard } from '../core/domain/types';
-import { isOverdue, locationKey } from './utils';
+import { isOverdue } from './utils';
 
-export type DueFilter = 'any' | 'overdue' | 'withDue';
+export type DueFilter = 'any' | 'overdue' | 'open' | 'complete' | 'none';
 
 export interface ListFilters {
   search: string;
   noCard: boolean;
+  withCard: boolean;
   due: DueFilter;
   labelIds: string[];
-  locations: string[];
+  boardId: string;
+  listIds: string[];
 }
 
 export const EMPTY_FILTERS: ListFilters = {
   search: '',
   noCard: false,
+  withCard: false,
   due: 'any',
   labelIds: [],
-  locations: [],
+  boardId: '',
+  listIds: [],
 };
 
 export function activeFilterCount(filters: ListFilters): number {
   return (
-    (filters.noCard ? 1 : 0) +
+    (filters.noCard || filters.withCard ? 1 : 0) +
     (filters.due !== 'any' ? 1 : 0) +
     filters.labelIds.length +
-    filters.locations.length
+    (filters.boardId ? 1 : 0) +
+    filters.listIds.length
   );
 }
 
@@ -35,6 +40,8 @@ export function matchesProcess(
   const { processNumber, specification, cards } = input;
 
   if (filters.noCard && cards.length > 0) return false;
+  if (filters.withCard && cards.length === 0) return false;
+
   if (filters.search.trim()) {
     const needle = filters.search.trim().toLowerCase();
     const haystack = [processNumber, specification, ...cards.map((card) => card.name)]
@@ -44,7 +51,15 @@ export function matchesProcess(
   }
 
   if (filters.due === 'overdue' && !cards.some((card) => isOverdue(card))) return false;
-  if (filters.due === 'withDue' && !cards.some((card) => Boolean(card.due))) return false;
+  if (filters.due === 'open' && !cards.some((card) => Boolean(card.due) && !card.dueComplete)) {
+    return false;
+  }
+  if (filters.due === 'complete' && !cards.some((card) => Boolean(card.due) && card.dueComplete)) {
+    return false;
+  }
+  if (filters.due === 'none' && !(cards.length > 0 && cards.every((card) => !card.due))) {
+    return false;
+  }
 
   if (filters.labelIds.length > 0) {
     const hasLabel = cards.some((card) =>
@@ -53,8 +68,12 @@ export function matchesProcess(
     if (!hasLabel) return false;
   }
 
-  if (filters.locations.length > 0) {
-    const hasLocation = cards.some((card) => filters.locations.includes(locationKey(card)));
+  if (filters.boardId || filters.listIds.length > 0) {
+    const hasLocation = cards.some(
+      (card) =>
+        (!filters.boardId || card.idBoard === filters.boardId) &&
+        (filters.listIds.length === 0 || filters.listIds.includes(card.idList)),
+    );
     if (!hasLocation) return false;
   }
 

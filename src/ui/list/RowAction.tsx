@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Icon } from '../icons';
+import { classNames } from '../utils';
 import { useStore } from '../store';
 import { CreateCardDialog } from '../components/CreateCardDialog';
 import { LinkCardsDialog } from '../components/LinkCardsDialog';
@@ -9,9 +10,10 @@ import { addCards, listStore, loadList } from './store';
 export interface RowActionProps {
   processNumber: string;
   specification: string;
+  highlight?: boolean;
 }
 
-export function RowAction({ processNumber, specification }: RowActionProps) {
+export function RowAction({ processNumber, specification, highlight = false }: RowActionProps) {
   const state = useStore(listStore);
   const cards = state.cards.filter((card) => card.links.includes(processNumber));
   const [menuOpen, setMenuOpen] = useState(false);
@@ -22,23 +24,25 @@ export function RowAction({ processNumber, specification }: RowActionProps) {
     <>
       <button
         type="button"
-        className="sf-row-action"
+        className={classNames(
+          'sf-row-action',
+          cards.length > 0 && 'sf-row-action--active',
+          highlight && 'sf-row-action--highlight',
+        )}
         onClick={() => setMenuOpen(true)}
+        aria-label={
+          cards.length > 0
+            ? `${cards.length} cartão(ões) vinculado(s). Abrir ações do processo`
+            : `Adicionar cartão ao processo ${processNumber}`
+        }
         title={
           cards.length > 0
             ? `${cards.length} cartão(ões) vinculado(s) · ${specification || processNumber}`
             : `Adicionar cartão ao processo ${processNumber}`
         }
       >
-        <Icon name={cards.length > 0 ? 'columns' : 'plus'} size={11} />
-        {cards.length > 0 ? (
-          <>
-            Cartões
-            <span className="sf-row-action__count">{cards.length}</span>
-          </>
-        ) : (
-          'Cartão'
-        )}
+        <Icon name={cards.length > 0 ? 'columns' : 'plus'} size={12} />
+        {cards.length > 0 && <span className="sf-row-action__count">{cards.length}</span>}
       </button>
 
       {menuOpen && (

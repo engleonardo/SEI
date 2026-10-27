@@ -16,6 +16,7 @@ export interface CardStackProps {
   errorExtra?: ReactNode;
   showHeader?: boolean;
   compact?: boolean;
+  highlight?: boolean;
   onReload: () => void;
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
@@ -30,6 +31,7 @@ export function CardStack({
   errorExtra,
   showHeader = false,
   compact = false,
+  highlight = false,
   onReload,
   onChanged,
   onRemoved,
@@ -121,6 +123,7 @@ export function CardStack({
           card={card}
           processNumber={processNumber}
           compact={compact}
+          highlight={highlight}
           onChanged={onChanged}
           onRemoved={onRemoved}
         />

@@ -13,13 +13,33 @@ import { listStore, loadList } from './store';
 
 interface RowEntry {
   row: HTMLTableRowElement;
+  anchor: HTMLAnchorElement;
   processNumber: string;
   specification: string;
+  highlight: boolean;
   actionHost: HTMLDivElement;
   actionRoot: Root;
   cardRow: HTMLTableRowElement;
   cardContainer: HTMLDivElement;
   cardRoot: Root | null;
+}
+
+function isHighlighted(row: HTMLTableRowElement, anchor: HTMLAnchorElement): boolean {
+  return (
+    anchor.classList.contains('processoNaoVisualizado') ||
+    row.classList.contains('infraTrNaoVisualizada') ||
+    row.classList.contains('processoNaoVisualizado')
+  );
+}
+
+function findActionCell(row: HTMLTableRowElement, anchor: HTMLAnchorElement): HTMLTableCellElement | null {
+  const processCell = anchor.closest('td');
+  const cells = Array.from(row.cells);
+  const processIndex = processCell ? cells.indexOf(processCell) : cells.length;
+  const tagCell = cells
+    .slice(0, Math.max(0, processIndex))
+    .find((cell) => Boolean(cell.querySelector('img, .infraIcone, [class*="marcador"], [class*="tag"]')));
+  return tagCell ?? processCell ?? cells[cells.length - 1] ?? null;
 }
 
 function collectRows(): SeiProcessRow[] {
@@ -39,6 +59,7 @@ function collectRows(): SeiProcessRow[] {
       processNumber,
       specification: tooltip.specification,
       processType: tooltip.processType,
+      highlight: isHighlighted(row, anchor),
     });
   }
   return result;
@@ -161,6 +182,7 @@ export class ListManager {
     if (existing && existing.actionHost.isConnected && existing.cardRow.isConnected) {
       existing.processNumber = info.processNumber;
       existing.specification = info.specification;
+      existing.highlight = info.highlight;
       return;
     }
 
@@ -172,17 +194,21 @@ export class ListManager {
       this.entries.delete(info.row);
     }
 
-    const lastCell = info.row.cells[info.row.cells.length - 1];
-    if (!lastCell) return;
+    const actionCell = findActionCell(info.row, info.anchor);
+    if (!actionCell) return;
 
     const action = createShadowHost();
     action.host.style.display = 'inline-flex';
     action.host.style.verticalAlign = 'middle';
-    action.host.style.marginLeft = '4px';
-    lastCell.appendChild(action.host);
+    action.host.style.marginLeft = '3px';
+    actionCell.appendChild(action.host);
     const actionRoot = mountReact(
       action.container,
-      <RowAction processNumber={info.processNumber} specification={info.specification} />,
+      <RowAction
+        processNumber={info.processNumber}
+        specification={info.specification}
+        highlight={info.highlight}
+      />,
     );
 
     const cardRow = document.createElement('tr');
@@ -195,15 +221,17 @@ export class ListManager {
 
     const card = createShadowHost();
     card.host.style.display = 'block';
-    card.host.style.padding = '2px 1px 8px';
+    card.host.style.padding = '0 0 3px 12px';
     cell.appendChild(card.host);
     cardRow.appendChild(cell);
     info.row.insertAdjacentElement('afterend', cardRow);
 
     this.entries.set(info.row, {
       row: info.row,
+      anchor: info.anchor,
       processNumber: info.processNumber,
       specification: info.specification,
+      highlight: info.highlight,
       actionHost: action.host,
       actionRoot,
       cardRow,
@@ -226,6 +254,25 @@ export class ListManager {
         state.filters,
       );
 
+      const highlight = isHighlighted(entry.row, entry.anchor);
+      if (highlight !== entry.highlight) {
+        entry.highlight = highlight;
+        entry.actionRoot.render(
+          <RowAction
+            processNumber={entry.processNumber}
+            specification={entry.specification}
+            highlight={highlight}
+          />,
+        );
+        entry.cardRoot?.render(
+          <ProcessRowCards
+            processNumber={entry.processNumber}
+            compact
+            highlight={highlight}
+          />,
+        );
+      }
+
       this.applyFilter(entry.row, visible);
       const rowVisible = window.getComputedStyle(entry.row).display !== 'none';
       const shouldShowCards = visible && rowVisible && cards.length > 0;
@@ -233,7 +280,11 @@ export class ListManager {
       if (cards.length > 0 && !entry.cardRoot) {
         entry.cardRoot = mountReact(
           entry.cardContainer,
-          <ProcessRowCards processNumber={entry.processNumber} compact />,
+          <ProcessRowCards
+            processNumber={entry.processNumber}
+            compact
+            highlight={highlight}
+          />,
         );
       } else if (cards.length === 0 && entry.cardRoot) {
         entry.cardRoot.unmount();

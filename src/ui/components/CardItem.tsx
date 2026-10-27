@@ -14,13 +14,21 @@ export interface CardItemProps {
   card: TrelloCard;
   processNumber: string;
   compact?: boolean;
+  highlight?: boolean;
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
 }
 
 type DialogKind = 'due' | 'labels' | 'checklist' | 'location' | null;
 
-export function CardItem({ card, processNumber, compact = false, onChanged, onRemoved }: CardItemProps) {
+export function CardItem({
+  card,
+  processNumber,
+  compact = false,
+  highlight = false,
+  onChanged,
+  onRemoved,
+}: CardItemProps) {
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [busy, setBusy] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -133,6 +141,7 @@ export function CardItem({ card, processNumber, compact = false, onChanged, onRe
           compact && 'sf-card--compact',
           overdue && 'sf-card--overdue',
           card.dueComplete && 'sf-card--done',
+          highlight && 'sf-card--highlight',
         )}
       >
         {busy && (
