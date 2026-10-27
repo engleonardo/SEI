@@ -178,6 +178,35 @@ export function ruleMatches(
 }
 
 /**
+ * Verifica se a regra ainda mudaria algo no cartão. Usado para ignorar, no
+ * "Aplicar agora", cartões que já estão com a regra aplicada.
+ */
+export function ruleWouldChange(
+  rule: Rule,
+  card: { idList: string; labels: Array<{ id: string }> },
+): boolean {
+  for (const action of rule.actions) {
+    if (action.type === 'moveToList' && action.listId) {
+      if (card.idList !== action.listId) return true;
+      continue;
+    }
+    if (action.type === 'addLabel' && action.labelId) {
+      if (!card.labels.some((label) => label.id === action.labelId)) return true;
+      continue;
+    }
+    if (action.type === 'removeLabel' && action.labelId) {
+      if (card.labels.some((label) => label.id === action.labelId)) return true;
+      continue;
+    }
+    if (action.type === 'moveToTop') {
+      // A posição não vem no cartão; mover para o topo sempre conta como ação.
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Usado pelo "Aplicar agora": a regra só age nos cartões que já estão na
  * condição do gatilho neste momento. Nunca aplica a ação em massa sem isso.
  */

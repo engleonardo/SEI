@@ -574,7 +574,7 @@ export function RulesSection({
       {confirmApply && (
         <ConfirmDialog
           title="Aplicar regra agora"
-          message={`${triggerSummary(confirmApply.rule)}. Serão alterados ${confirmApply.matching} de ${confirmApply.total} cartões vinculados. As mudanças vão direto para o Trello e não têm desfazer.`}
+          message={`${triggerSummary(confirmApply.rule)}. Serão alterados ${confirmApply.matching} de ${confirmApply.total} cartões; os que já estão com a regra aplicada ficam de fora. As mudanças vão direto para o Trello e podem ser desfeitas depois.`}
           confirmLabel={`Aplicar em ${confirmApply.matching}`}
           busy={applying}
           onConfirm={() => void confirmApplyNow()}

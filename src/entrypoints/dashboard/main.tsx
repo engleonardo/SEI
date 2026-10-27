@@ -19,6 +19,7 @@ import {
   DEFAULT_FILTERS,
   DUE_FILTER_OPTIONS,
   PROCESS_UPDATE_OPTIONS,
+  SORT_OPTIONS,
   activeFilterCount,
   cardsToCsv,
   dueBucket,
@@ -596,6 +597,22 @@ function Dashboard() {
           Filtros
           {active > 0 && <span className="sdo-filter-count">{active}</span>}
         </button>
+        <label className="sdo-sort" title="Ordenar cartões">
+          <Icon name="list" size={15} />
+          <select
+            id="sdo-sort"
+            className="sdo-sort__select"
+            value={filters.sort}
+            onChange={(event) => updateFilters({ sort: event.target.value as Filters['sort'] })}
+            aria-label="Ordenar cartões"
+          >
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <button type="button" className="sdo-icon-action" onClick={exportCsv} title="Exportar CSV" aria-label="Exportar CSV">
           <Icon name="external" size={15} />
         </button>

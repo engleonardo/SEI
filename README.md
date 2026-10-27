@@ -165,7 +165,7 @@ Em **Opções -> Regras** você monta regras instantâneas, sem depender de auto
 - Várias ações por regra: mover para uma lista, mover para o topo, adicionar ou remover etiquetas.
 - Regras em cadeia, com limite de 5 níveis e proteção contra loop.
 - Uma regra não pode mover para duas listas diferentes ao mesmo tempo.
-- **Aplicar agora** age só nos cartões que já estão na condição do gatilho, mostra quantos serão alterados e pede confirmação antes de gravar.
+- **Aplicar agora** age só nos cartões que já estão na condição do gatilho, ignora os que já estão com a regra aplicada, mostra quantos serão alterados e pede confirmação antes de gravar.
 - **Desfazer** a última aplicação manual: devolve os cartões à lista de origem e reverte as etiquetas. Cartões que mudaram de lista depois são mantidos.
 - As 4 regras iniciais vêm desativadas até você escolher as listas e etiquetas.
 

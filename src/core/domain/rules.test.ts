@@ -6,6 +6,7 @@ import {
   ruleIsConfigured,
   ruleIssue,
   ruleMatches,
+  ruleWouldChange,
   type Rule,
 } from './rules';
 
@@ -164,5 +165,30 @@ describe('regras', () => {
         ),
       ).toBe(false);
     });
+  });
+
+  it('ignora cartões que já estão com a regra aplicada', () => {
+    const combined = rule({
+      actions: [
+        { type: 'moveToList', listId: 'list-2' },
+        { type: 'addLabel', labelId: 'label-1' },
+      ],
+    });
+
+    expect(ruleWouldChange(combined, { idList: 'list-1', labels: [] })).toBe(true);
+    expect(ruleWouldChange(combined, { idList: 'list-2', labels: [{ id: 'label-1' }] })).toBe(
+      false,
+    );
+    expect(ruleWouldChange(combined, { idList: 'list-2', labels: [] })).toBe(true);
+    expect(ruleWouldChange(combined, { idList: 'list-1', labels: [{ id: 'label-1' }] })).toBe(true);
+
+    const removeRule = rule({ actions: [{ type: 'removeLabel', labelId: 'label-1' }] });
+    expect(ruleWouldChange(removeRule, { idList: 'list-1', labels: [] })).toBe(false);
+    expect(ruleWouldChange(removeRule, { idList: 'list-1', labels: [{ id: 'label-1' }] })).toBe(
+      true,
+    );
+
+    const top = rule({ actions: [{ type: 'moveToTop' }] });
+    expect(ruleWouldChange(top, { idList: 'list-1', labels: [] })).toBe(true);
   });
 });

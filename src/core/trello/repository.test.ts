@@ -596,6 +596,45 @@ describe('TrelloRepository', () => {
     expect(client.post).toHaveBeenCalledTimes(1);
   });
 
+  it('aplicar agora ignora cartões que já estão na lista de destino', async () => {
+    mocks.settings = { ...mocks.settings, defaultBoardId: '' };
+    mocks.rules = [
+      {
+        id: 'rule-done',
+        name: 'Concluído vai para concluídos',
+        enabled: true,
+        boardId: 'board-1',
+        trigger: { type: 'completed' },
+        actions: [{ type: 'moveToList', listId: 'list-done' }],
+      },
+    ];
+
+    const client = fakeClient();
+    vi.mocked(client.get).mockImplementation(async (path: string) => {
+      if (path === '/search') {
+        return {
+          cards: [
+            rawCard({
+              id: 'card-1',
+              desc: `SEI ${PROCESS}`,
+              dueComplete: true,
+              idList: 'list-done',
+              list: { id: 'list-done', name: 'Concluídos' },
+            }),
+            rawCard({ id: 'card-2', desc: `SEI ${PROCESS}`, dueComplete: true }),
+          ],
+        };
+      }
+      if (path.startsWith('/boards/')) return [];
+      return rawCard({ id: 'card-2', desc: `SEI ${PROCESS}`, dueComplete: true });
+    });
+
+    const repo = repository(client);
+    const preview = await repo.applyRuleNow('rule-done', true);
+    expect(preview).toEqual({ applied: 1, total: 2 });
+    expect(client.put).not.toHaveBeenCalled();
+  });
+
   it('aplicar agora considera novidade do SEI no processo vinculado', async () => {
     mocks.settings = { ...mocks.settings, defaultBoardId: '' };
     mocks.rules = [

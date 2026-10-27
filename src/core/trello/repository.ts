@@ -20,7 +20,7 @@ import {
   replaceSyncSnapshot,
   type CardSnapshot,
 } from '../storage/sync';
-import { ruleAppliesNow, ruleMatches, ruleIssue, ruleRunCardCount, type Rule, type RuleEvent, type RuleRunLabel, type RuleRunMove } from '../domain/rules';
+import { ruleAppliesNow, ruleMatches, ruleIssue, ruleRunCardCount, ruleWouldChange, type Rule, type RuleEvent, type RuleRunLabel, type RuleRunMove } from '../domain/rules';
 import { dropLastRuleRun, getLastRuleRun, pushRuleRun } from '../storage/rule-runs';
 import { recordRuleApplications } from '../storage/rule-stats';
 import { getSettings } from '../storage/settings';
@@ -578,9 +578,10 @@ export class TrelloRepository {
       touched = true;
     }
 
-    if (targetListId || moveToTop) {
-      const body: Record<string, string> = { pos: targetListId ? 'bottom' : 'top' };
-      if (targetListId) body.idList = targetListId;
+    const shouldMoveList = Boolean(targetListId && targetListId !== card.idList);
+    if (shouldMoveList || moveToTop) {
+      const body: Record<string, string> = { pos: shouldMoveList ? 'bottom' : 'top' };
+      if (shouldMoveList && targetListId) body.idList = targetListId;
       await this.client.put(`/cards/${card.id}`, body);
       touched = true;
     }
@@ -614,13 +615,18 @@ export class TrelloRepository {
 
     const cards = await this.getAllLinkedCards();
     const catalog = await getProcessCatalog();
-    const matching = cards.filter((card) =>
-      ruleAppliesNow(rule, card, {
-        seiUnread: card.links.some((link) => Boolean(catalog[link]?.unread)),
-      }),
+    // Só entram cartões do quadro da regra e que ainda mudariam algo.
+    const scoped = cards.filter(
+      (card) => card.links.length > 0 && card.idBoard === rule.boardId,
+    );
+    const matching = scoped.filter(
+      (card) =>
+        ruleAppliesNow(rule, card, {
+          seiUnread: card.links.some((link) => Boolean(catalog[link]?.unread)),
+        }) && ruleWouldChange(rule, card),
     );
     if (dryRun) {
-      return { applied: matching.length, total: cards.length };
+      return { applied: matching.length, total: scoped.length };
     }
 
     let applied = 0;
@@ -667,7 +673,7 @@ export class TrelloRepository {
       });
     }
 
-    return { applied, total: cards.length };
+    return { applied, total: scoped.length };
   }
 
   /**
