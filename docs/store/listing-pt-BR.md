@@ -6,24 +6,27 @@ SEI Flow
 
 ## Resumo (até 132 caracteres)
 
-Crie, vincule e edite cartões do Trello no SEI. Painel com prazos, etiquetas, tipos de processo e atualizações.
+Crie, vincule e edite cartões do Trello no SEI. Painel com regras, prazos, etiquetas e atualizações.
 
 ## Descrição completa
 
 ```
 O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para você trabalhar sem alternar de aba.
 
-• Crie cartões no Trello a partir de um processo do SEI.
+• Crie cartões no Trello a partir de um processo do SEI, escolhendo etiquetas, quadro, lista, início e término.
 • Vincule cartões que já existem no Trello a um ou vários processos - inclusive em lote.
 • Veja todos os cartões de um processo, sem esconder os adicionais.
 • Edite nome, descrição, etiquetas, checklist, prazo, quadro e lista dentro do SEI.
-• Painel SEI Flow como página inicial: prazos, etiquetas, tipos de processo e atualizações.
-• Filtre por etiqueta, tipo de processo, prazo, quadro, lista, atualização no Trello e atualização no SEI.
-• Abra os detalhes e edite o cartão completo pelo painel.
+• Conclua ou reabra o cartão com um clique, sem exigir prazo.
+• Regras automáticas por quadro: ao concluir, ao entrar em uma lista, ao entrar em qualquer lista e quando o processo do SEI recebe novidade.
+• Várias ações por regra (mover, mover para o topo, adicionar ou remover etiqueta), execução em cadeia, contador de aplicações, "Aplicar agora" com confirmação e "Desfazer" a última aplicação.
+• Sincronização nos dois sentidos: ao atualizar, o Trello é relido e as regras reagem também às mudanças feitas fora da extensão.
+• Painel SEI Flow como página inicial, com métricas, chips de lista com contagem, busca e ordenação por prazo, nome, lista, etiqueta ou tipo de processo.
+• Filtre por etiqueta (inclusive clicando na etiqueta do cartão), tipo de processo, prazo, quadro, lista, atualização no Trello e atualização no SEI.
+• Edite o cartão direto no painel, sem abrir outra tela.
 • Clique no número do processo para abrir a página correspondente no SEI.
 • Notificações diárias de prazos e badge com processos atualizados no SEI.
 • Desvincule sem excluir o cartão do Trello.
-• Filtre a lista de processos por quadro, lista, etiqueta, prazo e situação do cartão.
 • Exporte os cartões filtrados em CSV.
 • Funciona em qualquer domínio e versão do SEI (3.x, 4.x e 5.x).
 • Ative apenas os sites que você usa; sem permissão global obrigatória.
@@ -52,7 +55,7 @@ Português (Brasil)
 
 ## Single purpose
 
-Integrar cartões do Trello a processos do SEI, permitindo criar, vincular, visualizar e editar cartões sem sair do SEI.
+Integrar cartões do Trello a processos do SEI, permitindo criar, vincular, visualizar, editar e automatizar cartões sem sair do SEI.
 
 ## Justificativa de permissões
 
@@ -74,15 +77,17 @@ Integrar cartões do Trello a processos do SEI, permitindo criar, vincular, visu
 
 ## Screenshots
 
-Os arquivos estão em `docs/store/screenshots-1280x800/`. A Chrome Web Store aceita até 5 imagens; a ordem recomendada é:
+Os arquivos estão em `docs/store/screenshots-1280x800/` (gerados por `node scripts/store-screenshots.mjs`). A Chrome Web Store aceita até 5 imagens; a ordem recomendada é:
 
-1. `dashboard-1280x800.png` - painel inicial com métricas e filtros.
-2. `list-1280x800.png` - cartões anexados à lista de processos.
-3. `filter-1280x800.png` - filtros por quadro, lista, etiqueta e prazo.
-4. `process-1280x800.png` - processo aberto com o painel completo.
-5. `bulk-1280x800.png` - vinculação em lote entre processos.
+1. `dashboard-1280x800.png` - painel inicial com métricas, chips de lista e ordenação.
+2. `process-1280x800.png` - processo aberto com cartões, caminho do quadro/lista e ações.
+3. `rules-1280x800.png` - regras automáticas com contador e desfazer.
+4. `list-1280x800.png` - cartões anexados à lista de processos, com etiquetas e destaque de novidade.
+5. `create-dialog-1280x800.png` - criação de cartão com etiquetas, quadro/lista e datas.
 
-Imagens adicionais para documentação: `link-dialog-1280x800.png`, `create-dialog-1280x800.png` e `options-1280x800.png`.
+Imagens adicionais para documentação: `filter-1280x800.png`, `bulk-1280x800.png`, `link-dialog-1280x800.png` e `options-1280x800.png`.
+
+Para regerar: `npm run build` e depois `node scripts/store-screenshots.mjs`. As capturas usam dados fictícios.
 
 ## Banner promocional
 
