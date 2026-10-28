@@ -321,7 +321,10 @@ function Dashboard() {
   };
   const active = activeFilterCount(filters);
   const seiTab = lastTab?.url && looksLikeSeiUrl(lastTab.url) ? lastTab : null;
-  const siteActive = Boolean(
+  const hasActivatedSite = Boolean(
+    settings && (settings.allSites || settings.activatedOrigins.length > 0),
+  );
+  const seiOriginActive = Boolean(
     seiTab?.url && settings && isOriginActivated(seiTab.url, settings),
   );
 
@@ -383,9 +386,16 @@ function Dashboard() {
                 <span className="sdo-status__dot" />
                 Trello {connected ? 'conectado' : 'não conectado'}
               </span>
-              <span className={`sdo-status ${siteActive ? 'sdo-status--on' : 'sdo-status--off'}`}>
+              <span
+                className={`sdo-status ${hasActivatedSite ? 'sdo-status--on' : 'sdo-status--off'}`}
+                title={
+                  settings?.allSites
+                    ? 'SEI Flow ativo em todos os sites'
+                    : settings?.activatedOrigins.join(', ') || 'Nenhum site autorizado'
+                }
+              >
                 <span className="sdo-status__dot" />
-                Site {siteActive ? 'ativado' : 'não ativado'}
+                Site {hasActivatedSite ? 'ativado' : 'não ativado'}
               </span>
               {settings?.defaultListName && (
                 <span className="sdo-status sdo-status--muted">
@@ -466,7 +476,7 @@ function Dashboard() {
         </div>
       )}
 
-      {settings && !siteActive && seiTab && (
+      {settings && !seiOriginActive && seiTab && (
         <ActivationCard settings={settings} lastTab={seiTab} onChanged={setSettings} />
       )}
 

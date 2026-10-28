@@ -356,8 +356,19 @@ export class TrelloRepository {
     const raw = await this.client.post<TrelloCardApi>('/cards', body);
 
     await this.invalidateCardCaches();
-    const created = await this.getCard(raw.id, true);
+    let created = await this.getCard(raw.id, true);
     await mergeSyncSnapshot([created]);
+
+    // Criar um cartão em uma lista conta como "entrar na lista" para as regras.
+    if (created.links.length > 0) {
+      created = await this.runRules(created, {
+        kind: 'moved',
+        fromListId: null,
+        toListId: created.idList,
+      });
+      await mergeSyncSnapshot([created]);
+    }
+
     return created;
   }
 

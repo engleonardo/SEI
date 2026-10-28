@@ -736,4 +736,50 @@ describe('TrelloRepository', () => {
       actions: ['Adicionar etiqueta "Novo"'],
     });
   });
+
+  it('cria cartão e aplica regra de entrada na lista', async () => {
+    mocks.rules = [
+      {
+        id: 'rule-label',
+        name: 'Entrou na lista recebe etiqueta',
+        enabled: true,
+        boardId: 'board-1',
+        trigger: { type: 'enterList', listId: 'list-1' },
+        actions: [{ type: 'addLabel', labelId: 'label-novo', labelName: 'Novo' }],
+      },
+    ];
+
+    const client = fakeClient();
+    let hasLabel = false;
+    vi.mocked(client.post).mockImplementation(async (path: string) => {
+      if (path === '/cards/card-new/idLabels') {
+        hasLabel = true;
+        return {};
+      }
+      return rawCard({ id: 'card-new', desc: `SEI ${PROCESS}` });
+    });
+    vi.mocked(client.get).mockImplementation(async () =>
+      rawCard({
+        id: 'card-new',
+        desc: `SEI ${PROCESS}`,
+        labels: hasLabel ? [{ id: 'label-novo', name: 'Novo', color: 'blue' }] : [],
+      }),
+    );
+
+    const repo = repository(client);
+    const card = await repo.createCard({
+      name: 'Juliana Gomes',
+      processNumber: PROCESS,
+      listId: 'list-1',
+    });
+
+    expect(client.post).toHaveBeenCalledWith('/cards/card-new/idLabels', {
+      value: 'label-novo',
+    });
+    expect(card.labels.map((label) => label.id)).toContain('label-novo');
+    expect(logState.entries[0]).toMatchObject({
+      ruleId: 'rule-label',
+      cardId: 'card-new',
+    });
+  });
 });

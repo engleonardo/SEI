@@ -20,6 +20,8 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 ### Corrigido
 
 - Automação de etiquetas validada e agora registrada no histórico de execuções para diagnóstico.
+- Criar um cartão em uma lista agora dispara as regras de "entrar na lista" e "entrar em qualquer lista".
+- O status "Site ativado" no painel considera qualquer site autorizado, não apenas a última aba aberta.
 
 ## [1.1.1] - 2026-10-28
 
