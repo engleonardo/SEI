@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser';
 import { normalizeOrigin, originPermissionPattern } from '../storage/settings';
 import { injectSeiScript } from '../activation/inject';
+import { openDashboardTab } from '../extension/dashboard-tab';
 import type { RpcMap, RpcRequest, RpcResponse, RpcType } from './contract';
 import { TrelloError } from '../trello/client';
 import { cacheClear } from '../trello/cache';
@@ -14,6 +15,9 @@ import {
 } from '../storage/settings';
 import { getLastActionTab } from '../storage/last-tab';
 import { listProcessRecords, upsertProcessRecords } from '../storage/processes';
+import { getRules, saveRules } from '../storage/rules';
+import { getLastRuleRun } from '../storage/rule-runs';
+import { clearRuleStats, getRuleStats } from '../storage/rule-stats';
 
 const repository = new TrelloRepository();
 
@@ -41,21 +45,26 @@ const handlers = {
   },
 
   'options:open': async () => {
-    await browser.runtime.openOptionsPage();
+    if (typeof browser.runtime.openOptionsPage === 'function') {
+      await browser.runtime.openOptionsPage();
+      return undefined;
+    }
+    await browser.tabs.create({ url: browser.runtime.getURL('/options.html') });
     return undefined;
   },
 
   'dashboard:open': async () => {
-    await browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') });
+    await openDashboardTab();
     return undefined;
   },
 
-  'trello:boards': () => repository.getBoards(),
-  'trello:lists': ({ boardId }) => repository.getLists(boardId),
-  'trello:board-cards': ({ boardId }) => repository.getBoardCards(boardId),
+  'trello:boards': (payload) => repository.getBoards(payload?.fresh),
+  'trello:lists': ({ boardId, fresh }) => repository.getLists(boardId, fresh),
+  'trello:board-cards': ({ boardId, fresh }) => repository.getBoardCards(boardId, fresh),
   'trello:card': ({ cardId }) => repository.getCard(cardId),
-  'trello:cards-for-process': ({ processNumber }) => repository.getCardsForProcess(processNumber),
-  'trello:all-linked-cards': () => repository.getAllLinkedCards(),
+  'trello:cards-for-process': ({ processNumber, fresh }) =>
+    repository.getCardsForProcess(processNumber, fresh),
+  'trello:all-linked-cards': (payload) => repository.getAllLinkedCards(payload?.fresh),
   'trello:search-cards': ({ query }) => repository.searchCardsByName(query),
   'trello:create-card': (payload) => repository.createCard(payload),
   'trello:update-card': ({ cardId, patch }) => repository.updateCard(cardId, patch),
@@ -67,11 +76,11 @@ const handlers = {
   'trello:link-cards-bulk': ({ cardIds, processNumbers }) =>
     repository.linkCardsToProcesses(cardIds, processNumbers),
   'trello:unlink-card': ({ cardId, processNumber }) => repository.unlinkCard(cardId, processNumber),
-  'trello:board-labels': ({ boardId }) => repository.getBoardLabels(boardId),
+  'trello:board-labels': ({ boardId, fresh }) => repository.getBoardLabels(boardId, fresh),
   'trello:create-label': ({ boardId, name, color }) => repository.createLabel(boardId, name, color),
   'trello:add-label': ({ cardId, labelId }) => repository.addLabelToCard(cardId, labelId),
   'trello:remove-label': ({ cardId, labelId }) => repository.removeLabelFromCard(cardId, labelId),
-  'trello:checklists': ({ cardId }) => repository.getChecklists(cardId),
+  'trello:checklists': ({ cardId, fresh }) => repository.getChecklists(cardId, fresh),
   'trello:create-checklist': ({ cardId, name }) => repository.createChecklist(cardId, name),
   'trello:add-check-item': ({ checklistId, name }) => repository.addCheckItem(checklistId, name),
   'trello:update-check-item': async ({ cardId, checkItemId, state }) => {
@@ -144,9 +153,37 @@ const handlers = {
 
   'activation:last-tab': () => getLastActionTab(),
 
+  'rules:list': () => getRules(),
+
+  'rules:save': ({ rules }) => saveRules(rules),
+
+  'rules:apply-now': ({ ruleId, dryRun }) => repository.applyRuleNow(ruleId, dryRun),
+
+  'rules:last-run': () => getLastRuleRun(),
+
+  'rules:stats': () => getRuleStats(),
+
+  'rules:clear-stats': async () => {
+    await clearRuleStats();
+    return {};
+  },
+
+  'rules:undo': () => repository.undoLastRuleRun(),
+
   'processes:list': () => listProcessRecords(),
 
-  'processes:upsert': ({ processes }) => upsertProcessRecords(processes),
+  'processes:upsert': async ({ processes }) => {
+    const result = await upsertProcessRecords(processes);
+    let rulesApplied = 0;
+    if (result.unread.length > 0) {
+      try {
+        rulesApplied = (await repository.applySeiUpdateRules(result.unread)).applied;
+      } catch {
+        rulesApplied = 0;
+      }
+    }
+    return { updated: result.updated, total: result.total, rulesApplied };
+  },
 } satisfies HandlerMap;
 
 export interface DueSummary {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
 import type { Settings, TrelloCard, TrelloLabel } from '../../core/domain/types';
@@ -8,8 +8,6 @@ import type { LastActionTab } from '../../core/storage/last-tab';
 import type { ProcessCatalog, ProcessRecord } from '../../core/storage/processes';
 import { isOriginActivated } from '../../core/storage/settings';
 import { BrandMark } from '../../ui/BrandMark';
-import { CardItem } from '../../ui/components/CardItem';
-import { Modal } from '../../ui/components/Modal';
 import { Icon } from '../../ui/icons';
 import { showToast } from '../../ui/toast';
 import { setThemePreference } from '../../ui/theme';
@@ -21,6 +19,8 @@ import {
   DEFAULT_FILTERS,
   DUE_FILTER_OPTIONS,
   PROCESS_UPDATE_OPTIONS,
+  SORT_GROUPS,
+  SORT_OPTIONS,
   activeFilterCount,
   cardsToCsv,
   dueBucket,
@@ -46,6 +46,7 @@ function summarize(cards: TrelloCard[], catalog: ProcessCatalog) {
   let unread = 0;
   const processes = new Set<string>();
   const labels = new Set<string>();
+  const boards = new Set<string>();
   const sevenDays = Date.now() - 7 * 86_400_000;
 
   for (const card of cards) {
@@ -60,6 +61,7 @@ function summarize(cards: TrelloCard[], catalog: ProcessCatalog) {
     if (card.links.some((number) => catalog[number]?.unread)) unread += 1;
     for (const process of card.links) processes.add(process);
     for (const label of card.labels) labels.add(label.id);
+    if (card.idBoard) boards.add(card.idBoard);
   }
 
   return {
@@ -73,6 +75,7 @@ function summarize(cards: TrelloCard[], catalog: ProcessCatalog) {
     unread,
     processes: processes.size,
     labels: labels.size,
+    boards: boards.size,
   };
 }
 
@@ -86,7 +89,6 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
   const version = browser.runtime.getManifest().version;
@@ -112,7 +114,7 @@ function Dashboard() {
       setLastTab(nextLastTab);
 
       if (nextSettings.appKey && nextSettings.appToken) {
-        const nextCards = await callRpc('trello:all-linked-cards', undefined);
+        const nextCards = await callRpc('trello:all-linked-cards', { fresh: true });
         setCards(nextCards);
       } else {
         setCards([]);
@@ -132,6 +134,19 @@ function Dashboard() {
 
   useEffect(() => {
     if (settings) setThemePreference(settings.theme);
+  }, [settings]);
+
+  const defaultBoardApplied = useRef(false);
+  useEffect(() => {
+    if (defaultBoardApplied.current) return;
+    if (!settings?.defaultBoardId) return;
+    defaultBoardApplied.current = true;
+    setFilters((previous) => {
+      if (previous.boardId) return previous;
+      const next = { ...previous, boardId: settings.defaultBoardId };
+      saveFilters(next);
+      return next;
+    });
   }, [settings]);
 
   useEffect(() => {
@@ -160,6 +175,9 @@ function Dashboard() {
       let next = { ...previous, ...patch };
       if (patch.boardId !== undefined && patch.boardId !== previous.boardId) {
         next = { ...next, listId: '' };
+      }
+      if (patch.sort !== undefined) {
+        next = { ...next, group: SORT_GROUPS[patch.sort] };
       }
       saveFilters(next);
       return next;
@@ -240,19 +258,31 @@ function Dashboard() {
       .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
   }, [cards, catalog]);
 
-  const summary = useMemo(() => summarize(cards, catalog), [cards, catalog]);
-
   const visibleCards = useMemo(
     () => cards.filter((card) => matchesFilters(card, filters, catalog, lastVisit)),
     [cards, catalog, filters, lastVisit],
   );
 
-  const groups = useMemo(
-    () => groupCards(visibleCards, filters.group, filters.sort, catalog),
-    [visibleCards, filters.group, filters.sort, catalog],
-  );
+  const summary = useMemo(() => summarize(visibleCards, catalog), [visibleCards, catalog]);
 
-  const editingCard = editingId ? cards.find((card) => card.id === editingId) ?? null : null;
+  const listCounts = useMemo(() => {
+    if (!filters.boardId) return [];
+    const base = cards.filter((card) =>
+      matchesFilters(card, { ...filters, listId: '' }, catalog, lastVisit),
+    );
+    const counts = new Map<string, number>();
+    for (const card of base) counts.set(card.idList, (counts.get(card.idList) ?? 0) + 1);
+    return lists
+      .filter((list) => list.boardId === filters.boardId)
+      .map((list) => ({ id: list.id, name: list.name, count: counts.get(list.id) ?? 0 }));
+  }, [cards, filters, catalog, lastVisit, lists]);
+
+  const listTotal = listCounts.reduce((sum, item) => sum + item.count, 0);
+
+  const groups = useMemo(
+    () => groupCards(visibleCards, SORT_GROUPS[filters.sort], filters.sort, catalog),
+    [visibleCards, filters.sort, catalog],
+  );
 
   const exportCsv = () => {
     if (visibleCards.length === 0) {
@@ -278,7 +308,6 @@ function Dashboard() {
 
   const handleRemoved = (cardId: string) => {
     setCards((previous) => previous.filter((card) => card.id !== cardId));
-    if (editingId === cardId) setEditingId(null);
   };
 
   const handleToggleLabel = (labelId: string) => {
@@ -290,8 +319,9 @@ function Dashboard() {
     });
   };
   const active = activeFilterCount(filters);
+  const lastTabWeb = Boolean(lastTab?.url && /^https?:\/\//i.test(lastTab.url));
   const siteActive = Boolean(
-    lastTab?.url && settings && isOriginActivated(lastTab.url, settings),
+    lastTabWeb && lastTab?.url && settings && isOriginActivated(lastTab.url, settings),
   );
 
   const activeChips: string[] = [];
@@ -435,7 +465,7 @@ function Dashboard() {
         </div>
       )}
 
-      {settings && !siteActive && (
+      {settings && !siteActive && lastTabWeb && (
         <ActivationCard settings={settings} lastTab={lastTab} onChanged={setSettings} />
       )}
 
@@ -512,7 +542,7 @@ function Dashboard() {
           <span className="sdo-metric__body">
             <span>Total vinculado</span>
             <strong>{summary.total}</strong>
-            <small>cartões no painel</small>
+            <small>de {cards.length} cartões</small>
           </span>
         </button>
       </section>
@@ -534,7 +564,7 @@ function Dashboard() {
           <Icon name="tag" size={12} /> {summary.labels} etiquetas
         </span>
         <span>
-          <Icon name="board" size={12} /> {boards.length} quadros
+          <Icon name="board" size={12} /> {summary.boards} quadros
         </span>
       </div>
 
@@ -571,10 +601,54 @@ function Dashboard() {
           Filtros
           {active > 0 && <span className="sdo-filter-count">{active}</span>}
         </button>
+        <label className="sdo-sort" title="Ordenar cartões">
+          <Icon name="list" size={15} />
+          <select
+            id="sdo-sort"
+            className="sdo-sort__select"
+            value={filters.sort}
+            onChange={(event) => updateFilters({ sort: event.target.value as Filters['sort'] })}
+            aria-label="Ordenar cartões"
+          >
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <button type="button" className="sdo-icon-action" onClick={exportCsv} title="Exportar CSV" aria-label="Exportar CSV">
           <Icon name="external" size={15} />
         </button>
       </section>
+
+      {filters.boardId && listCounts.length > 0 && (
+        <div className="sdo-list-chips" aria-label="Cartões por lista">
+          <span className="sdo-list-chips__label">Listas</span>
+          <button
+            type="button"
+            className={`sdo-list-chip${filters.listId ? '' : ' sdo-list-chip--on'}`}
+            onClick={() => updateFilters({ listId: '' })}
+          >
+            Todas
+            <span className="sdo-list-chip__count">{listTotal}</span>
+          </button>
+          {listCounts.map((list) => (
+            <button
+              key={list.id}
+              type="button"
+              className={`sdo-list-chip${filters.listId === list.id ? ' sdo-list-chip--on' : ''}`}
+              onClick={() =>
+                updateFilters({ listId: filters.listId === list.id ? '' : list.id })
+              }
+              title={`Ver ${list.count} cartão(ões) em ${list.name}`}
+            >
+              {list.name}
+              <span className="sdo-list-chip__count">{list.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {activeChips.length > 0 && (
         <div className="sdo-active-chips">
@@ -645,7 +719,8 @@ function Dashboard() {
                   key={`${group.key}:${card.id}`}
                   card={card}
                   catalog={catalog}
-                  onEdit={() => setEditingId(card.id)}
+                  onChanged={handleChanged}
+                  onRemoved={handleRemoved}
                   onToggleLabel={handleToggleLabel}
                 />
               ))}
@@ -658,30 +733,6 @@ function Dashboard() {
         <span>SEI Flow · painel de controle · Desenvolvido por Engenheiro Leonardo Almeida de Oliveira</span>
         <span className="sdo-footer__links">Sem coleta de dados · suporte em Opções → Diagnóstico</span>
       </footer>
-
-      {editingCard && (
-        <Modal
-          title="Detalhes e edição do cartão"
-          subtitle={editingCard.name}
-          onClose={() => setEditingId(null)}
-          footer={
-            <button
-              type="button"
-              className="sf-btn"
-              onClick={() => setEditingId(null)}
-            >
-              Fechar
-            </button>
-          }
-        >
-          <CardItem
-            card={editingCard}
-            processNumber={editingCard.links[0] ?? ''}
-            onChanged={handleChanged}
-            onRemoved={handleRemoved}
-          />
-        </Modal>
-      )}
     </div>
   );
 }

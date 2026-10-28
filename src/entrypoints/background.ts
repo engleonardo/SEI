@@ -1,6 +1,7 @@
 import { defineBackground } from 'wxt/utils/define-background';
 import { browser } from 'wxt/browser';
 import { injectSeiScript } from '../core/activation/inject';
+import { openDashboardTab } from '../core/extension/dashboard-tab';
 import { handleRpc, getDueSummary } from '../core/messaging/handlers';
 import { isRpcRequest } from '../core/messaging/contract';
 import {
@@ -40,7 +41,7 @@ async function onInstalled(details: { reason: string }): Promise<void> {
   await setupAlarms();
   void refreshBadge();
   if (details.reason === 'install') {
-    await browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') });
+    await openDashboardTab();
   }
 }
 
@@ -149,14 +150,14 @@ export default defineBackground(() => {
   browser.notifications.onClicked.addListener((notificationId) => {
     if (notificationId !== NOTIFICATION_ID) return;
     void browser.notifications.clear(notificationId);
-    void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') });
+    void openDashboardTab();
   });
 
   // O dashboard é a página inicial: o ícone da extensão abre o painel.
   browser.action.onClicked.addListener((tab) => {
     void (async () => {
       await saveLastActionTab({ id: tab.id, url: tab.url, title: tab.title });
-      await browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') });
+      await openDashboardTab();
     })();
   });
 

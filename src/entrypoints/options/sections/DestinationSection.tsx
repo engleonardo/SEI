@@ -37,7 +37,7 @@ export function DestinationSection({
     }
     let active = true;
     setLoadingLists(true);
-    callRpc('trello:lists', { boardId })
+    callRpc('trello:lists', { boardId, fresh: true })
       .then((value) => {
         if (!active) return;
         setLists(value);

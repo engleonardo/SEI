@@ -102,6 +102,15 @@ async function stubExtension(page: Page) {
               case 'trello:board-cards':
                 response = ok([freeCardData, cardData]);
                 break;
+              case 'trello:board-labels':
+                response = ok([
+                  { id: 'label-red', name: 'Urgente', color: 'red' },
+                  { id: 'label-light', name: 'Leonardo', color: 'green_light' },
+                ]);
+                break;
+              case 'trello:create-label':
+                response = ok({ id: 'label-new', name: 'Nova', color: 'blue' });
+                break;
               case 'trello:link-cards':
                 response = ok(
                   (message.payload?.cardIds ?? []).map((cardId) => {
@@ -186,6 +195,14 @@ test('lista de processos mostra o cartão vinculado e o botão de ações', asyn
     return Math.abs(rect.left + rect.width / 2 - (strip.left + strip.width / 2)) < 2;
   });
   expect(centered).toBe(true);
+
+  // Etiqueta do cartão é clicável e filtra a lista, como no painel.
+  const labelChip = page.locator('.sf-label-chip--button').filter({ hasText: 'Urgente' }).first();
+  await expect(labelChip).toHaveAttribute('aria-pressed', 'false');
+  await labelChip.click();
+  await expect(labelChip).toHaveAttribute('aria-pressed', 'true');
+  await labelChip.click();
+  await expect(labelChip).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('quadro/lista abre seletor inline, sem popup', async ({ page }) => {
@@ -218,6 +235,13 @@ test('processo aberto mostra o painel completo', async ({ page }) => {
   await expect(page.getByText('Cartão vinculado')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Novo cartão' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Vincular cartões' })).toBeVisible();
+
+  // Etiqueta clicável aplica filtro dentro do painel do processo.
+  const chip = page.locator('.sf-label-chip--button').first();
+  await chip.click();
+  await expect(page.locator('.sf-label-filter')).toBeVisible();
+  await page.locator('.sf-label-filter').getByRole('button', { name: 'Limpar' }).click();
+  await expect(page.locator('.sf-label-filter')).toHaveCount(0);
 });
 
 test('diálogo de novo cartão abre com o destino padrão', async ({ page }) => {
@@ -226,8 +250,12 @@ test('diálogo de novo cartão abre com o destino padrão', async ({ page }) => 
 
   await expect(page.getByText('Novo cartão no Trello')).toBeVisible();
   await expect(page.getByRole('dialog').getByLabel('Nome')).toHaveValue(PROCESS);
-  await expect(page.getByText('Contratos').first()).toBeVisible();
-  await expect(page.getByText('Em análise').first()).toBeVisible();
+  await expect(page.getByRole('dialog').getByLabel('Quadro')).toHaveValue('board-1');
+  await expect(page.getByRole('dialog').getByLabel('Lista')).toHaveValue('list-1');
+  await expect(page.getByRole('dialog').getByLabel('Início (opcional)')).toHaveValue('');
+  await expect(page.getByRole('dialog').getByLabel('Término (opcional)')).toHaveValue('');
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Nova etiqueta' })).toBeVisible();
+  await expect(page.getByRole('dialog').getByRole('button', { name: /Urgente/ })).toBeVisible();
 });
 
 test('diálogo de vínculo lista cartões do quadro e permite seleção múltipla', async ({ page }) => {

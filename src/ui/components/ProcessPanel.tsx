@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { TrelloCard } from '../../core/domain/types';
+import type { TrelloCard, TrelloLabel } from '../../core/domain/types';
 import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import { openOptionsPage } from '../../core/messaging/actions';
 import { Icon } from '../icons';
+import { labelColorHex, labelTextColor } from '../utils';
 import { CardStack } from '../components/CardStack';
 
 function mergeCards(current: TrelloCard[], incoming: TrelloCard[]): TrelloCard[] {
@@ -11,18 +12,28 @@ function mergeCards(current: TrelloCard[], incoming: TrelloCard[]): TrelloCard[]
   return Array.from(map.values());
 }
 
-export function ProcessPanel({ processNumber }: { processNumber: string }) {
+export function ProcessPanel({
+  processNumber,
+  processUrl,
+}: {
+  processNumber: string;
+  processUrl?: string;
+}) {
   const [cards, setCards] = useState<TrelloCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsSetup, setNeedsSetup] = useState(false);
+  const [labelFilter, setLabelFilter] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     setNeedsSetup(false);
     try {
-      const value = await callRpc('trello:cards-for-process', { processNumber });
+      const value = await callRpc('trello:cards-for-process', {
+        processNumber,
+        fresh: true,
+      });
       setCards(value);
     } catch (cause) {
       setError(errorMessage(cause));
@@ -52,16 +63,79 @@ export function ProcessPanel({ processNumber }: { processNumber: string }) {
   };
 
   const onAdded = (newCards: TrelloCard[]) => {
-    setCards((previous) => mergeCards(previous, newCards).filter((card) => card.links.includes(processNumber)));
+    setCards((previous) =>
+      mergeCards(previous, newCards).filter((card) => card.links.includes(processNumber)),
+    );
   };
+
+  const toggleLabel = (labelId: string) => {
+    setLabelFilter((previous) =>
+      previous.includes(labelId)
+        ? previous.filter((id) => id !== labelId)
+        : [...previous, labelId],
+    );
+  };
+
+  const visibleCards =
+    labelFilter.length === 0
+      ? cards
+      : cards.filter((card) => card.labels.some((label) => labelFilter.includes(label.id)));
+
+  const filterLabels: TrelloLabel[] = [];
+  for (const card of cards) {
+    for (const label of card.labels) {
+      if (labelFilter.includes(label.id) && !filterLabels.some((item) => item.id === label.id)) {
+        filterLabels.push(label);
+      }
+    }
+  }
 
   return (
     <div className="sf-process-panel">
+      {labelFilter.length > 0 && (
+        <div className="sf-label-filter">
+          <span className="sf-label-filter__label">Filtrando</span>
+          {filterLabels.map((label) => (
+            <button
+              key={label.id}
+              type="button"
+              className="sf-label-chip sf-label-chip--button"
+              style={{
+                backgroundColor: labelColorHex(label.color),
+                color: labelTextColor(label.color),
+              }}
+              onClick={() => toggleLabel(label.id)}
+              title="Remover este filtro"
+            >
+              {label.name || label.color || 'Etiqueta'}
+              <Icon name="close" size={10} />
+            </button>
+          ))}
+          <button
+            type="button"
+            className="sf-btn sf-btn--sm"
+            onClick={() => setLabelFilter([])}
+          >
+            Limpar
+          </button>
+        </div>
+      )}
+
       <CardStack
         processNumber={processNumber}
-        cards={cards}
+        processUrl={processUrl}
+        cards={visibleCards}
         loading={loading}
         error={error}
+        showProcessMeta={false}
+        compact
+        activeLabels={labelFilter}
+        onToggleLabel={toggleLabel}
+        emptyMessage={
+          labelFilter.length > 0 && cards.length > 0
+            ? 'Nenhum cartão com as etiquetas selecionadas.'
+            : undefined
+        }
         errorExtra={
           needsSetup ? (
             <button
