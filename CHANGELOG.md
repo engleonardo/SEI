@@ -3,6 +3,45 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.1.1] - 2026-10-28
+
+Versão com regras automáticas, criação de cartão completa e sincronização nos dois sentidos.
+
+### Adicionado
+
+- **Regras automáticas** (Opções -> Regras): gatilhos ao concluir, ao entrar em uma lista, ao entrar em qualquer lista e quando o **processo SEI recebe novidade**.
+- Regras presas a um **quadro** (listas e etiquetas sempre desse quadro, sem mover entre quadros), com várias ações por regra e execução em cadeia (limite de 5 níveis).
+- **Aplicar agora** com prévia, confirmação e contagem de cartões; ignora cartões que já estão com a regra aplicada.
+- **Desfazer** a última aplicação manual, devolvendo os cartões à lista de origem e revertendo etiquetas.
+- **Contador por regra**, com data e origem (automática ou manual) e opção de zerar.
+- Criação de cartão com **etiquetas** (inclusive criar nova), **quadro/lista de destino** e **início/término** opcionais.
+- Link do processo SEI no fim da descrição, antes do marcador `SEI <processo>`.
+- **Chips de lista com contagem** no painel, com o quadro padrão já selecionado.
+- Seletor de **ordenação** sempre visível: prazo, atualização, nome (A-Z), lista, quadro/lista, etiqueta e tipo.
+- Etiquetas do cartão **clicáveis** para filtrar na lista do SEI e no painel do processo.
+- Sincronização nos dois sentidos ao atualizar: o Trello é relido e as regras reagem às mudanças feitas fora da extensão.
+- **Desfazer** e confirmação também evitam novas movimentações em massa.
+
+### Alterado
+
+- Página do processo mais limpa: faixa superior removida, ações (novo, vincular, atualizar) centralizadas acima do cartão e menores.
+- Cartões voltaram a ter a **faixa colorida lateral** (azul, vermelha para atrasado/atualizado, verde para concluído).
+- Caminho **quadro » lista** dentro do cartão, clicável para mover; textos adaptáveis à largura.
+- Rodapé do cartão apenas com ícones (à esquerda no processo, centralizado na lista), sem sobreposição.
+- Botão **Concluir/Reabrir** sem exigir prazo.
+- Busca também por **descrição e etiquetas**.
+- Etiquetas relidas ao abrir o seletor, com botão **Atualizar etiquetas** (sem polling).
+- Painel: edição **inline** sem modal, métricas refletindo os filtros e sem tremor nos elementos.
+- "Atualizado" nas regras passou a significar **novidade no processo SEI**, não edição do cartão.
+- Links úteis do Diagnóstico mais discretos e sem o repositório do GitHub.
+- Ícone da extensão reaproveita a aba do painel já aberta.
+
+### Corrigido
+
+- "Aplicar agora" não ignora mais o gatilho e não move mais cartões indevidamente.
+- Cartões já aplicados ficam fora da contagem e da execução.
+- Fallback ao abrir as opções quando o navegador não expõe `openOptionsPage`.
+
 ## [1.1.0] - 2026-10-27
 
 Versão final aprovada com o layout A, painel redesenhado e ajustes de usabilidade.
