@@ -14,12 +14,22 @@ import type { LastActionTab } from '../storage/last-tab';
 import type { ProcessRecord } from '../storage/processes';
 import type { Rule, RuleRun } from '../domain/rules';
 import type { RuleStats } from '../storage/rule-stats';
+import type { RuleLogEntry } from '../storage/rule-log';
+import type { SettingsBackup } from '../storage/backup';
 
 export interface RpcMap {
   'settings:get': { payload: undefined; result: Settings };
   'settings:save': { payload: Partial<Settings>; result: Settings };
   'settings:test-connection': { payload: undefined; result: ConnectionInfo };
   'settings:clear-cache': { payload: undefined; result: { cleared: true } };
+  'settings:export': {
+    payload: { includeCredentials: boolean };
+    result: SettingsBackup;
+  };
+  'settings:import': {
+    payload: { data: unknown };
+    result: { rules: number };
+  };
   'options:open': { payload: undefined; result: undefined };
   'dashboard:open': { payload: undefined; result: undefined };
   'trello:boards': { payload: { fresh?: boolean } | undefined; result: TrelloBoard[] };
@@ -37,7 +47,6 @@ export interface RpcMap {
       name: string;
       description?: string;
       processNumber?: string;
-      processUrl?: string;
       boardId?: string;
       listId?: string;
       start?: string | null;
@@ -102,6 +111,8 @@ export interface RpcMap {
   'rules:last-run': { payload: undefined; result: RuleRun | null };
   'rules:stats': { payload: undefined; result: RuleStats };
   'rules:clear-stats': { payload: undefined; result: RuleStats };
+  'rules:log': { payload: undefined; result: RuleLogEntry[] };
+  'rules:clear-log': { payload: undefined; result: RuleLogEntry[] };
   'rules:undo': {
     payload: undefined;
     result: { reverted: number; total: number; cards: number };

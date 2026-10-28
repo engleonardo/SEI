@@ -14,10 +14,8 @@ function mergeCards(current: TrelloCard[], incoming: TrelloCard[]): TrelloCard[]
 
 export function ProcessPanel({
   processNumber,
-  processUrl,
 }: {
   processNumber: string;
-  processUrl?: string;
 }) {
   const [cards, setCards] = useState<TrelloCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,7 +121,6 @@ export function ProcessPanel({
 
       <CardStack
         processNumber={processNumber}
-        processUrl={processUrl}
         cards={visibleCards}
         loading={loading}
         error={error}

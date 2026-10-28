@@ -80,6 +80,8 @@ export async function upsertProcessRecords(
     const next: ProcessRecord = {
       ...previous,
       ...sanitized,
+      // Sem informação explícita de novidade, preserva o estado conhecido.
+      unread: input.unread === undefined ? (previous?.unread ?? false) : sanitized.unread,
       specification: sanitized.specification || previous?.specification || '',
       processType: sanitized.processType || previous?.processType || '',
       url: sanitized.url || previous?.url || '',

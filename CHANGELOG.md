@@ -3,6 +3,26 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.2.0] - 2026-10-28
+
+### Adicionado
+
+- **Backup das configurações**: copiar, baixar e importar regras, destino, preferências e sites entre computadores (com opção de incluir as credenciais do Trello).
+- **Histórico das últimas execuções de regras** em Opções -> Regras, com cartão, ações e origem (automática ou manual).
+- A URL do processo é registrada ao abrir a página do processo, melhorando os links do painel.
+
+### Alterado
+
+- Bloco de vínculo no fim da descrição do Trello, com separador e o aviso "Não altere as informações abaixo."; o link do SEI não é mais gravado no cartão.
+- O ícone da extensão não mostra mais contador numérico.
+- "Abrir SEI" no painel usa apenas a última aba que era do SEI (não abre mais sites comuns).
+
+### Corrigido
+
+- Automação de etiquetas validada e agora registrada no histórico de execuções para diagnóstico.
+- Criar um cartão em uma lista agora dispara as regras de "entrar na lista" e "entrar em qualquer lista".
+- O status "Site ativado" no painel considera qualquer site autorizado, não apenas a última aba aberta.
+
 ## [1.1.1] - 2026-10-28
 
 Versão com regras automáticas, criação de cartão completa e sincronização nos dois sentidos.

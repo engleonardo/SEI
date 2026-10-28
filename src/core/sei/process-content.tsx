@@ -2,6 +2,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { findProcessNumber } from './process-number';
 import { findProcessContentAnchor } from './rows';
 import { createShadowHost } from '../../ui/shadow';
+import { callRpc } from '../messaging/client';
 import { ProcessPanel } from '../../ui/components/ProcessPanel';
 
 let currentProcess: string | null = null;
@@ -35,12 +36,18 @@ function mountPanel(processNumber: string): void {
   currentProcess = processNumber;
   host = created.host;
   root = createRoot(created.container);
-  root.render(
-    <ProcessPanel
-      processNumber={processNumber}
-      processUrl={window.location.href.split('#')[0]}
-    />,
-  );
+  root.render(<ProcessPanel processNumber={processNumber} />);
+
+  // Registra a URL do processo para o painel conseguir abrir o link no SEI.
+  void callRpc('processes:upsert', {
+    processes: [
+      {
+        number: processNumber,
+        url: window.location.href.split('#')[0],
+        origin: window.location.origin,
+      },
+    ],
+  }).catch(() => undefined);
 }
 
 function ensurePanel(): void {

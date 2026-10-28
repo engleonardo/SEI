@@ -225,10 +225,10 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
     await expect(dialog.getByText('Data de entrega')).toBeVisible();
     await dialog.getByRole('button', { name: 'Cancelar' }).click();
 
-    // Badge conta processos atualizados (não atrasados).
+    // O ícone não mostra contador numérico.
     await expect
       .poll(() => worker.evaluate(() => chrome.action.getBadgeText({})), { timeout: 10_000 })
-      .toBe('1');
+      .toBe('');
   } finally {
     await context.close();
     rmSync(extensionDir, { recursive: true, force: true });
