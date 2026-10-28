@@ -125,9 +125,13 @@ npm run build
 
 ## Como o vínculo funciona
 
-O vínculo é gravado na descrição do cartão como uma linha:
+O vínculo é gravado no fim da descrição do cartão, em um bloco separado:
 
 ```
+[seu comentário]
+
+---
+Não altere as informações abaixo.
 SEI 08660.018176/2014-60
 ```
 
@@ -136,6 +140,7 @@ SEI 08660.018176/2014-60
 - O texto existente da descrição é preservado.
 - Desvincular remove **apenas** a linha do processo atual; o cartão continua no Trello.
 - O marcador `SEI <processo>` é mantido para interoperabilidade entre versões.
+- O link do SEI **não** é gravado no cartão; a extensão abre o processo pela URL que ela registra ao visitar a lista ou o processo.
 
 ## Painel SEI Flow
 

@@ -14,6 +14,7 @@ import {
 } from '../../../core/domain/rules';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
 import type { RuleStats } from '../../../core/storage/rule-stats';
+import type { RuleLogEntry } from '../../../core/storage/rule-log';
 import { Icon } from '../../../ui/icons';
 import { ConfirmDialog } from '../../../ui/components/Modal';
 import { SectionCard, Spinner, StatusPill, type Notice } from './shared';
@@ -38,6 +39,7 @@ export function RulesSection({
   const [applying, setApplying] = useState(false);
   const [lastRun, setLastRun] = useState<RuleRun | null>(null);
   const [stats, setStats] = useState<RuleStats>({});
+  const [log, setLog] = useState<RuleLogEntry[]>([]);
   const [undoOpen, setUndoOpen] = useState(false);
   const [undoing, setUndoing] = useState(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
@@ -52,9 +54,19 @@ export function RulesSection({
 
   const loadStats = useCallback(async () => {
     try {
-      setStats(await callRpc('rules:stats', undefined));
+      const value = await callRpc('rules:stats', undefined);
+      setStats(value && typeof value === 'object' ? value : {});
     } catch {
       setStats({});
+    }
+  }, []);
+
+  const loadLog = useCallback(async () => {
+    try {
+      const value = await callRpc('rules:log', undefined);
+      setLog(Array.isArray(value) ? value : []);
+    } catch {
+      setLog([]);
     }
   }, []);
 
@@ -97,10 +109,11 @@ export function RulesSection({
       });
     void loadLastRun();
     void loadStats();
+    void loadLog();
     return () => {
       active = false;
     };
-  }, [loadBoardData, loadLastRun, loadStats, notify]);
+  }, [loadBoardData, loadLastRun, loadStats, loadLog, notify]);
 
   const persist = (next: Rule[], message?: string) => {
     setRules(next);
@@ -219,6 +232,7 @@ export function RulesSection({
       });
       setConfirmApply(null);
       await Promise.all([loadLastRun(), loadStats()]);
+      await loadLog();
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
     } finally {
@@ -236,6 +250,7 @@ export function RulesSection({
       });
       setUndoOpen(false);
       await Promise.all([loadLastRun(), loadStats()]);
+      await loadLog();
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
     } finally {
@@ -569,6 +584,60 @@ export function RulesSection({
           })}
         </div>
       )}
+
+      <details className="sfo-rule-log">
+        <summary>
+          <span className="sfo-rule-log__title">
+            <Icon name="list" size={13} />
+            Últimas execuções ({log.length})
+          </span>
+          <span className="sfo-rule-log__tools">
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm"
+              onClick={(event) => {
+                event.preventDefault();
+                void loadLog();
+              }}
+            >
+              Atualizar
+            </button>
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm"
+              onClick={(event) => {
+                event.preventDefault();
+                void callRpc('rules:clear-log', undefined).then(setLog);
+              }}
+            >
+              Limpar
+            </button>
+          </span>
+        </summary>
+        {log.length === 0 ? (
+          <p className="sfo-hint">
+            Nenhuma regra foi aplicada ainda. Cada execução aparece aqui com o cartão e as ações.
+          </p>
+        ) : (
+          <ul className="sfo-rule-log__list">
+            {log.map((entry, index) => (
+              <li key={`${entry.at}-${entry.ruleId}-${index}`}>
+                <span className="sfo-rule-log__time">
+                  {new Date(entry.at).toLocaleString('pt-BR')}
+                </span>
+                <strong>{entry.ruleName}</strong>
+                <span>{entry.cardName || entry.cardId}</span>
+                <span className="sfo-rule-log__source">
+                  {entry.source === 'manual' ? 'manual' : 'automática'}
+                </span>
+                <span className="sfo-rule-log__actions">
+                  {entry.actions.join(' · ') || 'sem ações registradas'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </details>
       </SectionCard>
 
       {confirmApply && (

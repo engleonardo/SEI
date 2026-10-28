@@ -76,4 +76,12 @@ describe('catálogo de processos do SEI', () => {
     ]);
     expect((await upsertProcessRecords([{ number: PROCESS, unread: true }])).unread).toEqual([]);
   });
+
+  it('preserva novidade quando o upsert não informa unread', async () => {
+    await upsertProcessRecords([{ number: PROCESS, unread: true }]);
+    await upsertProcessRecords([{ number: PROCESS, url: 'http://sei.test/processo' }]);
+    const catalog = await getProcessCatalog();
+    expect(catalog[PROCESS]?.unread).toBe(true);
+    expect(catalog[PROCESS]?.url).toBe('http://sei.test/processo');
+  });
 });

@@ -14,10 +14,12 @@ import {
   saveSettings,
 } from '../storage/settings';
 import { getLastActionTab } from '../storage/last-tab';
+import { exportBackup, importBackup } from '../storage/backup';
 import { listProcessRecords, upsertProcessRecords } from '../storage/processes';
 import { getRules, saveRules } from '../storage/rules';
 import { getLastRuleRun } from '../storage/rule-runs';
 import { clearRuleStats, getRuleStats } from '../storage/rule-stats';
+import { clearRuleLog, getRuleLog } from '../storage/rule-log';
 
 const repository = new TrelloRepository();
 
@@ -42,6 +44,13 @@ const handlers = {
   'settings:clear-cache': async () => {
     await cacheClear();
     return { cleared: true as const };
+  },
+
+  'settings:export': ({ includeCredentials }) => exportBackup(includeCredentials),
+
+  'settings:import': async ({ data }) => {
+    const result = await importBackup(data);
+    return { rules: result.rules };
   },
 
   'options:open': async () => {
@@ -168,6 +177,13 @@ const handlers = {
     return {};
   },
 
+  'rules:log': () => getRuleLog(),
+
+  'rules:clear-log': async () => {
+    await clearRuleLog();
+    return [];
+  },
+
   'rules:undo': () => repository.undoLastRuleRun(),
 
   'processes:list': () => listProcessRecords(),
@@ -183,8 +199,7 @@ const handlers = {
       }
     }
     return { updated: result.updated, total: result.total, rulesApplied };
-  },
-} satisfies HandlerMap;
+  },} satisfies HandlerMap;
 
 export interface DueSummary {
   total: number;

@@ -11,7 +11,7 @@ import type {
   TrelloList,
 } from '../domain/types';
 import { normalizeProcessNumber, sanitizeProcessForQuery } from '../domain/process';
-import { addLink, hasLink, parseLinks, removeLink, stripLinks } from '../link/marker';
+import { addLink, hasLink, parseLinks, removeLink, renderLinks, stripLinks } from '../link/marker';
 import { getRules } from '../storage/rules';
 import {
   forgetCards,
@@ -23,6 +23,7 @@ import {
 import { ruleAppliesNow, ruleMatches, ruleIssue, ruleRunCardCount, ruleWouldChange, type Rule, type RuleEvent, type RuleRunLabel, type RuleRunMove } from '../domain/rules';
 import { dropLastRuleRun, getLastRuleRun, pushRuleRun } from '../storage/rule-runs';
 import { recordRuleApplications } from '../storage/rule-stats';
+import { pushRuleLog, type RuleLogEntry } from '../storage/rule-log';
 import { getSettings } from '../storage/settings';
 import { getProcessCatalog } from '../storage/processes';
 import { mapLimit } from '../utils/async';
@@ -325,7 +326,6 @@ export class TrelloRepository {
     name: string;
     description?: string;
     processNumber?: string;
-    processUrl?: string;
     boardId?: string;
     listId?: string;
     start?: string | null;
@@ -340,15 +340,9 @@ export class TrelloRepository {
       );
     }
 
-    const clean = stripLinks(input.description ?? '').trimEnd();
-    const linkLine = input.processUrl ? `Processo SEI: ${input.processUrl}` : '';
-    const description = [
-      clean,
-      linkLine,
-      input.processNumber ? `SEI ${input.processNumber}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n');
+    const description = input.processNumber
+      ? addLink(input.description ?? '', input.processNumber)
+      : stripLinks(input.description ?? '');
 
     const body: Record<string, string> = {
       name: input.name.trim() || (input.processNumber ? `SEI ${input.processNumber}` : 'Novo cartão'),
@@ -389,10 +383,7 @@ export class TrelloRepository {
 
     if (patch.description !== undefined) {
       const links = parseLinks(current.desc);
-      const clean = stripLinks(patch.description);
-      body.desc = [clean, ...links.map((process) => `SEI ${process}`)]
-        .filter(Boolean)
-        .join('\n');
+      body.desc = renderLinks(patch.description, links);
     }
 
     if (patch.due !== undefined) body.due = patch.due === null ? 'null' : patch.due;
@@ -461,11 +452,22 @@ export class TrelloRepository {
     let current = card;
     const applied = new Set<string>();
     const counts = new Map<string, number>();
+    const log: RuleLogEntry[] = [];
     for (const event of events) {
-      const state = await this.executeRules(current, event, applied, 0, false, undefined, counts);
+      const state = await this.executeRules(
+        current,
+        event,
+        applied,
+        0,
+        false,
+        undefined,
+        counts,
+        log,
+      );
       current = state.card;
     }
     await recordRuleApplications(counts, 'auto');
+    await pushRuleLog(log);
     return current;
   }
 
@@ -476,6 +478,7 @@ export class TrelloRepository {
    */
   private async runRules(card: TrelloCard, event: RuleEvent): Promise<TrelloCard> {
     const counts = new Map<string, number>();
+    const log: RuleLogEntry[] = [];
     const { card: result } = await this.executeRules(
       card,
       event,
@@ -484,8 +487,10 @@ export class TrelloRepository {
       false,
       undefined,
       counts,
+      log,
     );
     await recordRuleApplications(counts, 'auto');
+    await pushRuleLog(log);
     return result;
   }
 
@@ -497,6 +502,7 @@ export class TrelloRepository {
     force: boolean,
     only?: string,
     counts?: Map<string, number>,
+    log?: RuleLogEntry[],
   ): Promise<{ card: TrelloCard; touched: boolean }> {
     if (depth >= 5) return { card, touched: false };
     if (card.links.length === 0) return { card, touched: false };
@@ -519,6 +525,17 @@ export class TrelloRepository {
       touched = true;
       current = appliedRule.card;
       if (counts) counts.set(rule.id, (counts.get(rule.id) ?? 0) + 1);
+      if (log) {
+        log.push({
+          at: Date.now(),
+          ruleId: rule.id,
+          ruleName: rule.name,
+          cardId: current.id,
+          cardName: current.name,
+          source: force ? 'manual' : 'auto',
+          actions: appliedRule.actions,
+        });
+      }
 
       if (appliedRule.moved) {
         const chained = await this.executeRules(
@@ -529,6 +546,7 @@ export class TrelloRepository {
           false,
           undefined,
           counts,
+          log,
         );
         current = chained.card;
       }
@@ -540,15 +558,22 @@ export class TrelloRepository {
   private async executeRule(
     card: TrelloCard,
     rule: Rule,
-  ): Promise<{ card: TrelloCard; touched: boolean; moved: boolean; fromListId: string }> {
+  ): Promise<{
+    card: TrelloCard;
+    touched: boolean;
+    moved: boolean;
+    fromListId: string;
+    actions: string[];
+  }> {
     const fromListId = card.idList;
     const moveCandidate = rule.actions.find(
       (action) => action.type === 'moveToList' && action.listId,
     );
     let targetListId = moveCandidate?.listId;
+    let boardLists: Array<{ id: string; name: string }> | null = null;
     if (targetListId) {
       // Nunca move para uma lista de outro quadro: a regra é presa ao quadro dela.
-      const boardLists = await this.getLists(rule.boardId).catch(() => null);
+      boardLists = await this.getLists(rule.boardId).catch(() => null);
       if (
         !Array.isArray(boardLists) ||
         !boardLists.some((list) => list.id === targetListId)
@@ -565,17 +590,20 @@ export class TrelloRepository {
     );
 
     let touched = false;
+    const actions: string[] = [];
 
     for (const action of adds) {
       if (card.labels.some((label) => label.id === action.labelId)) continue;
       await this.client.post(`/cards/${card.id}/idLabels`, { value: action.labelId });
       touched = true;
+      actions.push(`Adicionar etiqueta${action.labelName ? ` "${action.labelName}"` : ''}`);
     }
 
     for (const action of removes) {
       if (!card.labels.some((label) => label.id === action.labelId)) continue;
       await this.client.delete(`/cards/${card.id}/idLabels/${action.labelId}`);
       touched = true;
+      actions.push(`Remover etiqueta${action.labelName ? ` "${action.labelName}"` : ''}`);
     }
 
     const shouldMoveList = Boolean(targetListId && targetListId !== card.idList);
@@ -584,10 +612,17 @@ export class TrelloRepository {
       if (shouldMoveList && targetListId) body.idList = targetListId;
       await this.client.put(`/cards/${card.id}`, body);
       touched = true;
+      if (shouldMoveList) {
+        const listName =
+          boardLists?.find((list) => list.id === targetListId)?.name ?? 'lista';
+        actions.push(`Mover para a lista "${listName}"`);
+      } else {
+        actions.push('Mover para o topo');
+      }
     }
 
     if (!touched) {
-      return { card, touched: false, moved: false, fromListId };
+      return { card, touched: false, moved: false, fromListId, actions: [] };
     }
 
     await this.invalidateCardCaches();
@@ -597,6 +632,7 @@ export class TrelloRepository {
       touched: true,
       moved: updated.idList !== fromListId,
       fromListId,
+      actions,
     };
   }
 
@@ -634,6 +670,7 @@ export class TrelloRepository {
     const moves: RuleRunMove[] = [];
     const labels: RuleRunLabel[] = [];
     const counts = new Map<string, number>();
+    const log: RuleLogEntry[] = [];
 
     for (const card of matching) {
       const beforeListId = card.idList;
@@ -647,6 +684,7 @@ export class TrelloRepository {
           true,
           rule.id,
           counts,
+          log,
         );
         if (!result.touched) continue;
 
@@ -661,6 +699,7 @@ export class TrelloRepository {
     await this.invalidateCardCaches();
     if (touched.length > 0) await mergeSyncSnapshot(touched);
     await recordRuleApplications(counts, 'manual');
+    await pushRuleLog(log);
 
     if (moves.length > 0 || labels.length > 0) {
       await pushRuleRun({
@@ -698,6 +737,7 @@ export class TrelloRepository {
     let applied = 0;
     const touched: TrelloCard[] = [];
     const counts = new Map<string, number>();
+    const log: RuleLogEntry[] = [];
 
     for (const card of relevant) {
       try {
@@ -709,6 +749,7 @@ export class TrelloRepository {
           false,
           undefined,
           counts,
+          log,
         );
         if (result.touched) {
           applied += 1;
@@ -722,6 +763,7 @@ export class TrelloRepository {
     await this.invalidateCardCaches();
     if (touched.length > 0) await mergeSyncSnapshot(touched);
     await recordRuleApplications(counts, 'auto');
+    await pushRuleLog(log);
     return { applied };
   }
 
@@ -871,10 +913,7 @@ export class TrelloRepository {
           return { cardId, status: 'already' as const, card: current };
         }
         const links = [...newLinks, ...existing];
-        const description = stripLinks(current.desc);
-        const desc = [description, ...links.map((process) => `SEI ${process}`)]
-          .filter(Boolean)
-          .join('\n');
+        const desc = renderLinks(current.desc, links);
         await this.client.put(`/cards/${cardId}`, { desc });
         const card = await this.getCard(cardId, true);
         return { cardId, status: 'linked' as const, card };
