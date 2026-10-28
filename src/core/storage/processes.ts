@@ -67,10 +67,11 @@ export async function listProcessRecords(): Promise<ProcessRecord[]> {
 
 export async function upsertProcessRecords(
   records: Array<Partial<ProcessRecord> & { number: string }>,
-): Promise<{ updated: number; total: number }> {
+): Promise<{ updated: number; total: number; unread: string[] }> {
   const catalog = await getProcessCatalog();
   let updated = 0;
   const now = Date.now();
+  const unread: string[] = [];
 
   for (const input of records) {
     const sanitized = sanitizeRecord({ ...input, updatedAt: now }, input.number);
@@ -94,6 +95,10 @@ export async function upsertProcessRecords(
     ) {
       continue;
     }
+    // Só conta como novidade quando o processo já era conhecido e passou a ter atualização.
+    if (previous && !previous.unread && next.unread) {
+      unread.push(next.number);
+    }
     catalog[sanitized.number] = next;
     updated += 1;
   }
@@ -107,9 +112,9 @@ export async function upsertProcessRecords(
     try {
       await browser.storage.local.set({ [PROCESSES_KEY]: trimmed });
     } catch {
-      return { updated: 0, total: Object.keys(catalog).length };
+      return { updated: 0, total: Object.keys(catalog).length, unread: [] };
     }
   }
 
-  return { updated, total: Object.keys(catalog).length };
+  return { updated, total: Object.keys(catalog).length, unread };
 }

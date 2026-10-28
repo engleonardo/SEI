@@ -89,6 +89,20 @@ test('extensão carrega, injeta no SEI e abre opções/dashboard', async () => {
     await expect(dashboard.getByText('Desenvolvido por Engenheiro Leonardo Almeida de Oliveira')).toBeVisible();
     await dashboard.getByRole('button', { name: /^Filtros/ }).click();
     await expect(dashboard.getByText('Etiquetas', { exact: true })).toBeVisible();
+
+    // Abrir o painel de novo reaproveita a aba existente em vez de criar outra.
+    const dashboardsBefore = context
+      .pages()
+      .filter((item) => item.url().includes('/dashboard.html')).length;
+    await options.evaluate(async () => {
+      await chrome.runtime.sendMessage({ rpc: 'dashboard:open', payload: null });
+      await chrome.runtime.sendMessage({ rpc: 'dashboard:open', payload: null });
+    });
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    const dashboardsAfter = context
+      .pages()
+      .filter((item) => item.url().includes('/dashboard.html')).length;
+    expect(dashboardsAfter).toBe(dashboardsBefore);
   } finally {
     await context.close();
     rmSync(extensionDir, { recursive: true, force: true });

@@ -29,7 +29,7 @@ export function addLink(description: string | null | undefined, processNumber: s
   if (!process) throw new Error('Número de processo inválido.');
   const base = (description ?? '').replace(/\r\n/g, '\n').trim();
   if (parseLinks(base).includes(process)) return base;
-  return base ? `SEI ${process}\n${base}` : `SEI ${process}`;
+  return base ? `${base}\nSEI ${process}` : `SEI ${process}`;
 }
 
 export function removeLink(description: string | null | undefined, processNumber: string): string {

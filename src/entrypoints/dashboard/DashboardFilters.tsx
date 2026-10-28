@@ -4,9 +4,7 @@ import { labelColorHex, labelTextColor } from '../../ui/utils';
 import {
   ACTIVITY_FILTER_OPTIONS,
   DUE_FILTER_OPTIONS,
-  GROUP_OPTIONS,
   PROCESS_UPDATE_OPTIONS,
-  SORT_OPTIONS,
   activeFilterCount,
   type DashboardFilters,
 } from './model';
@@ -228,38 +226,6 @@ export function DashboardFilters({
             }
           >
             {PROCESS_UPDATE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="sdo-field" htmlFor="sdo-group">
-          <span>Agrupar por</span>
-          <select
-            id="sdo-group"
-            className="sfo-select"
-            value={filters.group}
-            onChange={(event) => onChange({ group: event.target.value as DashboardFilters['group'] })}
-          >
-            {GROUP_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="sdo-field" htmlFor="sdo-sort">
-          <span>Ordenar por</span>
-          <select
-            id="sdo-sort"
-            className="sfo-select"
-            value={filters.sort}
-            onChange={(event) => onChange({ sort: event.target.value as DashboardFilters['sort'] })}
-          >
-            {SORT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

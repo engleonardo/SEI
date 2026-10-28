@@ -9,13 +9,19 @@ import { LinkCardsDialog } from './LinkCardsDialog';
 
 export interface CardStackProps {
   processNumber: string;
+  processUrl?: string;
   cards: TrelloCard[];
   loading?: boolean;
   error?: string | null;
   errorExtra?: ReactNode;
   showHeader?: boolean;
+  showProcessMeta?: boolean;
+  showLocation?: boolean;
   compact?: boolean;
   highlight?: boolean;
+  activeLabels?: string[];
+  emptyMessage?: ReactNode;
+  onToggleLabel?: (labelId: string) => void;
   onReload: () => void;
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
@@ -24,13 +30,19 @@ export interface CardStackProps {
 
 export function CardStack({
   processNumber,
+  processUrl,
   cards,
   loading = false,
   error = null,
   errorExtra,
   showHeader = false,
+  showProcessMeta = true,
+  showLocation = true,
   compact = false,
   highlight = false,
+  activeLabels,
+  emptyMessage,
+  onToggleLabel,
   onReload,
   onChanged,
   onRemoved,
@@ -41,25 +53,25 @@ export function CardStack({
 
   return (
     <div className="sf-stack">
-      {showHeader && (
-        <div className="sf-stack__head sf-stack__head--actions">
+      {showHeader && cards.length > 0 && (
+        <div className="sf-stack__actions">
           <button
             type="button"
-            className="sf-btn sf-btn--sm"
+            className="sf-icon-btn"
             onClick={() => setShowCreate(true)}
-            title="Criar cartão no Trello"
+            aria-label="Novo cartão"
+            title="Novo cartão"
           >
             <Icon name="plus" size={13} />
-            Novo cartão
           </button>
           <button
             type="button"
-            className="sf-btn sf-btn--sm"
+            className="sf-icon-btn"
             onClick={() => setShowLink(true)}
-            title="Vincular cartões existentes do Trello"
+            aria-label="Vincular cartões"
+            title="Vincular cartões existentes"
           >
             <Icon name="link" size={13} />
-            Vincular cartões
           </button>
           <button
             type="button"
@@ -69,7 +81,7 @@ export function CardStack({
             aria-label="Atualizar cartões"
             title="Atualizar cartões"
           >
-            <Icon name="refresh" size={15} />
+            <Icon name="refresh" size={13} />
           </button>
         </div>
       )}
@@ -104,7 +116,7 @@ export function CardStack({
             ) : undefined
           }
         >
-          Nenhum cartão vinculado a este processo.
+          {emptyMessage ?? 'Nenhum cartão vinculado a este processo.'}
         </EmptyState>
       )}
 
@@ -113,8 +125,12 @@ export function CardStack({
           key={card.id}
           card={card}
           processNumber={processNumber}
+          showProcessMeta={showProcessMeta}
+          showLocation={showLocation}
           compact={compact}
           highlight={highlight}
+          activeLabels={activeLabels}
+          onToggleLabel={onToggleLabel}
           onChanged={onChanged}
           onRemoved={onRemoved}
         />
@@ -123,6 +139,7 @@ export function CardStack({
       {showCreate && (
         <CreateCardDialog
           processNumber={processNumber}
+          processUrl={processUrl}
           onClose={() => setShowCreate(false)}
           onCreated={(card) => onAdded([card])}
         />

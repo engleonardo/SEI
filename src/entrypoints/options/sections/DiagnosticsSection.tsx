@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { browser } from 'wxt/browser';
 import type { Settings } from '../../../core/domain/types';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
+import { openDashboard } from '../../../core/messaging/actions';
 import { Icon } from '../../../ui/icons';
 import { SectionCard, Spinner, type Notice } from './shared';
 
@@ -96,79 +97,33 @@ export function DiagnosticsSection({
       </SectionCard>
 
       <SectionCard title="Links úteis" subtitle="Documentação, suporte e privacidade." icon="external">
-        <div className="sfo-list">
-          <div className="sfo-list-item">
-            <Icon name="board" size={15} />
-            <div className="sfo-list-item__main">
-              <div className="sfo-list-item__title">Painel SEI Flow</div>
-              <button
-                type="button"
-                className="sfo-btn sfo-btn--sm"
-                style={{ marginTop: 6 }}
-                onClick={() =>
-                  void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') })
-                }
-              >
-                Abrir dashboard
-              </button>
-            </div>
-          </div>
-          <div className="sfo-list-item">
-            <Icon name="external" size={15} />
-            <div className="sfo-list-item__main">
-              <div className="sfo-list-item__title">Repositório no GitHub</div>
-              <a
-                className="sfo-list-item__meta"
-                href="https://github.com/engleonardo/SEI"
-                target="_blank"
-                rel="noreferrer"
-              >
-                github.com/engleonardo/SEI
-              </a>
-            </div>
-          </div>
-          <div className="sfo-list-item">
-            <Icon name="alert" size={15} />
-            <div className="sfo-list-item__main">
-              <div className="sfo-list-item__title">Reportar um problema</div>
-              <a
-                className="sfo-list-item__meta"
-                href="https://github.com/engleonardo/SEI/issues"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Abrir uma issue
-              </a>
-            </div>
-          </div>
-          <div className="sfo-list-item">
-            <Icon name="info" size={15} />
-            <div className="sfo-list-item__main">
-              <div className="sfo-list-item__title">Política de privacidade</div>
-              <a
-                className="sfo-list-item__meta"
-                href="https://github.com/engleonardo/SEI/blob/main/PRIVACY.md"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Ler PRIVACY.md
-              </a>
-            </div>
-          </div>
-          <div className="sfo-list-item">
-            <Icon name="board" size={15} />
-            <div className="sfo-list-item__main">
-              <div className="sfo-list-item__title">Chave e token do Trello</div>
-              <a
-                className="sfo-list-item__meta"
-                href="https://trello.com/app-key"
-                target="_blank"
-                rel="noreferrer"
-              >
-                trello.com/app-key
-              </a>
-            </div>
-          </div>
+        <div className="sfo-links">
+          <button type="button" className="sfo-link" onClick={() => void openDashboard()}>
+            <Icon name="board" size={13} />
+            Abrir dashboard
+          </button>
+          <a
+            className="sfo-link"
+            href="https://github.com/engleonardo/SEI/issues"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Icon name="alert" size={13} />
+            Reportar um problema
+          </a>
+          <a
+            className="sfo-link"
+            href="https://github.com/engleonardo/SEI/blob/main/PRIVACY.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Icon name="info" size={13} />
+            Privacidade
+          </a>
+          <a className="sfo-link" href="https://trello.com/app-key" target="_blank" rel="noreferrer">
+            <Icon name="settings" size={13} />
+            Chave e token do Trello
+          </a>
         </div>
       </SectionCard>
     </>

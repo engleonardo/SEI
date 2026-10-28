@@ -5,7 +5,7 @@ export type DueFilter = 'any' | 'open' | 'overdue' | 'today' | 'soon' | 'complet
 export type ActivityFilter = 'any' | 'today' | '7d' | '30d' | 'sinceVisit';
 export type ProcessUpdateFilter = 'any' | 'unread' | 'read';
 export type GroupMode = 'due' | 'board' | 'list' | 'type' | 'label' | 'none';
-export type SortMode = 'due' | 'activity' | 'name' | 'board';
+export type SortMode = 'due' | 'activity' | 'name' | 'list' | 'board' | 'label' | 'type';
 
 export interface DashboardFilters {
   search: string;
@@ -79,11 +79,25 @@ export const GROUP_OPTIONS: Array<{ value: GroupMode; label: string }> = [
   { value: 'none', label: 'Lista única' },
 ];
 
+/** Cada ordenação define também como os cartões são agrupados na tela. */
+export const SORT_GROUPS: Record<SortMode, GroupMode> = {
+  due: 'due',
+  activity: 'none',
+  name: 'none',
+  list: 'list',
+  board: 'board',
+  label: 'label',
+  type: 'type',
+};
+
 export const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
-  { value: 'due', label: 'Prazo' },
+  { value: 'due', label: 'Prazo (mais próximo primeiro)' },
   { value: 'activity', label: 'Atualização mais recente' },
-  { value: 'name', label: 'Nome' },
+  { value: 'name', label: 'Nome (A-Z)' },
+  { value: 'list', label: 'Lista' },
   { value: 'board', label: 'Quadro e lista' },
+  { value: 'label', label: 'Etiqueta' },
+  { value: 'type', label: 'Tipo de processo' },
 ];
 
 const FILTERS_KEY = 'sei-flow:dashboard:filters:v1';
@@ -213,18 +227,48 @@ export function matchesFilters(
   return haystack.includes(needle);
 }
 
-export function sortCards(cards: TrelloCard[], sort: SortMode): TrelloCard[] {
+export function sortCards(
+  cards: TrelloCard[],
+  sort: SortMode,
+  catalog: ProcessCatalog = {},
+): TrelloCard[] {
   const sorted = [...cards];
+  const byName = (a: TrelloCard, b: TrelloCard) => a.name.localeCompare(b.name, 'pt-BR');
+
   sorted.sort((a, b) => {
     if (sort === 'activity') return activityTime(b) - activityTime(a);
-    if (sort === 'name') return a.name.localeCompare(b.name, 'pt-BR');
+    if (sort === 'name') return byName(a, b);
     if (sort === 'board') {
       const boardCompare = (a.board?.name ?? '').localeCompare(b.board?.name ?? '', 'pt-BR');
       if (boardCompare !== 0) return boardCompare;
-      return (a.list?.name ?? '').localeCompare(b.list?.name ?? '', 'pt-BR');
+      const listCompare = (a.list?.name ?? '').localeCompare(b.list?.name ?? '', 'pt-BR');
+      if (listCompare !== 0) return listCompare;
+      return byName(a, b);
+    }
+    if (sort === 'list') {
+      const listCompare = (a.list?.name ?? '').localeCompare(b.list?.name ?? '', 'pt-BR');
+      if (listCompare !== 0) return listCompare;
+      const boardCompare = (a.board?.name ?? '').localeCompare(b.board?.name ?? '', 'pt-BR');
+      if (boardCompare !== 0) return boardCompare;
+      return byName(a, b);
+    }
+    if (sort === 'label') {
+      const labelOf = (card: TrelloCard) =>
+        [...card.labels]
+          .map((label) => label.name || label.color || '')
+          .sort((x, y) => x.localeCompare(y, 'pt-BR'))[0] ?? '\uffff';
+      const labelCompare = labelOf(a).localeCompare(labelOf(b), 'pt-BR');
+      if (labelCompare !== 0) return labelCompare;
+      return byName(a, b);
+    }
+    if (sort === 'type') {
+      const typeOf = (card: TrelloCard) => processTypesFor(card, catalog)[0] ?? '\uffff';
+      const typeCompare = typeOf(a).localeCompare(typeOf(b), 'pt-BR');
+      if (typeCompare !== 0) return typeCompare;
+      return byName(a, b);
     }
     if (a.dueComplete !== b.dueComplete) return a.dueComplete ? 1 : -1;
-    if (!a.due && !b.due) return a.name.localeCompare(b.name, 'pt-BR');
+    if (!a.due && !b.due) return byName(a, b);
     if (!a.due) return 1;
     if (!b.due) return -1;
     return new Date(a.due).getTime() - new Date(b.due).getTime();
@@ -246,7 +290,7 @@ export function groupCards(
   sort: SortMode,
   catalog: ProcessCatalog,
 ): CardGroup[] {
-  const sorted = sortCards(cards, sort);
+  const sorted = sortCards(cards, sort, catalog);
 
   if (group === 'none') {
     return sorted.length > 0 ? [{ key: 'all', title: '', cards: sorted }] : [];
@@ -318,7 +362,7 @@ export function groupCards(
   }
 
   return Array.from(map.values())
-    .map((bucket) => ({ ...bucket, cards: sortCards(bucket.cards, sort) }))
+    .map((bucket) => ({ ...bucket, cards: sortCards(bucket.cards, sort, catalog) }))
     .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
 }
 
@@ -333,7 +377,6 @@ export function activeFilterCount(filters: DashboardFilters): number {
   if (filters.due !== 'any') count += 1;
   if (filters.activity !== 'any') count += 1;
   if (filters.processUpdate !== 'any') count += 1;
-  if (filters.group !== 'due') count += 1;
   if (filters.sort !== 'due') count += 1;
   return count;
 }
@@ -343,9 +386,19 @@ export function loadFilters(): DashboardFilters {
     const raw = window.localStorage.getItem(FILTERS_KEY);
     if (!raw) return { ...DEFAULT_FILTERS };
     const parsed = JSON.parse(raw) as Partial<DashboardFilters>;
+    const sortValues: SortMode[] = ['due', 'activity', 'name', 'list', 'board', 'label', 'type'];
+    const groupValues: GroupMode[] = ['due', 'board', 'list', 'type', 'label', 'none'];
+    const sort = sortValues.includes(parsed.sort as SortMode)
+      ? (parsed.sort as SortMode)
+      : DEFAULT_FILTERS.sort;
+    const group = groupValues.includes(parsed.group as GroupMode)
+      ? (parsed.group as GroupMode)
+      : SORT_GROUPS[sort];
     return {
       ...DEFAULT_FILTERS,
       ...parsed,
+      sort,
+      group,
       labelIds: Array.isArray(parsed.labelIds)
         ? parsed.labelIds.filter((value): value is string => typeof value === 'string')
         : [],

@@ -17,6 +17,7 @@ interface RowEntry {
   anchor: HTMLAnchorElement;
   processNumber: string;
   specification: string;
+  url: string;
   highlight: boolean;
   actionHost: HTMLDivElement;
   actionRoot: Root;
@@ -373,6 +374,7 @@ export class ListManager {
     ) {
       existing.processNumber = info.processNumber;
       existing.specification = info.specification;
+      existing.url = info.url;
       existing.highlight = info.highlight;
       return;
     }
@@ -439,6 +441,7 @@ export class ListManager {
       anchor: info.anchor,
       processNumber: info.processNumber,
       specification: info.specification,
+      url: info.url,
       highlight: info.highlight,
       actionHost: action.host,
       actionRoot,
@@ -476,6 +479,7 @@ export class ListManager {
         entry.cardRoot?.render(
           <ProcessRowCards
             processNumber={entry.processNumber}
+            processUrl={entry.url}
             compact
             highlight={highlight}
           />,
@@ -520,6 +524,7 @@ export class ListManager {
       entry.cardContainer,
       <ProcessRowCards
         processNumber={entry.processNumber}
+        processUrl={entry.url}
         compact
         highlight={entry.highlight}
       />,
@@ -551,7 +556,11 @@ export class ListManager {
     if (this.catalogTimer) window.clearTimeout(this.catalogTimer);
     this.catalogTimer = window.setTimeout(() => {
       this.catalogTimer = null;
-      void callRpc('processes:upsert', { processes: records }).catch(() => undefined);
+      void callRpc('processes:upsert', { processes: records })
+        .then((result) => {
+          if (result.rulesApplied > 0) void loadList();
+        })
+        .catch(() => undefined);
     }, 1_200);
   }
 

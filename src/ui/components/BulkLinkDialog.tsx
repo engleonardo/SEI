@@ -30,7 +30,7 @@ export function BulkLinkDialog({ onClose, onDone }: BulkLinkDialogProps) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([callRpc('settings:get', undefined), callRpc('trello:boards', undefined)])
+    Promise.all([callRpc('settings:get', undefined), callRpc('trello:boards', { fresh: true })])
       .then(([settings, nextBoards]) => {
         if (!active) return;
         setBoards(nextBoards);
@@ -57,8 +57,8 @@ export function BulkLinkDialog({ onClose, onDone }: BulkLinkDialogProps) {
     setError(null);
     setSelected(new Set());
     Promise.all([
-      callRpc('trello:lists', { boardId }),
-      callRpc('trello:board-cards', { boardId }),
+      callRpc('trello:lists', { boardId, fresh: true }),
+      callRpc('trello:board-cards', { boardId, fresh: true }),
     ])
       .then(([nextLists, nextCards]) => {
         if (!active) return;

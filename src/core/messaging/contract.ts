@@ -12,6 +12,8 @@ import type {
 } from '../domain/types';
 import type { LastActionTab } from '../storage/last-tab';
 import type { ProcessRecord } from '../storage/processes';
+import type { Rule, RuleRun } from '../domain/rules';
+import type { RuleStats } from '../storage/rule-stats';
 
 export interface RpcMap {
   'settings:get': { payload: undefined; result: Settings };
@@ -20,20 +22,26 @@ export interface RpcMap {
   'settings:clear-cache': { payload: undefined; result: { cleared: true } };
   'options:open': { payload: undefined; result: undefined };
   'dashboard:open': { payload: undefined; result: undefined };
-  'trello:boards': { payload: undefined; result: TrelloBoard[] };
-  'trello:lists': { payload: { boardId: string }; result: TrelloList[] };
-  'trello:board-cards': { payload: { boardId: string }; result: TrelloCard[] };
+  'trello:boards': { payload: { fresh?: boolean } | undefined; result: TrelloBoard[] };
+  'trello:lists': { payload: { boardId: string; fresh?: boolean }; result: TrelloList[] };
+  'trello:board-cards': { payload: { boardId: string; fresh?: boolean }; result: TrelloCard[] };
   'trello:card': { payload: { cardId: string }; result: TrelloCard };
-  'trello:cards-for-process': { payload: { processNumber: string }; result: TrelloCard[] };
-  'trello:all-linked-cards': { payload: undefined; result: TrelloCard[] };
+  'trello:cards-for-process': {
+    payload: { processNumber: string; fresh?: boolean };
+    result: TrelloCard[];
+  };
+  'trello:all-linked-cards': { payload: { fresh?: boolean } | undefined; result: TrelloCard[] };
   'trello:search-cards': { payload: { query: string }; result: TrelloCard[] };
   'trello:create-card': {
     payload: {
       name: string;
       description?: string;
       processNumber?: string;
+      processUrl?: string;
       boardId?: string;
       listId?: string;
+      start?: string | null;
+      due?: string | null;
     };
     result: TrelloCard;
   };
@@ -51,14 +59,14 @@ export interface RpcMap {
     payload: { cardId: string; processNumber: string };
     result: TrelloCard;
   };
-  'trello:board-labels': { payload: { boardId: string }; result: TrelloLabel[] };
+  'trello:board-labels': { payload: { boardId: string; fresh?: boolean }; result: TrelloLabel[] };
   'trello:create-label': {
     payload: { boardId: string; name: string; color: string };
     result: TrelloLabel;
   };
   'trello:add-label': { payload: { cardId: string; labelId: string }; result: TrelloCard };
   'trello:remove-label': { payload: { cardId: string; labelId: string }; result: TrelloCard };
-  'trello:checklists': { payload: { cardId: string }; result: TrelloChecklist[] };
+  'trello:checklists': { payload: { cardId: string; fresh?: boolean }; result: TrelloChecklist[] };
   'trello:create-checklist': {
     payload: { cardId: string; name: string };
     result: TrelloChecklist[];
@@ -85,10 +93,23 @@ export interface RpcMap {
     result: { activated: boolean; allSites: boolean; origin: string | null };
   };
   'activation:last-tab': { payload: undefined; result: LastActionTab | null };
+  'rules:list': { payload: undefined; result: Rule[] };
+  'rules:save': { payload: { rules: Rule[] }; result: Rule[] };
+  'rules:apply-now': {
+    payload: { ruleId: string; dryRun?: boolean };
+    result: { applied: number; total: number };
+  };
+  'rules:last-run': { payload: undefined; result: RuleRun | null };
+  'rules:stats': { payload: undefined; result: RuleStats };
+  'rules:clear-stats': { payload: undefined; result: RuleStats };
+  'rules:undo': {
+    payload: undefined;
+    result: { reverted: number; total: number; cards: number };
+  };
   'processes:list': { payload: undefined; result: ProcessRecord[] };
   'processes:upsert': {
     payload: { processes: Array<Partial<ProcessRecord> & { number: string }> };
-    result: { updated: number; total: number };
+    result: { updated: number; total: number; rulesApplied: number };
   };
 }
 

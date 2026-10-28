@@ -109,6 +109,38 @@ describe('modelo do dashboard', () => {
     expect(byLabel.map((group) => group.title)).toEqual(['Sem etiqueta', 'Urgente']);
   });
 
+  it('ordena por nome, lista, etiqueta e tipo', () => {
+    const beta = card({
+      id: 'c-beta',
+      name: 'Beta',
+      labels: [{ id: 'label-ur', name: 'Urgente', color: 'red' }],
+      links: [PROCESS],
+      list: { id: 'list-z', name: 'Zeta' },
+    });
+    const alfa = card({
+      id: 'c-alfa',
+      name: 'Alfa',
+      labels: [],
+      links: [OTHER],
+      list: { id: 'list-a', name: 'Alfa' },
+    });
+    const gama = card({
+      id: 'c-gama',
+      name: 'Gama',
+      labels: [{ id: 'label-ad', name: 'Ado', color: 'blue' }],
+      links: [],
+      list: { id: 'list-m', name: 'Meio' },
+    });
+    const cards = [beta, alfa, gama];
+    const names = (sort: 'name' | 'list' | 'label' | 'type') =>
+      groupCards(cards, 'none', sort, catalog)[0]?.cards.map((item) => item.name);
+
+    expect(names('name')).toEqual(['Alfa', 'Beta', 'Gama']);
+    expect(names('list')).toEqual(['Alfa', 'Gama', 'Beta']);
+    expect(names('label')).toEqual(['Gama', 'Beta', 'Alfa']);
+    expect(names('type')).toEqual(['Beta', 'Alfa', 'Gama']);
+  });
+
   it('conta filtros ativos e exporta CSV', () => {
     expect(activeFilterCount(filters())).toBe(0);
     expect(

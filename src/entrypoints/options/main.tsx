@@ -3,21 +3,24 @@ import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
 import type { Settings, TrelloBoard } from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
+import { openDashboard } from '../../core/messaging/actions';
 import { BrandMark } from '../../ui/BrandMark';
 import { Icon, type IconName } from '../../ui/icons';
 import { ConnectionSection } from './sections/ConnectionSection';
 import { DestinationSection } from './sections/DestinationSection';
 import { DiagnosticsSection } from './sections/DiagnosticsSection';
 import { PreferencesSection } from './sections/PreferencesSection';
+import { RulesSection } from './sections/RulesSection';
 import { SitesSection } from './sections/SitesSection';
 import { Spinner, type Notice } from './sections/shared';
 import './style.css';
 
-type Tab = 'connection' | 'destination' | 'sites' | 'preferences' | 'diagnostics';
+type Tab = 'connection' | 'destination' | 'rules' | 'sites' | 'preferences' | 'diagnostics';
 
 const TABS: Array<{ id: Tab; label: string; icon: IconName }> = [
   { id: 'connection', label: 'Conexão', icon: 'settings' },
   { id: 'destination', label: 'Destino', icon: 'board' },
+  { id: 'rules', label: 'Regras', icon: 'refresh' },
   { id: 'sites', label: 'Sites do SEI', icon: 'link' },
   { id: 'preferences', label: 'Preferências', icon: 'tag' },
   { id: 'diagnostics', label: 'Diagnóstico', icon: 'info' },
@@ -31,6 +34,10 @@ const PAGE_TITLES: Record<Tab, { title: string; subtitle: string }> = {
   destination: {
     title: 'Destino dos cartões',
     subtitle: 'Defina o quadro e a lista usados ao criar cartões pelo SEI.',
+  },
+  rules: {
+    title: 'Regras automáticas',
+    subtitle: 'Ações instantâneas aplicadas só a cartões vinculados ao SEI.',
   },
   sites: {
     title: 'Sites do SEI',
@@ -81,7 +88,7 @@ function App() {
         setBoards([]);
         return;
       }
-      const value = await callRpc('trello:boards', undefined);
+      const value = await callRpc('trello:boards', { fresh: true });
       setBoards(value);
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
@@ -140,9 +147,7 @@ function App() {
           <button
             type="button"
             className="sfo-nav__item sfo-nav__item--dashboard"
-            onClick={() =>
-              void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') })
-            }
+            onClick={() => void openDashboard()}
           >
             <Icon name="board" size={16} />
             Dashboard
@@ -219,6 +224,8 @@ function App() {
             notify={notify}
           />
         )}
+
+        {tab === 'rules' && <RulesSection boards={boards} notify={notify} />}
 
         {tab === 'sites' && (
           <SitesSection settings={settings} applySettings={applySettings} notify={notify} />

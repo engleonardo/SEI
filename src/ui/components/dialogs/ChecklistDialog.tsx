@@ -26,7 +26,7 @@ export function ChecklistDialog({
   useEffect(() => {
     let active = true;
     setLoading(true);
-    callRpc('trello:checklists', { cardId: card.id })
+    callRpc('trello:checklists', { cardId: card.id, fresh: true })
       .then((value) => {
         if (active) setChecklists(value);
       })
@@ -146,7 +146,7 @@ export function ChecklistDialog({
       await callRpc('trello:delete-check-item', { checklistId, checkItemId: itemId });
     } catch (cause) {
       showToast(errorMessage(cause), 'error');
-      setChecklists(await callRpc('trello:checklists', { cardId: card.id }));
+      setChecklists(await callRpc('trello:checklists', { cardId: card.id, fresh: true }));
     }
   };
 
