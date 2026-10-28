@@ -9,7 +9,6 @@ import { LinkCardsDialog } from './LinkCardsDialog';
 
 export interface CardStackProps {
   processNumber: string;
-  processUrl?: string;
   cards: TrelloCard[];
   loading?: boolean;
   error?: string | null;
@@ -30,7 +29,6 @@ export interface CardStackProps {
 
 export function CardStack({
   processNumber,
-  processUrl,
   cards,
   loading = false,
   error = null,
@@ -139,7 +137,6 @@ export function CardStack({
       {showCreate && (
         <CreateCardDialog
           processNumber={processNumber}
-          processUrl={processUrl}
           onClose={() => setShowCreate(false)}
           onCreated={(card) => onAdded([card])}
         />

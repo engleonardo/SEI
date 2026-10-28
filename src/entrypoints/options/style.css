@@ -736,6 +736,77 @@ a {
   font-size: 11.5px;
 }
 
+.sfo-rule-log {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.sfo-rule-log > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sfo-rule-log__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.sfo-rule-log__tools {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.sfo-rule-log__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sfo-rule-log__list > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 11.5px;
+}
+
+.sfo-rule-log__time {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sfo-rule-log__source {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.sfo-rule-log__actions {
+  flex-basis: 100%;
+  color: var(--text-soft);
+}
+
 .sfo-rules-undo__text {
   display: inline-flex;
   flex: 1 1 240px;

@@ -7,6 +7,7 @@ import { openOptionsPage } from '../../core/messaging/actions';
 import type { LastActionTab } from '../../core/storage/last-tab';
 import type { ProcessCatalog, ProcessRecord } from '../../core/storage/processes';
 import { isOriginActivated } from '../../core/storage/settings';
+import { looksLikeSeiUrl } from '../../core/sei/detect';
 import { BrandMark } from '../../ui/BrandMark';
 import { Icon } from '../../ui/icons';
 import { showToast } from '../../ui/toast';
@@ -319,9 +320,12 @@ function Dashboard() {
     });
   };
   const active = activeFilterCount(filters);
-  const lastTabWeb = Boolean(lastTab?.url && /^https?:\/\//i.test(lastTab.url));
-  const siteActive = Boolean(
-    lastTabWeb && lastTab?.url && settings && isOriginActivated(lastTab.url, settings),
+  const seiTab = lastTab?.url && looksLikeSeiUrl(lastTab.url) ? lastTab : null;
+  const hasActivatedSite = Boolean(
+    settings && (settings.allSites || settings.activatedOrigins.length > 0),
+  );
+  const seiOriginActive = Boolean(
+    seiTab?.url && settings && isOriginActivated(seiTab.url, settings),
   );
 
   const activeChips: string[] = [];
@@ -382,9 +386,16 @@ function Dashboard() {
                 <span className="sdo-status__dot" />
                 Trello {connected ? 'conectado' : 'não conectado'}
               </span>
-              <span className={`sdo-status ${siteActive ? 'sdo-status--on' : 'sdo-status--off'}`}>
+              <span
+                className={`sdo-status ${hasActivatedSite ? 'sdo-status--on' : 'sdo-status--off'}`}
+                title={
+                  settings?.allSites
+                    ? 'SEI Flow ativo em todos os sites'
+                    : settings?.activatedOrigins.join(', ') || 'Nenhum site autorizado'
+                }
+              >
                 <span className="sdo-status__dot" />
-                Site {siteActive ? 'ativado' : 'não ativado'}
+                Site {hasActivatedSite ? 'ativado' : 'não ativado'}
               </span>
               {settings?.defaultListName && (
                 <span className="sdo-status sdo-status--muted">
@@ -396,8 +407,8 @@ function Dashboard() {
           </div>
         </div>
         <div className="sdo-hero__actions">
-          {lastTab?.url && (
-            <a className="sfo-btn sfo-btn--sm" href={lastTab.url} target="_blank" rel="noreferrer">
+          {seiTab?.url && (
+            <a className="sfo-btn sfo-btn--sm" href={seiTab.url} target="_blank" rel="noreferrer">
               <Icon name="external" size={14} />
               Abrir SEI
             </a>
@@ -465,8 +476,8 @@ function Dashboard() {
         </div>
       )}
 
-      {settings && !siteActive && lastTabWeb && (
-        <ActivationCard settings={settings} lastTab={lastTab} onChanged={setSettings} />
+      {settings && !seiOriginActive && seiTab && (
+        <ActivationCard settings={settings} lastTab={seiTab} onChanged={setSettings} />
       )}
 
       <section className="sdo-metrics" aria-label="Resumo dos cartões">

@@ -479,7 +479,6 @@ export class ListManager {
         entry.cardRoot?.render(
           <ProcessRowCards
             processNumber={entry.processNumber}
-            processUrl={entry.url}
             compact
             highlight={highlight}
           />,
@@ -524,7 +523,6 @@ export class ListManager {
       entry.cardContainer,
       <ProcessRowCards
         processNumber={entry.processNumber}
-        processUrl={entry.url}
         compact
         highlight={entry.highlight}
       />,

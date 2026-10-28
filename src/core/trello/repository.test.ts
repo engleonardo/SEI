@@ -73,6 +73,18 @@ vi.mock('../storage/processes', () => ({
   getProcessCatalog: async () => ({ ...catalogState.catalog }),
 }));
 
+const logState = vi.hoisted(() => ({ entries: [] as Array<Record<string, unknown>> }));
+
+vi.mock('../storage/rule-log', () => ({
+  pushRuleLog: async (entries: Array<Record<string, unknown>>) => {
+    logState.entries.unshift(...entries);
+  },
+  getRuleLog: async () => [...logState.entries],
+  clearRuleLog: async () => {
+    logState.entries = [];
+  },
+}));
+
 const syncState = vi.hoisted(() => ({
   snapshot: {} as Record<string, unknown>,
 }));
@@ -133,6 +145,7 @@ vi.mock('./cache', () => ({
 
 const PROCESS = '08660.018176/2014-60';
 const OTHER = '12345.678901/2025-12';
+const WARN = 'Não altere as informações abaixo.';
 
 function rawCard(overrides: Partial<TrelloCardApi> = {}): TrelloCardApi {
   return {
@@ -171,6 +184,7 @@ beforeEach(() => {
   runState.runs = [];
   statsState.stats = {};
   catalogState.catalog = {};
+  logState.entries = [];
   mocks.settings = {
     ...mocks.settings,
     defaultBoardId: 'board-1',
@@ -198,7 +212,7 @@ describe('TrelloRepository', () => {
       expect.objectContaining({
         name: 'Novo',
         idList: 'list-1',
-        desc: `Descrição\nSEI ${PROCESS}`,
+        desc: `Descrição\n\n---\n${WARN}\nSEI ${PROCESS}`,
       }),
     );
     expect(card.links).toEqual([PROCESS]);
@@ -215,7 +229,7 @@ describe('TrelloRepository', () => {
     const updated = await repo.updateCard('card-1', { description: 'Nova' });
 
     expect(client.put).toHaveBeenCalledWith('/cards/card-1', {
-      desc: `Nova\nSEI ${PROCESS}\nSEI ${OTHER}`,
+      desc: `Nova\n\n---\n${WARN}\nSEI ${PROCESS}\nSEI ${OTHER}`,
     });
     expect(updated.description).toBe('Nova');
   });
@@ -243,7 +257,7 @@ describe('TrelloRepository', () => {
     expect(results).toHaveLength(1);
     expect(results[0]?.status).toBe('linked');
     expect(client.put).toHaveBeenCalledWith('/cards/card-1', {
-      desc: `Descrição\nSEI ${PROCESS}`,
+      desc: `Descrição\n\n---\n${WARN}\nSEI ${PROCESS}`,
     });
   });
 
@@ -272,7 +286,7 @@ describe('TrelloRepository', () => {
     expect(results[0]?.status).toBe('linked');
     expect(client.put).toHaveBeenCalledTimes(1);
     expect(client.put).toHaveBeenCalledWith('/cards/card-1', {
-      desc: `Descrição\nSEI ${PROCESS}\nSEI ${OTHER}\nSEI ${third}`,
+      desc: `Descrição\n\n---\n${WARN}\nSEI ${PROCESS}\nSEI ${OTHER}\nSEI ${third}`,
     });
   });
 
@@ -287,7 +301,7 @@ describe('TrelloRepository', () => {
     const updated = await repo.unlinkCard('card-1', PROCESS);
 
     expect(client.put).toHaveBeenCalledWith('/cards/card-1', {
-      desc: `Descrição\n\nSEI ${OTHER}`,
+      desc: `Descrição\n\n---\n${WARN}\nSEI ${OTHER}`,
     });
     expect(updated.links).toEqual([OTHER]);
   });
@@ -671,5 +685,101 @@ describe('TrelloRepository', () => {
 
     catalogState.catalog = { [PROCESS]: { unread: true } };
     expect(await repo.applyRuleNow('rule-sei', true)).toEqual({ applied: 1, total: 1 });
+  });
+
+  it('adiciona etiqueta quando o cartão entra na lista e registra a execução', async () => {
+    mocks.settings = { ...mocks.settings, defaultBoardId: '' };
+    mocks.rules = [
+      {
+        id: 'rule-label',
+        name: 'Entrou na lista recebe etiqueta',
+        enabled: true,
+        boardId: 'board-1',
+        trigger: { type: 'enterList', listId: 'list-2' },
+        actions: [{ type: 'addLabel', labelId: 'label-novo', labelName: 'Novo' }],
+      },
+    ];
+
+    let currentList = 'list-1';
+    let hasLabel = false;
+    const client = fakeClient();
+    vi.mocked(client.get).mockImplementation(async () =>
+      rawCard({
+        id: 'card-1',
+        desc: `SEI ${PROCESS}`,
+        idList: currentList,
+        list: { id: currentList, name: 'Lista' },
+        labels: hasLabel ? [{ id: 'label-novo', name: 'Novo', color: 'blue' }] : [],
+      }),
+    );
+    vi.mocked(client.put).mockImplementation(async (_path: string, body?: unknown) => {
+      const patch = body as { idList?: string } | undefined;
+      if (patch?.idList) currentList = patch.idList;
+      return {};
+    });
+    vi.mocked(client.post).mockImplementation(async () => {
+      hasLabel = true;
+      return {};
+    });
+
+    const repo = repository(client);
+    const updated = await repo.updateCard('card-1', { idList: 'list-2' });
+
+    expect(client.post).toHaveBeenCalledWith('/cards/card-1/idLabels', {
+      value: 'label-novo',
+    });
+    expect(updated.labels.map((label) => label.id)).toEqual(['label-novo']);
+    expect(logState.entries[0]).toMatchObject({
+      ruleId: 'rule-label',
+      cardId: 'card-1',
+      source: 'auto',
+      actions: ['Adicionar etiqueta "Novo"'],
+    });
+  });
+
+  it('cria cartão e aplica regra de entrada na lista', async () => {
+    mocks.rules = [
+      {
+        id: 'rule-label',
+        name: 'Entrou na lista recebe etiqueta',
+        enabled: true,
+        boardId: 'board-1',
+        trigger: { type: 'enterList', listId: 'list-1' },
+        actions: [{ type: 'addLabel', labelId: 'label-novo', labelName: 'Novo' }],
+      },
+    ];
+
+    const client = fakeClient();
+    let hasLabel = false;
+    vi.mocked(client.post).mockImplementation(async (path: string) => {
+      if (path === '/cards/card-new/idLabels') {
+        hasLabel = true;
+        return {};
+      }
+      return rawCard({ id: 'card-new', desc: `SEI ${PROCESS}` });
+    });
+    vi.mocked(client.get).mockImplementation(async () =>
+      rawCard({
+        id: 'card-new',
+        desc: `SEI ${PROCESS}`,
+        labels: hasLabel ? [{ id: 'label-novo', name: 'Novo', color: 'blue' }] : [],
+      }),
+    );
+
+    const repo = repository(client);
+    const card = await repo.createCard({
+      name: 'Juliana Gomes',
+      processNumber: PROCESS,
+      listId: 'list-1',
+    });
+
+    expect(client.post).toHaveBeenCalledWith('/cards/card-new/idLabels', {
+      value: 'label-novo',
+    });
+    expect(card.labels.map((label) => label.id)).toContain('label-novo');
+    expect(logState.entries[0]).toMatchObject({
+      ruleId: 'rule-label',
+      cardId: 'card-new',
+    });
   });
 });

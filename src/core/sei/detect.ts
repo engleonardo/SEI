@@ -10,6 +10,28 @@ function actionFromUrl(url: string): string {
   }
 }
 
+/**
+ * Heurística para reconhecer URLs do SEI sem depender do script injetado.
+ * Usada para não guardar sites comuns como "última aba do SEI".
+ */
+export function looksLikeSeiUrl(href: string | null | undefined): boolean {
+  if (!href) return false;
+  try {
+    const url = new URL(href);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    const path = url.pathname.toLowerCase();
+    const search = url.search.toLowerCase();
+    return (
+      /\/(sei|sip|web\/sei)(\/|$)/.test(path) ||
+      /\/controlador\.php$/.test(path) ||
+      /acao=procedimento_/.test(search) ||
+      /infra_(sistema|unidade|hash|tooltip)/.test(search)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function detectPageKind(doc: Document = document, url?: string): SeiPageKind {
   const href = url ?? doc.location?.href ?? '';
   const action = actionFromUrl(href);

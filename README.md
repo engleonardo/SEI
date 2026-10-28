@@ -12,8 +12,8 @@ O **Painel SEI Flow** é a página inicial da extensão: reúne prazos, etiqueta
 
 ## Baixar e instalar
 
-- **Chrome / Edge:** [sei-flow-1.1.1-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.1.1/sei-flow-1.1.1-chrome.zip)
-- **Firefox:** [sei-flow-1.1.1-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.1.1/sei-flow-1.1.1-firefox.zip)
+- **Chrome / Edge:** [sei-flow-1.2.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.2.0/sei-flow-1.2.0-chrome.zip)
+- **Firefox:** [sei-flow-1.2.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.2.0/sei-flow-1.2.0-firefox.zip)
 - **Todas as versões:** [Releases](https://github.com/engleonardo/SEI/releases)
 
 Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` -> **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.
@@ -125,9 +125,13 @@ npm run build
 
 ## Como o vínculo funciona
 
-O vínculo é gravado na descrição do cartão como uma linha:
+O vínculo é gravado no fim da descrição do cartão, em um bloco separado:
 
 ```
+[seu comentário]
+
+---
+Não altere as informações abaixo.
 SEI 08660.018176/2014-60
 ```
 
@@ -136,6 +140,7 @@ SEI 08660.018176/2014-60
 - O texto existente da descrição é preservado.
 - Desvincular remove **apenas** a linha do processo atual; o cartão continua no Trello.
 - O marcador `SEI <processo>` é mantido para interoperabilidade entre versões.
+- O link do SEI **não** é gravado no cartão; a extensão abre o processo pela URL que ela registra ao visitar a lista ou o processo.
 
 ## Painel SEI Flow
 

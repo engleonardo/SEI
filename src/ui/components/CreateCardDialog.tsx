@@ -21,7 +21,6 @@ import { ErrorState, Spinner } from './common';
 
 export interface CreateCardDialogProps {
   processNumber: string;
-  processUrl?: string;
   defaultName?: string;
   onClose: () => void;
   onCreated: (card: TrelloCard) => void;
@@ -29,7 +28,6 @@ export interface CreateCardDialogProps {
 
 export function CreateCardDialog({
   processNumber,
-  processUrl,
   defaultName,
   onClose,
   onCreated,
@@ -221,7 +219,6 @@ export function CreateCardDialog({
         name: name.trim(),
         description,
         processNumber,
-        processUrl,
         boardId,
         listId,
         start: fromDateInputValue(start),

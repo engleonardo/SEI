@@ -12,7 +12,7 @@ import {
   saveSettings,
 } from '../core/storage/settings';
 import { saveLastActionTab } from '../core/storage/last-tab';
-import { listProcessRecords } from '../core/storage/processes';
+import { looksLikeSeiUrl } from '../core/sei/detect';
 
 async function maybeInject(tabId: number, url: string): Promise<void> {
   if (tabId < 0 || !url) return;
@@ -39,7 +39,7 @@ async function injectIntoOpenTabs(): Promise<void> {
 async function onInstalled(details: { reason: string }): Promise<void> {
   await getSettings();
   await setupAlarms();
-  void refreshBadge();
+  await clearBadge();
   if (details.reason === 'install') {
     await openDashboardTab();
   }
@@ -48,7 +48,6 @@ async function onInstalled(details: { reason: string }): Promise<void> {
 const DUE_ALARM = 'sei-flow:due-check';
 const NOTIFICATION_ID = 'sei-flow:due';
 const LAST_NOTIFICATION_KEY = 'sei-flow:last-due-notification';
-let badgeTimer: ReturnType<typeof setTimeout> | null = null;
 
 async function setupAlarms(): Promise<void> {
   try {
@@ -58,31 +57,10 @@ async function setupAlarms(): Promise<void> {
   }
 }
 
-async function refreshBadge(): Promise<void> {
-  try {
-    const processes = await listProcessRecords();
-    const unread = processes.filter((process) => process.unread).length;
-    await browser.action.setBadgeText({
-      text: unread > 0 ? (unread > 99 ? '99+' : String(unread)) : '',
-    });
-    await browser.action.setBadgeBackgroundColor({ color: '#1d4ed8' });
-    await browser.action.setTitle({
-      title:
-        unread > 0
-          ? `SEI Flow - ${unread} processo(s) atualizado(s) no SEI`
-          : 'SEI Flow - gestão eficiente',
-    });
-  } catch {
-    await browser.action.setBadgeText({ text: '' }).catch(() => undefined);
-  }
-}
-
-function scheduleBadgeUpdate(): void {
-  if (badgeTimer) clearTimeout(badgeTimer);
-  badgeTimer = setTimeout(() => {
-    badgeTimer = null;
-    void refreshBadge();
-  }, 2_000);
+/** O ícone não mostra contador; limpa qualquer número de versões anteriores. */
+async function clearBadge(): Promise<void> {
+  await browser.action.setBadgeText({ text: '' }).catch(() => undefined);
+  await browser.action.setTitle({ title: 'SEI Flow' }).catch(() => undefined);
 }
 
 async function notifyDue(): Promise<void> {
@@ -137,13 +115,12 @@ export default defineBackground(() => {
 
   browser.runtime.onStartup.addListener(() => {
     void setupAlarms();
-    void refreshBadge();
+    void clearBadge();
     void injectIntoOpenTabs();
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name !== DUE_ALARM) return;
-    void refreshBadge();
     void notifyDue();
   });
 
@@ -156,7 +133,12 @@ export default defineBackground(() => {
   // O dashboard é a página inicial: o ícone da extensão abre o painel.
   browser.action.onClicked.addListener((tab) => {
     void (async () => {
-      await saveLastActionTab({ id: tab.id, url: tab.url, title: tab.title });
+      if (tab.url) {
+        const settings = await getSettings();
+        if (isOriginActivated(tab.url, settings) || looksLikeSeiUrl(tab.url)) {
+          await saveLastActionTab({ id: tab.id, url: tab.url, title: tab.title });
+        }
+      }
       await openDashboardTab();
     })();
   });
@@ -175,12 +157,6 @@ export default defineBackground(() => {
     if (!isRpcRequest(message)) return false;
     handleRpc(message)
       .then((response) => {
-        if (
-          response.ok &&
-          (message.rpc.startsWith('trello:') || message.rpc.startsWith('processes:'))
-        ) {
-          scheduleBadgeUpdate();
-        }
         sendResponse(response);
       })
       .catch((error: unknown) => {
