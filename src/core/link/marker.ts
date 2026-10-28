@@ -18,7 +18,7 @@ export function parseLinks(description: string | null | undefined): string[] {
   if (!description) return [];
   const links: string[] = [];
   const seen = new Set<string>();
-  for (const line of description.split('\n')) {
+  for (const line of description.replace(/\r\n/g, '\n').split('\n')) {
     const process = parseLinkLine(line);
     if (!process || seen.has(process)) continue;
     seen.add(process);

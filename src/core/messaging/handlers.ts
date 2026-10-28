@@ -20,6 +20,7 @@ import { getRules, saveRules } from '../storage/rules';
 import { getLastRuleRun } from '../storage/rule-runs';
 import { clearRuleStats, getRuleStats } from '../storage/rule-stats';
 import { clearRuleLog, getRuleLog } from '../storage/rule-log';
+import { clearSyncSnapshot } from '../storage/sync';
 
 const repository = new TrelloRepository();
 
@@ -49,7 +50,12 @@ const handlers = {
   'settings:export': ({ includeCredentials }) => exportBackup(includeCredentials),
 
   'settings:import': async ({ data }) => {
+    const before = await getSettings();
     const result = await importBackup(data);
+    if (before.appKey !== result.settings.appKey || before.appToken !== result.settings.appToken) {
+      await cacheClear();
+      await clearSyncSnapshot();
+    }
     return { rules: result.rules };
   },
 

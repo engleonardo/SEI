@@ -1,7 +1,8 @@
+import { browser } from 'wxt/browser';
 import type { Rule } from '../domain/rules';
 import type { Settings } from '../domain/types';
 import { getRules, saveRules } from './rules';
-import { getSettings, saveSettings } from './settings';
+import { getSettings, normalizeOrigin, originPermissionPattern, saveSettings } from './settings';
 
 export interface SettingsBackup {
   app: 'sei-flow';
@@ -58,6 +59,36 @@ function asBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
+type PermissionsApi = {
+  contains?: (permissions: { origins?: string[] }) => Promise<boolean>;
+};
+
+async function hasPermission(origins: string[]): Promise<boolean> {
+  try {
+    const permissions = (browser as unknown as { permissions?: PermissionsApi }).permissions;
+    if (!permissions?.contains) return true;
+    return await permissions.contains({ origins });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Só mantém sites que o navegador realmente autoriza. Ao importar em outra
+ * máquina, as permissões opcionais precisam ser concedidas de novo.
+ */
+async function reconcileOrigins(origins: string[]): Promise<string[]> {
+  const granted: string[] = [];
+  for (const origin of origins) {
+    const normalized = normalizeOrigin(origin);
+    if (!normalized) continue;
+    if (await hasPermission([originPermissionPattern(normalized)])) {
+      granted.push(normalized);
+    }
+  }
+  return Array.from(new Set(granted));
+}
+
 export async function importBackup(value: unknown): Promise<ImportResult> {
   const data = value as Partial<SettingsBackup> | null;
   if (!data || data.app !== 'sei-flow' || !data.settings || typeof data.settings !== 'object') {
@@ -66,9 +97,12 @@ export async function importBackup(value: unknown): Promise<ImportResult> {
 
   const current = await getSettings();
   const incoming = data.settings as Partial<Settings>;
-  const origins = Array.isArray(incoming.activatedOrigins)
+  const incomingOrigins = Array.isArray(incoming.activatedOrigins)
     ? incoming.activatedOrigins.filter((origin): origin is string => typeof origin === 'string')
     : current.activatedOrigins;
+  const origins = await reconcileOrigins(incomingOrigins);
+  const wantsAllSites = asBoolean(incoming.allSites, current.allSites);
+  const allSites = wantsAllSites ? await hasPermission(['*://*/*']) : false;
 
   const patch: Partial<Settings> = {
     defaultBoardId: asString(incoming.defaultBoardId, current.defaultBoardId),
@@ -76,7 +110,7 @@ export async function importBackup(value: unknown): Promise<ImportResult> {
     defaultListId: asString(incoming.defaultListId, current.defaultListId),
     defaultListName: asString(incoming.defaultListName, current.defaultListName),
     activatedOrigins: origins,
-    allSites: asBoolean(incoming.allSites, current.allSites),
+    allSites,
     theme: incoming.theme === 'dark' ? 'dark' : 'light',
     compact: asBoolean(incoming.compact, current.compact),
     notificationsEnabled: asBoolean(

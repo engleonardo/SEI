@@ -57,6 +57,13 @@ describe('link marker', () => {
     );
   });
 
+  it('reconhece vínculos com CRLF e normaliza o bloco', () => {
+    const crlf = `Texto\r\n\r\n---\r\n${LINK_WARNING}\r\nSEI ${PROCESS}`;
+    expect(parseLinks(crlf)).toEqual([PROCESS]);
+    expect(stripLinks(crlf)).toBe('Texto');
+    expect(addLink(crlf, PROCESS)).toBe(`Texto\n\n${BLOCK}\nSEI ${PROCESS}`);
+  });
+
   it('identifica vínculo existente', () => {
     expect(hasLink(`Texto\nSEI ${PROCESS}`, PROCESS)).toBe(true);
     expect(hasLink('Texto', PROCESS)).toBe(false);
