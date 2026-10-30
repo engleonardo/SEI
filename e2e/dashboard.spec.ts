@@ -152,13 +152,15 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
 
     // Cartões de lista: o quadro padrão já vem escolhido e mostra a contagem por lista.
     await expect(dashboard.getByText('Listas do quadro')).toBeVisible();
+    await expect(dashboard.getByRole('button', { name: /Sem vínculo/ })).toBeVisible();
     const listCard = dashboard.locator('.sdo-list-card').filter({ hasText: 'Em análise' }).first();
     await expect(listCard).toBeVisible();
     await listCard.click();
     await expect(dashboard.getByText('Revisar contrato')).toBeVisible();
     await expect(dashboard.locator('.sdo-list-card--on')).toHaveText(/Em análise/);
-    await listCard.click();
-    await expect(dashboard.locator('.sdo-list-card--on')).toHaveText(/Todas as listas/);
+    await expect(dashboard.locator('.sdo-list-card--on')).toHaveCount(1);
+    await dashboard.getByRole('button', { name: /Todas as listas/ }).click();
+    await expect(dashboard.locator('.sdo-list-card--on')).toHaveCount(0);
 
     // Link do processo abre a página real do SEI.
     const processLink = dashboard.getByRole('link', {

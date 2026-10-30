@@ -15,6 +15,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 - Listas do painel aparecem em cartões grandes, no mesmo estilo dos indicadores de prazo, com a contagem de cartões por lista.
 - O seletor de **Quadro** ficou visível na barra de busca do painel (e continua nos filtros).
+- **Todas as listas** e **Sem vínculo** saíram do meio das listas e ficaram como controles discretos no cabeçalho da seção.
 - Listas do painel (chips e filtro) seguem a **ordem do Trello**.
 
 ## [1.2.0] - 2026-10-28

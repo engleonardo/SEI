@@ -740,60 +740,63 @@ function Dashboard() {
               <Icon name="list" size={14} />
               Listas do quadro
             </span>
-            <span className="sdo-lists__hint">Clique em uma lista para filtrar os cartões</span>
+            <div className="sdo-lists__tools">
+              <button
+                type="button"
+                className={`sdo-unlinked-toggle${
+                  filters.link === 'unlinked' ? ' sdo-unlinked-toggle--on' : ''
+                }`}
+                onClick={toggleLinkFilter}
+                aria-pressed={filters.link === 'unlinked'}
+                title="Mostrar apenas cartões sem vínculo com o SEI"
+              >
+                <Icon name="unlink" size={13} />
+                Sem vínculo
+                {filters.link === 'unlinked' && (
+                  <span className="sdo-unlinked-toggle__count">{cards.length}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                className={`sdo-lists__all${filters.listId ? ' sdo-lists__all--clear' : ''}`}
+                onClick={() => updateFilters({ listId: '' })}
+                aria-pressed={!filters.listId}
+                title="Mostrar todas as listas do quadro"
+              >
+                {filters.listId ? <Icon name="close" size={12} /> : null}
+                Todas as listas
+                <span className="sdo-lists__all-count">{listTotal}</span>
+              </button>
+            </div>
           </div>
           <div className="sdo-lists__grid">
-            <button
-              type="button"
-              className={`sdo-list-card${filters.listId ? '' : ' sdo-list-card--on'}`}
-              onClick={() => updateFilters({ listId: '' })}
-            >
-              <span className="sdo-list-card__icon">
-                <Icon name="list" size={16} />
-              </span>
-              <span className="sdo-list-card__body">
-                <span className="sdo-list-card__name">Todas as listas</span>
-                <strong>{listTotal}</strong>
-                <small>cartões no quadro</small>
-              </span>
-            </button>
-            {listCounts.map((list) => (
-              <button
-                key={list.id}
-                type="button"
-                className={`sdo-list-card${filters.listId === list.id ? ' sdo-list-card--on' : ''}`}
-                onClick={() =>
-                  updateFilters({ listId: filters.listId === list.id ? '' : list.id })
-                }
-                title={`Filtrar por ${list.name}`}
-              >
-                <span className="sdo-list-card__icon">
-                  <Icon name="list" size={16} />
-                </span>
-                <span className="sdo-list-card__body">
-                  <span className="sdo-list-card__name">{list.name}</span>
-                  <strong>{list.count}</strong>
-                  <small>{list.count === 1 ? 'cartão' : 'cartões'}</small>
-                </span>
-              </button>
-            ))}
-            <button
-              type="button"
-              className={`sdo-list-card sdo-list-card--action${
-                filters.link === 'unlinked' ? ' sdo-list-card--on' : ''
-              }`}
-              onClick={toggleLinkFilter}
-              title="Mostrar apenas cartões sem vínculo com o SEI"
-            >
-              <span className="sdo-list-card__icon">
-                <Icon name="unlink" size={16} />
-              </span>
-              <span className="sdo-list-card__body">
-                <span className="sdo-list-card__name">Sem vínculo</span>
-                <strong>{filters.link === 'unlinked' ? cards.length : 'Filtrar'}</strong>
-                <small>cartões sem processo SEI</small>
-              </span>
-            </button>
+            {listCounts.map((list) => {
+              const selected = filters.listId === list.id;
+              return (
+                <button
+                  key={list.id}
+                  type="button"
+                  className={`sdo-list-card${selected ? ' sdo-list-card--on' : ''}`}
+                  onClick={() => updateFilters({ listId: selected ? '' : list.id })}
+                  aria-pressed={selected}
+                  title={`Filtrar por ${list.name}`}
+                >
+                  <span className="sdo-list-card__icon">
+                    <Icon name="list" size={16} />
+                  </span>
+                  <span className="sdo-list-card__body">
+                    <span className="sdo-list-card__name">{list.name}</span>
+                    <strong>{list.count}</strong>
+                    <small>{list.count === 1 ? 'cartão' : 'cartões'}</small>
+                  </span>
+                  {selected && (
+                    <span className="sdo-list-card__check" aria-hidden="true">
+                      <Icon name="check" size={12} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </section>
       )}
