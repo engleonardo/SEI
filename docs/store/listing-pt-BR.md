@@ -91,7 +91,7 @@ Os arquivos estão em `docs/store/screenshots-1280x800/` (gerados por `node scri
 4. `rules-1280x800.png` - regras automáticas com contador, aplicar agora e desfazer.
 5. `list-1280x800.png` - cartões anexados à lista de processos, com etiquetas e destaque de novidade.
 
-Imagens adicionais para documentação: `rules-dark-1280x800.png`, `filter-1280x800.png`, `create-dialog-1280x800.png`, `bulk-1280x800.png`, `link-dialog-1280x800.png` e `options-1280x800.png`.
+Imagens adicionais para documentação: `rules-dark-1280x800.png`, `filter-1280x800.png`, `create-dialog-1280x800.png` e `options-1280x800.png`.
 
 Para regerar: `npm run build` e depois `node scripts/store-screenshots.mjs`. As capturas usam dados fictícios.
 

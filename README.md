@@ -50,7 +50,7 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 </p>
 <p align="center">
   <img src="docs/screenshots/process.png" width="48%" alt="Processo aberto com o painel do SEI Flow" />
-  <img src="docs/screenshots/link-dialog.png" width="48%" alt="Vincular cartões existentes em lote" />
+  <img src="docs/screenshots/rules.png" width="48%" alt="Regras automáticas com contador e desfazer" />
 </p>
 <p align="center">
   <img src="docs/screenshots/create-dialog.png" width="48%" alt="Criar cartão a partir do processo" />
