@@ -7,7 +7,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { chromium } from '@playwright/test';
 
@@ -347,19 +347,33 @@ async function startOutputServer() {
     '.css': 'text/css; charset=utf-8',
     '.png': 'image/png',
   };
-  const server = createServer(async (req, res) => {
-    try {
-      const url = (req.url ?? '/').split('?')[0];
-      const name = url === '/' ? '/dashboard.html' : url;
-      if (!/^\/[\w./-]+$/.test(name)) throw new Error('caminho inválido');
-      const body = await readFile(join(OUTPUT, name.replace(/^\//, '')));
-      res.writeHead(200, {
-        'content-type': types[extname(name)] ?? 'application/octet-stream',
-      });
-      res.end(body);
-    } catch {
-      res.writeHead(404).end('not found');
+  const files = new Map();
+
+  const walk = async (dir, prefix) => {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const fullPath = join(dir, entry.name);
+      const key = `${prefix}/${entry.name}`;
+      if (entry.isDirectory()) {
+        await walk(fullPath, key);
+      } else if (entry.isFile()) {
+        files.set(key, {
+          body: await readFile(fullPath),
+          type: types[extname(entry.name)] ?? 'application/octet-stream',
+        });
+      }
     }
+  };
+  await walk(OUTPUT, '');
+
+  const server = createServer((req, res) => {
+    const url = (req.url ?? '/').split('?')[0];
+    const entry = files.get(url === '/' ? '/dashboard.html' : url);
+    if (!entry) {
+      res.writeHead(404).end('not found');
+      return;
+    }
+    res.writeHead(200, { 'content-type': entry.type });
+    res.end(entry.body);
   });
   await new Promise((resolve) => server.listen(4190, '127.0.0.1', resolve));
   return server;
