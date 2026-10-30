@@ -78,7 +78,7 @@ export function CreateCardDialog({
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialBoardId, initialListId]);
 
   useEffect(() => {
     if (!settings) return;
@@ -107,7 +107,7 @@ export function CreateCardDialog({
     return () => {
       active = false;
     };
-  }, [settings]);
+  }, [settings, initialBoardId]);
 
   useEffect(() => {
     if (!boardId) {
@@ -139,7 +139,7 @@ export function CreateCardDialog({
     return () => {
       active = false;
     };
-  }, [boardId, settings]);
+  }, [boardId, settings, initialListId]);
 
   useEffect(() => {
     if (!boardId) {

@@ -15,6 +15,7 @@ import type { ProcessRecord } from '../storage/processes';
 import type { Rule, RuleRun } from '../domain/rules';
 import type { RuleStats } from '../storage/rule-stats';
 import type { RuleLogEntry } from '../storage/rule-log';
+import type { LinkCandidate } from '../link/scan';
 import type { SettingsBackup } from '../storage/backup';
 
 export interface RpcMap {
@@ -42,6 +43,10 @@ export interface RpcMap {
   };
   'trello:all-linked-cards': { payload: { fresh?: boolean } | undefined; result: TrelloCard[] };
   'trello:search-cards': { payload: { query: string }; result: TrelloCard[] };
+  'trello:unlinked-candidates': {
+    payload: { boardId: string };
+    result: LinkCandidate[];
+  };
   'trello:create-card': {
     payload: {
       name: string;

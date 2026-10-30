@@ -782,4 +782,34 @@ describe('TrelloRepository', () => {
       cardId: 'card-new',
     });
   });
+
+  it('encontra cartões sem vínculo com número de processo no comentário', async () => {
+    const SEI_IN_TEXT = '23541.040441/2026-70';
+    const client = fakeClient();
+    vi.mocked(client.get).mockImplementation(async (path: string) => {
+      if (path === '/members/me/boards') return [{ id: 'board-1', name: 'Quadro' }];
+      if (path === '/boards/board-1/lists') {
+        return [{ id: 'list-1', name: 'Lista', pos: 1 }];
+      }
+      if (path === '/boards/board-1/cards') {
+        return [
+          rawCard({ id: 'card-1', desc: `SEI: ${SEI_IN_TEXT}\nNome: Ana` }),
+          rawCard({ id: 'card-2', desc: `SEI ${PROCESS}` }),
+          rawCard({ id: 'card-3', desc: 'Sem número de processo' }),
+        ];
+      }
+      return [];
+    });
+
+    const repo = repository(client);
+    const candidates = await repo.findUnlinkedCandidates('board-1');
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({
+      cardId: 'card-1',
+      cardName: 'Cartão',
+      processNumber: SEI_IN_TEXT,
+    });
+    expect(candidates[0]?.snippet).toContain(SEI_IN_TEXT);
+  });
 });

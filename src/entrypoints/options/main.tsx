@@ -235,7 +235,9 @@ function App() {
           <PreferencesSection settings={settings} save={save} notify={notify} />
         )}
 
-        {tab === 'diagnostics' && <DiagnosticsSection settings={settings} notify={notify} />}
+        {tab === 'diagnostics' && (
+          <DiagnosticsSection settings={settings} boards={boards} notify={notify} />
+        )}
 
         <div className="sfo-alert sfo-alert--warning">
           <Icon name="alert" size={16} />

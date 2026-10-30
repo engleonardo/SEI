@@ -12,6 +12,7 @@ import type {
 } from '../domain/types';
 import { normalizeProcessNumber, sanitizeProcessForQuery } from '../domain/process';
 import { addLink, hasLink, parseLinks, removeLink, renderLinks, stripLinks } from '../link/marker';
+import { findProcessNumbers, snippetFor, type LinkCandidate } from '../link/scan';
 import { getRules } from '../storage/rules';
 import {
   forgetCards,
@@ -244,6 +245,33 @@ export class TrelloRepository {
     if (!query) return [];
     const raw = await this.safeSearch(`name:"${query.replace(/["\\]/g, '')}" is:open`);
     return toCards(raw);
+  }
+
+  /**
+   * Procura cartões sem vínculo cujo comentário tenha um número de processo SEI.
+   * Não altera nada: apenas devolve os candidatos para confirmação do usuário.
+   */
+  async findUnlinkedCandidates(boardId: string): Promise<LinkCandidate[]> {
+    const cards = await this.getBoardCards(boardId, true);
+    const candidates: LinkCandidate[] = [];
+
+    for (const card of cards) {
+      if (card.links.length > 0) continue;
+      for (const processNumber of findProcessNumbers(card.description)) {
+        candidates.push({
+          cardId: card.id,
+          cardName: card.name,
+          processNumber,
+          snippet: snippetFor(card.description, processNumber),
+        });
+      }
+    }
+
+    return candidates.sort(
+      (a, b) =>
+        a.cardName.localeCompare(b.cardName, 'pt-BR') ||
+        a.processNumber.localeCompare(b.processNumber, 'pt-BR'),
+    );
   }
 
   async getCardsForProcess(processNumber: string, fresh = false): Promise<TrelloCard[]> {
