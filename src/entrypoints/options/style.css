@@ -810,19 +810,57 @@ a {
 .sfo-candidates {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 320px;
+  gap: 8px;
+  max-height: 360px;
   overflow-y: auto;
+}
+
+.sfo-candidate-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.sfo-candidate-group__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.sfo-candidate-group__head input {
+  accent-color: var(--accent);
+}
+
+.sfo-candidate-group__badge {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.sfo-candidate-group__items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 2px;
 }
 
 .sfo-candidate {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 6px 8px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
+  border-radius: 8px;
+  background: var(--surface-soft);
   cursor: pointer;
 }
 

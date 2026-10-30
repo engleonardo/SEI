@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { browser } from 'wxt/browser';
 import type { Settings, TrelloBoard } from '../../../core/domain/types';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
@@ -122,11 +122,12 @@ export function DiagnosticsSection({
       const result = await callRpc('trello:unlinked-candidates', { boardId: linkBoardId });
       setCandidates(result);
       setSelected(new Set(result.map(candidateKey)));
+      const cards = new Set(result.map((candidate) => candidate.cardId)).size;
       notify({
         kind: result.length > 0 ? 'info' : 'success',
         text:
           result.length > 0
-            ? `${result.length} candidato(s) encontrado(s). Confira e confirme o vínculo.`
+            ? `${result.length} candidato(s) em ${cards} cartão(ões). Confira e confirme o vínculo.`
             : 'Nenhum cartão sem vínculo com número de processo no comentário.',
       });
     } catch (cause) {
@@ -175,6 +176,36 @@ export function DiagnosticsSection({
       return next;
     });
   };
+
+  const toggleGroup = (keys: string[], checked: boolean) => {
+    setSelected((previous) => {
+      const next = new Set(previous);
+      for (const key of keys) {
+        if (checked) next.add(key);
+        else next.delete(key);
+      }
+      return next;
+    });
+  };
+
+  const candidateGroups = useMemo(() => {
+    const map = new Map<string, { cardId: string; cardName: string; items: LinkCandidate[] }>();
+    for (const candidate of candidates) {
+      const group = map.get(candidate.cardId);
+      if (group) {
+        group.items.push(candidate);
+      } else {
+        map.set(candidate.cardId, {
+          cardId: candidate.cardId,
+          cardName: candidate.cardName,
+          items: [candidate],
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      a.cardName.localeCompare(b.cardName, 'pt-BR'),
+    );
+  }, [candidates]);
 
   const diagnostics = [
     `SEI Flow v${manifest.version}`,
@@ -386,8 +417,10 @@ export function DiagnosticsSection({
           <>
             <div className="sfo-actions">
               <span className="sfo-hint">
-                {candidates.length} candidato(s). O comentário não é alterado; o bloco de vínculo
-                é incluído no fim da descrição.
+                {candidates.length} candidato(s) em{' '}
+                {new Set(candidates.map((candidate) => candidate.cardId)).size} cartão(ões).
+                Cartões com mais de um número aparecem agrupados com a contagem de processos. O
+                comentário não é alterado; o bloco de vínculo é incluído no fim da descrição.
               </span>
               <button
                 type="button"
@@ -406,23 +439,46 @@ export function DiagnosticsSection({
             </div>
 
             <div className="sfo-candidates">
-              {candidates.map((candidate) => {
-                const key = candidateKey(candidate);
+              {candidateGroups.map((group) => {
+                const keys = group.items.map(candidateKey);
+                const allSelected = keys.every((key) => selected.has(key));
                 return (
-                  <label key={key} className="sfo-candidate">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(key)}
-                      onChange={() => toggleCandidate(candidate)}
-                    />
-                    <span className="sfo-candidate__body">
-                      <span className="sfo-candidate__head">
-                        <strong>{candidate.cardName}</strong>
-                        <code>{candidate.processNumber}</code>
-                      </span>
-                      <span className="sfo-candidate__snippet">{candidate.snippet}</span>
-                    </span>
-                  </label>
+                  <div key={group.cardId} className="sfo-candidate-group">
+                    <div className="sfo-candidate-group__head">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={() => toggleGroup(keys, !allSelected)}
+                        aria-label={`Selecionar todos os processos de ${group.cardName}`}
+                      />
+                      <strong>{group.cardName}</strong>
+                      {group.items.length > 1 && (
+                        <span className="sfo-candidate-group__badge">
+                          {group.items.length} processos
+                        </span>
+                      )}
+                    </div>
+                    <div className="sfo-candidate-group__items">
+                      {group.items.map((candidate) => {
+                        const key = candidateKey(candidate);
+                        return (
+                          <label key={key} className="sfo-candidate">
+                            <input
+                              type="checkbox"
+                              checked={selected.has(key)}
+                              onChange={() => toggleCandidate(candidate)}
+                            />
+                            <span className="sfo-candidate__body">
+                              <span className="sfo-candidate__head">
+                                <code>{candidate.processNumber}</code>
+                              </span>
+                              <span className="sfo-candidate__snippet">{candidate.snippet}</span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
             </div>
