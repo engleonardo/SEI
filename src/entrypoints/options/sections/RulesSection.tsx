@@ -12,11 +12,12 @@ import {
   type RuleRun,
   type RuleTriggerType,
 } from '../../../core/domain/rules';
+import { parseRulesImport } from '../../../core/domain/rule-import';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
 import type { RuleStats } from '../../../core/storage/rule-stats';
 import type { RuleLogEntry } from '../../../core/storage/rule-log';
 import { Icon } from '../../../ui/icons';
-import { ConfirmDialog } from '../../../ui/components/Modal';
+import { ConfirmDialog, Modal } from '../../../ui/components/Modal';
 import { SectionCard, Spinner, StatusPill, type Notice } from './shared';
 
 export function RulesSection({
@@ -43,6 +44,12 @@ export function RulesSection({
   const [undoOpen, setUndoOpen] = useState(false);
   const [undoing, setUndoing] = useState(false);
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
+  const [exportOpen, setExportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importError, setImportError] = useState<string | null>(null);
+  const [pendingReplace, setPendingReplace] = useState<Rule[] | null>(null);
+  const [importing, setImporting] = useState(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const saveSeq = useRef(0);
 
@@ -153,7 +160,7 @@ export function RulesSection({
       });
   };
 
-  const exportRules = () => {
+  const exportRules = async (mode: 'clipboard' | 'file') => {
     if (rules.length === 0) {
       notify({ kind: 'info', text: 'Nenhuma regra para exportar.' });
       return;
@@ -164,18 +171,99 @@ export function RulesSection({
       exportedAt: new Date().toISOString(),
       rules,
     };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `sei-flow-regras-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-    notify({ kind: 'success', text: `${rules.length} regra(s) exportada(s).` });
+    const json = JSON.stringify(payload, null, 2);
+
+    try {
+      if (mode === 'clipboard') {
+        await navigator.clipboard.writeText(json);
+        setExportOpen(false);
+        notify({
+          kind: 'success',
+          text: `${rules.length} regra(s) copiada(s) para a área de transferência.`,
+        });
+        return;
+      }
+
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `sei-flow-regras-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setExportOpen(false);
+      notify({ kind: 'success', text: `${rules.length} regra(s) exportada(s).` });
+    } catch (cause) {
+      notify({ kind: 'error', text: errorMessage(cause) });
+    }
+  };
+
+  const openImport = () => {
+    setImportText('');
+    setImportError(null);
+    setImportOpen(true);
+  };
+
+  const parseImportedRules = (): Rule[] | null => {
+    try {
+      const imported = parseRulesImport(importText);
+      setImportError(null);
+      return imported;
+    } catch (cause) {
+      setImportError(errorMessage(cause));
+      return null;
+    }
+  };
+
+  const commitImport = async (imported: Rule[], mode: 'merge' | 'replace') => {
+    setImporting(true);
+    try {
+      // Garante que nenhuma edição pendente sobrescreva a importação.
+      await queue.current;
+      const base = mode === 'merge' ? rules : [];
+      const map = new Map(base.map((rule) => [rule.id, rule]));
+      for (const rule of imported) map.set(rule.id, rule);
+      const next = Array.from(map.values());
+      const saved = await callRpc('rules:save', { rules: next });
+      saveSeq.current += 1;
+      setSaveState('saved');
+      setRules(saved);
+
+      const boardIds = new Set(saved.map((rule) => rule.boardId).filter(Boolean));
+      for (const boardId of boardIds) void loadBoardData(boardId);
+
+      const ignored = next.length - saved.length;
+      notify({
+        kind: ignored > 0 ? 'warning' : 'success',
+        text:
+          mode === 'merge'
+            ? `${imported.length} regra(s) lida(s); ${saved.length} no total.${
+                ignored > 0 ? ` ${ignored} ignorada(s) por formato inválido.` : ''
+              }`
+            : `${saved.length} regra(s) importada(s).${
+                ignored > 0 ? ` ${ignored} ignorada(s) por formato inválido.` : ''
+              }`,
+      });
+      setImportOpen(false);
+      setImportText('');
+      setPendingReplace(null);
+    } catch (cause) {
+      notify({ kind: 'error', text: errorMessage(cause) });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const applyImport = (mode: 'merge' | 'replace') => {
+    const imported = parseImportedRules();
+    if (!imported) return;
+    if (mode === 'replace') {
+      setPendingReplace(imported);
+      return;
+    }
+    void commitImport(imported, 'merge');
   };
 
   const updateRule = (ruleId: string, patch: Partial<Rule>) => {
@@ -367,11 +455,15 @@ export function RulesSection({
           <button
             type="button"
             className="sfo-btn"
-            onClick={exportRules}
+            onClick={() => setExportOpen(true)}
             disabled={rules.length === 0}
           >
             <Icon name="external" size={14} />
             Exportar regras
+          </button>
+          <button type="button" className="sfo-btn" onClick={openImport}>
+            <Icon name="link" size={14} />
+            Importar regras
           </button>
           <span className={`sfo-rules-save${saveState === 'error' ? ' sfo-rules-save--error' : ''}`}>
             {saveState === 'saving' ? (
@@ -735,6 +827,131 @@ export function RulesSection({
           busy={undoing}
           onConfirm={() => void undoLastRun()}
           onClose={() => setUndoOpen(false)}
+        />
+      )}
+      {exportOpen && (
+        <Modal
+          title="Exportar regras"
+          subtitle={`${rules.length} regra(s) serão exportadas.`}
+          size="sm"
+          onClose={() => setExportOpen(false)}
+          footer={
+            <>
+              <button type="button" className="sf-btn" onClick={() => setExportOpen(false)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="sf-btn"
+                onClick={() => void exportRules('clipboard')}
+              >
+                <Icon name="list" size={14} />
+                Copiar regras
+              </button>
+              <button
+                type="button"
+                className="sf-btn sf-btn--primary"
+                onClick={() => void exportRules('file')}
+              >
+                <Icon name="external" size={14} />
+                Baixar JSON
+              </button>
+            </>
+          }
+        >
+          <p style={{ margin: 0, color: 'var(--sf-text-soft)', fontSize: 13 }}>
+            Copie o JSON para colar em outro computador ou baixe um arquivo. O conteúdo inclui
+            apenas as regras.
+          </p>
+        </Modal>
+      )}
+      {importOpen && (
+        <Modal
+          title="Importar regras"
+          subtitle="Cole o JSON exportado pelo SEI Flow ou selecione o arquivo."
+          onClose={() => {
+            if (!importing) setImportOpen(false);
+          }}
+          footer={
+            <>
+              <button
+                type="button"
+                className="sf-btn"
+                onClick={() => setImportOpen(false)}
+                disabled={importing}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="sf-btn"
+                onClick={() => applyImport('merge')}
+                disabled={importing || !importText.trim()}
+              >
+                Adicionar às existentes
+              </button>
+              <button
+                type="button"
+                className="sf-btn sf-btn--primary"
+                onClick={() => applyImport('replace')}
+                disabled={importing || !importText.trim()}
+              >
+                {importing ? <span className="sf-spinner" /> : <Icon name="check" size={14} />}
+                Substituir tudo
+              </button>
+            </>
+          }
+        >
+          <div className="sf-field">
+            <label htmlFor="sfo-import-rules-file">Arquivo JSON</label>
+            <input
+              id="sfo-import-rules-file"
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (!file) return;
+                void file.text().then((text) => {
+                  setImportText(text);
+                  setImportError(null);
+                });
+              }}
+            />
+          </div>
+          <div className="sf-field">
+            <label htmlFor="sfo-import-rules-text">Ou cole as regras</label>
+            <textarea
+              id="sfo-import-rules-text"
+              className="sf-input"
+              style={{ minHeight: 150, fontFamily: 'ui-monospace, monospace', fontSize: 11.5 }}
+              value={importText}
+              onChange={(event) => {
+                setImportText(event.target.value);
+                setImportError(null);
+              }}
+              placeholder='{"app":"sei-flow-rules","rules":[...]}'
+            />
+          </div>
+          {importError && (
+            <p className="sf-hint" style={{ margin: 0, color: 'var(--sf-danger)' }}>
+              {importError}
+            </p>
+          )}
+          <p className="sf-hint" style={{ margin: 0 }}>
+            <strong>Adicionar</strong> mantém as regras atuais e acrescenta as novas.{' '}
+            <strong>Substituir tudo</strong> apaga as atuais e usa apenas as importadas.
+          </p>
+        </Modal>
+      )}
+      {pendingReplace && (
+        <ConfirmDialog
+          title="Substituir todas as regras"
+          message={`As ${rules.length} regra(s) atuais serão substituídas por ${pendingReplace.length} regra(s) importadas. Essa ação não pode ser desfeita.`}
+          confirmLabel="Substituir tudo"
+          tone="danger"
+          busy={importing}
+          onConfirm={() => void commitImport(pendingReplace, 'replace')}
+          onClose={() => setPendingReplace(null)}
         />
       )}
     </>

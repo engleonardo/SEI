@@ -10,7 +10,8 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - Filtro **Sem vínculo** no painel para ver cartões do quadro que ainda não estão vinculados a processos do SEI.
 - Botão **Novo cartão** no painel para criar cartões no Trello sem abrir o Trello (com etiquetas, quadro/lista e datas).
 - **Vincular cartões desvinculados** (Opções -> Diagnóstico): procura cartões sem vínculo que citam um número de processo SEI, mostra os candidatos e vincula somente após confirmação, sem alterar o comentário.
-- **Exportar regras** na aba Regras, gerando um arquivo JSON apenas com as regras.
+- **Exportar regras** na aba Regras, com opção de copiar o JSON ou baixar um arquivo.
+- **Importar regras** na aba Regras, colando o JSON ou selecionando um arquivo, com opção de adicionar às regras atuais ou substituir todas.
 - **Ativação automática de sites que começam com “sei”** nas Opções, cobrindo endereços como `sei.ufsc.br` sem cadastrar um por um.
 
 ### Alterado
