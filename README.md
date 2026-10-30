@@ -12,8 +12,8 @@ O **Painel SEI Flow** é a página inicial da extensão: reúne prazos, etiqueta
 
 ## Baixar e instalar
 
-- **Chrome / Edge:** [sei-flow-1.2.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.2.0/sei-flow-1.2.0-chrome.zip)
-- **Firefox:** [sei-flow-1.2.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.2.0/sei-flow-1.2.0-firefox.zip)
+- **Chrome / Edge:** [sei-flow-1.3.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.3.0/sei-flow-1.3.0-chrome.zip)
+- **Firefox:** [sei-flow-1.3.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.3.0/sei-flow-1.3.0-firefox.zip)
 - **Todas as versões:** [Releases](https://github.com/engleonardo/SEI/releases)
 
 Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` -> **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.
@@ -39,7 +39,10 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 ## Capturas de tela
 
 <p align="center">
-  <img src="docs/screenshots/dashboard.png" width="100%" alt="Painel SEI Flow com métricas, filtros, etiquetas e cartões" />
+  <img src="docs/screenshots/dashboard.png" width="100%" alt="Painel SEI Flow com métricas, listas na ordem do Trello e cartões" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/dashboard-dark.png" width="100%" alt="Painel SEI Flow no modo escuro" />
 </p>
 <p align="center">
   <img src="docs/screenshots/list.png" width="48%" alt="Lista de processos com cartões do Trello" />
@@ -76,7 +79,11 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 | Desvincular sem excluir do Trello | Sim |
 | Excluir cartão do Trello | Sim |
 | Filtros por quadro, lista, etiqueta, prazo e cartão | Sim |
-| Tema claro/escuro (claro padrão) | Sim |
+| Filtro **Sem vínculo** e vínculo por número no comentário | Sim |
+| Criar cartão direto pelo painel | Sim |
+| Listas na ordem do Trello e ordenação padrão por lista | Sim |
+| Importar e exportar regras em JSON | Sim |
+| Tema claro/escuro no painel, opções e painéis do SEI | Sim |
 | Cache e retry/backoff em 429/5xx | Sim |
 | Painel SEI Flow como página inicial da extensão | Sim |
 | Painel moderno com métricas resumidas e filtros recolhíveis | Sim |
@@ -85,7 +92,6 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 | Edição completa dos cartões pelo painel, sem modal | Sim |
 | Métricas do painel refletem os filtros aplicados | Sim |
 | Links dos processos abrem a página correspondente no SEI | Sim |
-| Badge com processos atualizados no SEI | Sim |
 | Atualizações do Trello (7/30 dias e desde a última visita) | Sim |
 | Notificações diárias de prazos | Sim |
 | Barra fixa, atalho de busca e filtros persistidos | Sim |
