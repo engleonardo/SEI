@@ -2,17 +2,25 @@ import { useState } from 'react';
 import { browser } from 'wxt/browser';
 import type { Settings } from '../../../core/domain/types';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
-import { normalizeOrigin, originPermissionPattern } from '../../../core/storage/settings';
+import { isSeiHost, normalizeOrigin, originPermissionPattern } from '../../../core/storage/settings';
 import { Icon } from '../../../ui/icons';
-import { SectionCard, Spinner, StatusPill, type Notice } from './shared';
+import {
+  CollapsibleCard,
+  SectionCard,
+  Spinner,
+  StatusPill,
+  type Notice,
+} from './shared';
 
 export function SitesSection({
   settings,
   applySettings,
+  save,
   notify,
 }: {
   settings: Settings;
   applySettings: (settings: Settings) => void;
+  save: (patch: Partial<Settings>) => Promise<Settings>;
   notify: (notice: Notice) => void;
 }) {
   const [originInput, setOriginInput] = useState('');
@@ -44,8 +52,38 @@ export function SitesSection({
     }
   };
 
+  const toggleAutoSei = async () => {
+    const next = !settings.autoSeiHosts;
+    setBusy(true);
+    try {
+      if (next) {
+        const granted = await browser.permissions.request({ origins: ['*://*/*'] });
+        if (!granted) {
+          notify({
+            kind: 'error',
+            text: 'Permissão para ativar sites que começam com “sei” não concedida.',
+          });
+          return;
+        }
+      }
+      const updated = await save({ autoSeiHosts: next });
+      applySettings(updated);
+      notify({
+        kind: 'success',
+        text: next
+          ? 'Sites que começam com “sei” serão ativados automaticamente.'
+          : 'Ativação automática dos sites “sei” desabilitada.',
+      });
+    } catch (cause) {
+      notify({ kind: 'error', text: errorMessage(cause) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const addOrigin = async () => {
-    const origin = normalizeOrigin(originInput);
+    const raw = originInput.includes('://') ? originInput : `https://${originInput.trim()}`;
+    const origin = normalizeOrigin(raw);
     if (!origin) {
       notify({ kind: 'error', text: 'Informe uma URL válida, começando com https:// ou http://.' });
       return;
@@ -106,10 +144,20 @@ export function SitesSection({
         footer={
           <>
             <span style={{ flex: 1 }} />
-            <StatusPill tone={settings.allSites || settings.activatedOrigins.length > 0 ? 'success' : 'warning'}>
+            <StatusPill
+              tone={
+                settings.allSites ||
+                settings.autoSeiHosts ||
+                settings.activatedOrigins.length > 0
+                  ? 'success'
+                  : 'warning'
+              }
+            >
               {settings.allSites
                 ? 'Todos os sites'
-                : `${settings.activatedOrigins.length} site(s) ativado(s)`}
+                : settings.autoSeiHosts
+                  ? 'Sites “sei” automáticos'
+                  : `${settings.activatedOrigins.length} site(s) ativado(s)`}
             </StatusPill>
           </>
         }
@@ -126,6 +174,28 @@ export function SitesSection({
             <span className="sfo-toggle-row__text">
               Recomendado para quem usa várias instalações do SEI. Concede permissão de leitura e
               alteração em todos os sites, mas o script só age quando detecta o SEI.
+            </span>
+          </span>
+        </label>
+
+        <label
+          className={`sfo-toggle-row${settings.allSites ? ' sfo-toggle-row--disabled' : ''}`}
+        >
+          <input
+            type="checkbox"
+            checked={settings.autoSeiHosts}
+            onChange={() => void toggleAutoSei()}
+            disabled={busy || settings.allSites}
+          />
+          <span className="sfo-toggle-row__body">
+            <span className="sfo-toggle-row__title">
+              Ativar automaticamente sites que começam com “sei”
+            </span>
+            <span className="sfo-toggle-row__text">
+              Cobre endereços como <code>https://sei.ufsc.br</code>,{' '}
+              <code>http://seiprocesos.orgao.gov.br</code> e similares sem cadastrar um por um. Pede
+              a permissão ampla uma única vez; a interface continua aparecendo apenas em páginas do
+              SEI.
             </span>
           </span>
         </label>
@@ -159,8 +229,9 @@ export function SitesSection({
             </button>
           </div>
           <span className="sfo-hint">
-            Informe apenas a origem, sem caminho. Ex.: <code>https://sei.exemplo.gov.br</code>. O
-            navegador pedirá permissão para esse domínio.
+            Informe apenas a origem, sem caminho. Ex.: <code>sei.exemplo.gov.br</code> ou{' '}
+            <code>https://sei.exemplo.gov.br</code>. O navegador pedirá permissão para esse
+            domínio.
           </span>
         </div>
 
@@ -168,7 +239,9 @@ export function SitesSection({
           <div className="sfo-empty">
             {settings.allSites
               ? 'Todos os sites estão ativados.'
-              : 'Nenhum site específico ativado. Use o campo acima ou o painel da extensão.'}
+              : settings.autoSeiHosts
+                ? 'Nenhum site específico cadastrado. Sites que começam com “sei” já são ativados automaticamente.'
+                : 'Nenhum site específico ativado. Use o campo acima ou o painel da extensão.'}
           </div>
         ) : (
           <div className="sfo-list">
@@ -180,7 +253,9 @@ export function SitesSection({
                   <div className="sfo-list-item__meta">
                     {settings.allSites
                       ? 'Coberto pela ativação em todos os sites'
-                      : 'Permissão concedida para este domínio'}
+                      : settings.autoSeiHosts && isSeiHost(origin)
+                        ? 'Coberto pela ativação automática de sites “sei”'
+                        : 'Permissão concedida para este domínio'}
                   </div>
                 </div>
                 <button
@@ -198,7 +273,11 @@ export function SitesSection({
         )}
       </SectionCard>
 
-      <SectionCard title="Como funciona a injeção" subtitle="Sem content scripts globais no manifest." icon="info">
+      <CollapsibleCard
+        title="Como funciona a injeção"
+        subtitle="Sem content scripts globais no manifest."
+        icon="info"
+      >
         <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text-soft)', fontSize: 13 }}>
           <li>
             Ao abrir uma aba em um site autorizado, o service worker injeta o script do SEI Flow
@@ -216,7 +295,7 @@ export function SitesSection({
             navegador.
           </li>
         </ul>
-      </SectionCard>
+      </CollapsibleCard>
     </>
   );
 }

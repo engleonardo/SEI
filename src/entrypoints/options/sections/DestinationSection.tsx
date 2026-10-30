@@ -89,8 +89,8 @@ export function DestinationSection({
 
   return (
     <SectionCard
-      title="Destino dos novos cartões"
-      subtitle="Escolha onde os cartões criados a partir do SEI serão adicionados. Você ainda pode mover cada cartão individualmente."
+      title="Quadro e lista padrão"
+      subtitle="Destino principal dos cartões criados a partir do SEI. Você ainda pode mover cada cartão individualmente."
       icon="board"
       footer={
         <>

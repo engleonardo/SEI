@@ -4,7 +4,7 @@
 
 - [ ] Conta de desenvolvedor paga e verificada no Chrome Web Store.
 - [ ] `npm ci && npm run verify` passando.
-- [ ] `npm run build && npm run zip` gerando `.output/sei-flow-1.2.0-chrome.zip`.
+- [ ] `npm run build && npm run zip` gerando `.output/sei-flow-1.3.0-chrome.zip`.
 - [ ] Ícone 128×128 correto (`public/icon-128.png`).
 - [ ] Screenshots 1280×800 em `docs/store/screenshots-1280x800/`.
 - [ ] Banner 440×280 em `docs/store/banner-440x280.png` (opcional, para destaque).
@@ -23,7 +23,7 @@
 
 ## Após publicar
 
-- [ ] Criar uma tag `v1.2.0` (ou a versão publicada) no GitHub.
+- [ ] Criar uma tag `v1.3.0` (ou a versão publicada) no GitHub.
 - [ ] Anexar o zip ao GitHub Release.
 - [ ] Configurar os segredos da loja para o envio automático (veja `auto-publish.md`).
 - [ ] Confirmar o link da loja no README.

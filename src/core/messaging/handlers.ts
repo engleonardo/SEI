@@ -81,6 +81,7 @@ const handlers = {
     repository.getCardsForProcess(processNumber, fresh),
   'trello:all-linked-cards': (payload) => repository.getAllLinkedCards(payload?.fresh),
   'trello:search-cards': ({ query }) => repository.searchCardsByName(query),
+  'trello:unlinked-candidates': ({ boardId }) => repository.findUnlinkedCandidates(boardId),
   'trello:create-card': (payload) => repository.createCard(payload),
   'trello:update-card': ({ cardId, patch }) => repository.updateCard(cardId, patch),
   'trello:delete-card': async ({ cardId }) => {

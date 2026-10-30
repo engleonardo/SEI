@@ -4,6 +4,7 @@ import { browser } from 'wxt/browser';
 import type { Settings, TrelloBoard } from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
 import { openDashboard } from '../../core/messaging/actions';
+import { watchSettings } from '../../core/storage/settings';
 import { BrandMark } from '../../ui/BrandMark';
 import { Icon, type IconName } from '../../ui/icons';
 import { ConnectionSection } from './sections/ConnectionSection';
@@ -13,6 +14,7 @@ import { PreferencesSection } from './sections/PreferencesSection';
 import { RulesSection } from './sections/RulesSection';
 import { SitesSection } from './sections/SitesSection';
 import { Spinner, type Notice } from './sections/shared';
+import { setThemePreference } from '../../ui/theme';
 import './style.css';
 
 type Tab = 'connection' | 'destination' | 'rules' | 'sites' | 'preferences' | 'diagnostics';
@@ -32,8 +34,8 @@ const PAGE_TITLES: Record<Tab, { title: string; subtitle: string }> = {
     subtitle: 'Autorize o SEI Flow a falar com a sua conta do Trello.',
   },
   destination: {
-    title: 'Destino dos cartões',
-    subtitle: 'Defina o quadro e a lista usados ao criar cartões pelo SEI.',
+    title: 'Destino principal',
+    subtitle: 'Defina onde os cartões criados pelo SEI serão adicionados.',
   },
   rules: {
     title: 'Regras automáticas',
@@ -49,7 +51,7 @@ const PAGE_TITLES: Record<Tab, { title: string; subtitle: string }> = {
   },
   diagnostics: {
     title: 'Diagnóstico',
-    subtitle: 'Versão, permissões, cache e canais de suporte.',
+    subtitle: 'Ferramentas de manutenção, backup e suporte.',
   },
 };
 
@@ -79,6 +81,25 @@ function App() {
     setSettings(next);
     return next;
   }, []);
+
+  useEffect(() => {
+    if (settings) setThemePreference(settings.theme);
+  }, [settings]);
+
+  useEffect(() => watchSettings((next) => setThemePreference(next.theme)), []);
+
+  const dark = settings?.theme === 'dark';
+
+  const toggleTheme = useCallback(async () => {
+    const next = settings?.theme === 'dark' ? 'light' : 'dark';
+    setThemePreference(next);
+    try {
+      await save({ theme: next });
+    } catch (cause) {
+      setThemePreference(settings?.theme ?? 'light');
+      notify({ kind: 'error', text: errorMessage(cause) });
+    }
+  }, [settings, save, notify]);
 
   const reloadBoards = useCallback(async () => {
     try {
@@ -170,7 +191,7 @@ function App() {
 
         <div className="sfo-sidebar__footer">
           <span>Versão {version}</span>
-          <span>Suporte e privacidade em Diagnóstico</span>
+          <span>Suporte em Diagnóstico</span>
         </div>
       </aside>
 
@@ -180,6 +201,16 @@ function App() {
             <h1 className="sfo-page-title">{page.title}</h1>
             <p className="sfo-page-sub">{page.subtitle}</p>
           </div>
+          <button
+            type="button"
+            className="sfo-theme-toggle"
+            onClick={() => void toggleTheme()}
+            title={dark ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'}
+            aria-label={dark ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'}
+          >
+            <Icon name={dark ? 'sun' : 'moon'} size={15} />
+            {dark ? 'Tema claro' : 'Tema escuro'}
+          </button>
         </header>
 
         {notice && <div className={`sfo-alert sfo-alert--${notice.kind}`}>{notice.text}</div>}
@@ -228,14 +259,21 @@ function App() {
         {tab === 'rules' && <RulesSection boards={boards} notify={notify} />}
 
         {tab === 'sites' && (
-          <SitesSection settings={settings} applySettings={applySettings} notify={notify} />
+          <SitesSection
+            settings={settings}
+            applySettings={applySettings}
+            save={save}
+            notify={notify}
+          />
         )}
 
         {tab === 'preferences' && (
           <PreferencesSection settings={settings} save={save} notify={notify} />
         )}
 
-        {tab === 'diagnostics' && <DiagnosticsSection settings={settings} notify={notify} />}
+        {tab === 'diagnostics' && (
+          <DiagnosticsSection settings={settings} boards={boards} notify={notify} />
+        )}
 
         <div className="sfo-alert sfo-alert--warning">
           <Icon name="alert" size={16} />
@@ -246,6 +284,36 @@ function App() {
             criador não tem ingerência sobre as informações desses sistemas.
           </div>
         </div>
+
+        <nav className="sfo-global-links" aria-label="Links úteis">
+          <span className="sfo-global-links__label">Links úteis</span>
+          <button type="button" className="sfo-link" onClick={() => void openDashboard()}>
+            <Icon name="board" size={13} />
+            Abrir dashboard
+          </button>
+          <a
+            className="sfo-link"
+            href="https://github.com/engleonardo/SEI/issues"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Icon name="alert" size={13} />
+            Reportar um problema
+          </a>
+          <a
+            className="sfo-link"
+            href="https://github.com/engleonardo/SEI/blob/main/PRIVACY.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Icon name="info" size={13} />
+            Privacidade
+          </a>
+          <a className="sfo-link" href="https://trello.com/app-key" target="_blank" rel="noreferrer">
+            <Icon name="settings" size={13} />
+            Chave e token do Trello
+          </a>
+        </nav>
 
         <footer className="sfo-footer">
           <span>

@@ -42,6 +42,7 @@ const settings = {
   defaultListName: 'Em análise',
   activatedOrigins: [],
   allSites: false,
+  autoSeiHosts: false,
   theme: 'light',
   compact: true,
   autoRefreshMinutes: 0,

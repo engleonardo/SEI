@@ -19,9 +19,15 @@ function applyToHost(host: HTMLElement): void {
   host.dataset.sfTheme = effectiveTheme();
 }
 
+function applyToDocument(): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.dataset.sfTheme = effectiveTheme();
+}
+
 export function registerThemeHost(host: HTMLElement): void {
   hosts.add(host);
   applyToHost(host);
+  applyToDocument();
 }
 
 export function unregisterThemeHost(host: HTMLElement): void {
@@ -31,6 +37,7 @@ export function unregisterThemeHost(host: HTMLElement): void {
 export function setThemePreference(next: ThemePreference): void {
   preference = next;
   hosts.forEach(applyToHost);
+  applyToDocument();
 }
 
 export function getThemePreference(): ThemePreference {
@@ -40,7 +47,10 @@ export function getThemePreference(): ThemePreference {
 const query = media();
 if (query) {
   const onChange = () => {
-    if (preference === 'auto') hosts.forEach(applyToHost);
+    if (preference === 'auto') {
+      hosts.forEach(applyToHost);
+      applyToDocument();
+    }
   };
   if (typeof query.addEventListener === 'function') query.addEventListener('change', onChange);
   else query.addListener(onChange);

@@ -12,6 +12,7 @@ import type {
 } from '../domain/types';
 import { normalizeProcessNumber, sanitizeProcessForQuery } from '../domain/process';
 import { addLink, hasLink, parseLinks, removeLink, renderLinks, stripLinks } from '../link/marker';
+import { findProcessNumbers, snippetFor, type LinkCandidate } from '../link/scan';
 import { getRules } from '../storage/rules';
 import {
   forgetCards,
@@ -34,7 +35,7 @@ import { toCard, toCards } from './normalize';
 const CARD_FIELDS =
   'id,name,desc,shortUrl,due,dueComplete,idBoard,idList,idChecklists,labels,dateLastActivity';
 const BOARD_FIELDS = 'id,name';
-const LIST_FIELDS = 'id,name';
+const LIST_FIELDS = 'id,name,pos';
 const LABEL_FIELDS = 'id,name,color';
 const MAX_CARDS = 1000;
 
@@ -96,12 +97,20 @@ export class TrelloRepository {
         filter: 'open',
         fields: LIST_FIELDS,
       });
-      return (response ?? []).filter((list) => Boolean(list?.id && list?.name));
+      return (response ?? [])
+        .filter((list) => Boolean(list?.id && list?.name))
+        .sort((a, b) => (a.pos ?? 0) - (b.pos ?? 0));
     };
     if (fresh) {
-      const lists = await load();
-      await cacheSet(`lists:${boardId}`, lists);
-      return lists;
+      try {
+        const lists = await load();
+        await cacheSet(`lists:${boardId}`, lists);
+        return lists;
+      } catch (error) {
+        const cached = await cacheGet<TrelloList[]>(`lists:${boardId}`, Number.POSITIVE_INFINITY);
+        if (cached) return cached;
+        throw error;
+      }
     }
     return cacheGetOrSet(`lists:${boardId}`, CACHE_TTL.boardLists, load);
   }
@@ -120,9 +129,18 @@ export class TrelloRepository {
     };
 
     if (fresh) {
-      const cards = await load();
-      await cacheSet(`boardcards:${boardId}`, cards);
-      return cards;
+      try {
+        const cards = await load();
+        await cacheSet(`boardcards:${boardId}`, cards);
+        return cards;
+      } catch (error) {
+        const cached = await cacheGet<TrelloCard[]>(
+          `boardcards:${boardId}`,
+          Number.POSITIVE_INFINITY,
+        );
+        if (cached) return cached;
+        throw error;
+      }
     }
 
     return cacheGetOrSet(`boardcards:${boardId}`, CACHE_TTL.boardCards, load);
@@ -229,6 +247,33 @@ export class TrelloRepository {
     return toCards(raw);
   }
 
+  /**
+   * Procura cartões sem vínculo cujo comentário tenha um número de processo SEI.
+   * Não altera nada: apenas devolve os candidatos para confirmação do usuário.
+   */
+  async findUnlinkedCandidates(boardId: string): Promise<LinkCandidate[]> {
+    const cards = await this.getBoardCards(boardId, true);
+    const candidates: LinkCandidate[] = [];
+
+    for (const card of cards) {
+      if (card.links.length > 0) continue;
+      for (const processNumber of findProcessNumbers(card.description)) {
+        candidates.push({
+          cardId: card.id,
+          cardName: card.name,
+          processNumber,
+          snippet: snippetFor(card.description, processNumber),
+        });
+      }
+    }
+
+    return candidates.sort(
+      (a, b) =>
+        a.cardName.localeCompare(b.cardName, 'pt-BR') ||
+        a.processNumber.localeCompare(b.processNumber, 'pt-BR'),
+    );
+  }
+
   async getCardsForProcess(processNumber: string, fresh = false): Promise<TrelloCard[]> {
     const process = sanitizeProcessForQuery(processNumber);
     if (!process) return [];
@@ -248,7 +293,7 @@ export class TrelloRepository {
         }
       }
 
-      const merged = mergeById(toCards(asCardList(searched)), fromDefaultBoard);
+      const merged = mergeById(fromDefaultBoard, toCards(asCardList(searched)));
       return this.applyBoardLabels(merged.filter((card) => card.links.includes(process)));
     };
 
@@ -283,7 +328,7 @@ export class TrelloRepository {
         }
       }
 
-      const merged = mergeById(toCards(asCardList(searched)), fromDefaultBoard);
+      const merged = mergeById(fromDefaultBoard, toCards(asCardList(searched)));
       return this.applyBoardLabels(merged.filter((card) => card.links.length > 0));
     };
 

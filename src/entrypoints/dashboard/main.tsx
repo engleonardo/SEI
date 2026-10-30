@@ -1,14 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
-import type { Settings, TrelloCard, TrelloLabel } from '../../core/domain/types';
+import type {
+  Settings,
+  TrelloBoard,
+  TrelloCard,
+  TrelloLabel,
+  TrelloList,
+} from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
 import { openOptionsPage } from '../../core/messaging/actions';
 import type { LastActionTab } from '../../core/storage/last-tab';
 import type { ProcessCatalog, ProcessRecord } from '../../core/storage/processes';
-import { isOriginActivated } from '../../core/storage/settings';
+import { isOriginActivated, watchSettings } from '../../core/storage/settings';
 import { looksLikeSeiUrl } from '../../core/sei/detect';
 import { BrandMark } from '../../ui/BrandMark';
+import { CreateCardDialog } from '../../ui/components/CreateCardDialog';
 import { Icon } from '../../ui/icons';
 import { showToast } from '../../ui/toast';
 import { setThemePreference } from '../../ui/theme';
@@ -91,43 +98,71 @@ function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [trelloBoards, setTrelloBoards] = useState<TrelloBoard[]>([]);
+  const [boardLists, setBoardLists] = useState<TrelloList[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
 
   const version = browser.runtime.getManifest().version;
   const connected = Boolean(settings?.appKey && settings?.appToken);
+  const loadSeq = useRef(0);
 
   const load = useCallback(async (silent = false) => {
+    const seq = ++loadSeq.current;
     if (!silent) setLoading(true);
     setRefreshing(true);
     setError(null);
     try {
       const nextSettings = await callRpc('settings:get', undefined);
+      if (seq !== loadSeq.current) return;
       setSettings(nextSettings);
 
-      const [processRecords, nextLastTab] = await Promise.all([
+      const [processRecords, nextLastTab, nextBoards] = await Promise.all([
         callRpc('processes:list', undefined),
         callRpc('activation:last-tab', undefined),
+        nextSettings.appKey && nextSettings.appToken
+          ? callRpc('trello:boards', { fresh: false }).catch(() => [] as TrelloBoard[])
+          : Promise.resolve([] as TrelloBoard[]),
       ]);
+      if (seq !== loadSeq.current) return;
       const nextCatalog: ProcessCatalog = {};
       for (const record of processRecords as ProcessRecord[]) {
         nextCatalog[record.number] = record;
       }
       setCatalog(nextCatalog);
+      setTrelloBoards(Array.isArray(nextBoards) ? nextBoards : []);
       setLastTab(nextLastTab);
 
       if (nextSettings.appKey && nextSettings.appToken) {
-        const nextCards = await callRpc('trello:all-linked-cards', { fresh: true });
-        setCards(nextCards);
-      } else {
+        if (filters.link === 'unlinked') {
+          const boardId = filters.boardId || nextSettings.defaultBoardId;
+          if (!boardId) {
+            if (seq === loadSeq.current) setCards([]);
+          } else {
+            const boardCards = await callRpc('trello:board-cards', {
+              boardId,
+              fresh: true,
+            });
+            if (seq === loadSeq.current) {
+              setCards(boardCards.filter((card) => card.links.length === 0));
+            }
+          }
+        } else {
+          const nextCards = await callRpc('trello:all-linked-cards', { fresh: true });
+          if (seq === loadSeq.current) setCards(nextCards);
+        }
+      } else if (seq === loadSeq.current) {
         setCards([]);
       }
-      writeLastVisit();
+      if (seq === loadSeq.current) writeLastVisit();
     } catch (cause) {
-      setError(errorMessage(cause));
+      if (seq === loadSeq.current) setError(errorMessage(cause));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (seq === loadSeq.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-  }, []);
+  }, [filters.link, filters.boardId]);
 
   useEffect(() => {
     void load();
@@ -136,6 +171,8 @@ function Dashboard() {
   useEffect(() => {
     if (settings) setThemePreference(settings.theme);
   }, [settings]);
+
+  useEffect(() => watchSettings((next) => setThemePreference(next.theme)), []);
 
   const defaultBoardApplied = useRef(false);
   useEffect(() => {
@@ -149,6 +186,25 @@ function Dashboard() {
       return next;
     });
   }, [settings]);
+
+  useEffect(() => {
+    const boardId = filters.boardId;
+    if (!boardId) {
+      setBoardLists([]);
+      return;
+    }
+    let active = true;
+    callRpc('trello:lists', { boardId, fresh: true })
+      .then((value) => {
+        if (active) setBoardLists(Array.isArray(value) ? value : []);
+      })
+      .catch(() => {
+        if (active) setBoardLists([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [filters.boardId]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -186,10 +242,15 @@ function Dashboard() {
   }, []);
 
   const clearFilters = useCallback(() => {
-    const next = { ...DEFAULT_FILTERS };
+    const next = {
+      ...DEFAULT_FILTERS,
+      boardId: filters.boardId,
+      sort: filters.sort,
+      group: SORT_GROUPS[filters.sort],
+    };
     setFilters(next);
     saveFilters(next);
-  }, []);
+  }, [filters.boardId, filters.sort]);
 
   const markSeen = useCallback(() => {
     const now = Date.now();
@@ -200,6 +261,9 @@ function Dashboard() {
 
   const boards = useMemo(() => {
     const map = new Map<string, string>();
+    for (const board of trelloBoards) {
+      if (board.id) map.set(board.id, board.name);
+    }
     for (const card of cards) {
       if (card.idBoard && !map.has(card.idBoard)) {
         map.set(card.idBoard, card.board?.name ?? 'Quadro');
@@ -208,10 +272,19 @@ function Dashboard() {
     return Array.from(map.entries())
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-  }, [cards]);
+  }, [cards, trelloBoards]);
 
   const lists = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; boardId: string }>();
+    if (filters.boardId && boardLists.length > 0) {
+      return boardLists.map((list) => ({
+        id: list.id,
+        name: list.name,
+        boardId: filters.boardId,
+        pos: list.pos,
+      }));
+    }
+
+    const map = new Map<string, { id: string; name: string; boardId: string; pos?: number }>();
     for (const card of cards) {
       if (filters.boardId && card.idBoard !== filters.boardId) continue;
       if (card.idList && !map.has(card.idList)) {
@@ -219,17 +292,36 @@ function Dashboard() {
           id: card.idList,
           name: card.list?.name ?? 'Lista',
           boardId: card.idBoard,
+          pos: card.list?.pos,
         });
       }
     }
     return Array.from(map.values()).sort((a, b) => {
-      if (filters.boardId) return a.name.localeCompare(b.name, 'pt-BR');
       const boardA = cards.find((card) => card.idBoard === a.boardId)?.board?.name ?? '';
       const boardB = cards.find((card) => card.idBoard === b.boardId)?.board?.name ?? '';
       const boardCompare = boardA.localeCompare(boardB, 'pt-BR');
-      return boardCompare !== 0 ? boardCompare : a.name.localeCompare(b.name, 'pt-BR');
+      if (boardCompare !== 0) return boardCompare;
+      if (typeof a.pos === 'number' && typeof b.pos === 'number' && a.pos !== b.pos) {
+        return a.pos - b.pos;
+      }
+      return a.name.localeCompare(b.name, 'pt-BR');
     });
-  }, [cards, filters.boardId]);
+  }, [cards, filters.boardId, boardLists]);
+
+  const listOrder = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const list of boardLists) {
+      if (filters.boardId && typeof list.pos === 'number') {
+        map.set(`${filters.boardId}:${list.id}`, list.pos);
+      }
+    }
+    for (const card of cards) {
+      if (typeof card.list?.pos === 'number') {
+        map.set(`${card.idBoard}:${card.idList}`, card.list.pos);
+      }
+    }
+    return map;
+  }, [boardLists, cards, filters.boardId]);
 
   const labels = useMemo<LabelFilterOption[]>(() => {
     const map = new Map<string, { label: TrelloLabel; count: number }>();
@@ -266,6 +358,15 @@ function Dashboard() {
 
   const summary = useMemo(() => summarize(visibleCards, catalog), [visibleCards, catalog]);
 
+  const scopeCards = useMemo(
+    () => (filters.boardId ? cards.filter((card) => card.idBoard === filters.boardId) : cards),
+    [cards, filters.boardId],
+  );
+  const scopeTotal = scopeCards.length;
+  const scopeName = filters.boardId
+    ? (boards.find((board) => board.id === filters.boardId)?.name ?? 'Quadro selecionado')
+    : 'Todos os quadros';
+
   const listCounts = useMemo(() => {
     if (!filters.boardId) return [];
     const base = cards.filter((card) =>
@@ -281,8 +382,8 @@ function Dashboard() {
   const listTotal = listCounts.reduce((sum, item) => sum + item.count, 0);
 
   const groups = useMemo(
-    () => groupCards(visibleCards, SORT_GROUPS[filters.sort], filters.sort, catalog),
-    [visibleCards, filters.sort, catalog],
+    () => groupCards(visibleCards, SORT_GROUPS[filters.sort], filters.sort, catalog, listOrder),
+    [visibleCards, filters.sort, catalog, listOrder],
   );
 
   const exportCsv = () => {
@@ -319,53 +420,134 @@ function Dashboard() {
       withoutLabels: false,
     });
   };
+
+  const toggleLinkFilter = () => {
+    const link = filters.link === 'unlinked' ? 'linked' : 'unlinked';
+    updateFilters({
+      link,
+      boardId: filters.boardId || settings?.defaultBoardId || '',
+    });
+  };
+
+  const toggleDue = (value: Filters['due']) => {
+    updateFilters({ due: filters.due === value ? 'any' : value });
+  };
+
+  const toggleProcessUpdate = (value: Filters['processUpdate']) => {
+    updateFilters({ processUpdate: filters.processUpdate === value ? 'any' : value });
+  };
+
+  const toggleActivity = (value: Filters['activity']) => {
+    updateFilters({ activity: filters.activity === value ? 'any' : value });
+  };
+
+  const resetToScope = () => {
+    updateFilters({
+      search: '',
+      listId: '',
+      processType: '',
+      labelIds: [],
+      withoutLabels: false,
+      due: 'any',
+      activity: 'any',
+      processUpdate: 'any',
+    });
+  };
+
+  const toggleTheme = async () => {
+    const next = settings?.theme === 'dark' ? 'light' : 'dark';
+    setThemePreference(next);
+    try {
+      const updated = await callRpc('settings:save', { theme: next });
+      setSettings(updated);
+    } catch (cause) {
+      setThemePreference(settings?.theme ?? 'light');
+      showToast(errorMessage(cause), 'error');
+    }
+  };
   const active = activeFilterCount(filters);
   const seiTab = lastTab?.url && looksLikeSeiUrl(lastTab.url) ? lastTab : null;
   const hasActivatedSite = Boolean(
-    settings && (settings.allSites || settings.activatedOrigins.length > 0),
+    settings && (settings.allSites || settings.autoSeiHosts || settings.activatedOrigins.length > 0),
   );
   const seiOriginActive = Boolean(
     seiTab?.url && settings && isOriginActivated(seiTab.url, settings),
   );
 
-  const activeChips: string[] = [];
-  if (filters.search.trim()) activeChips.push(`Busca: ${filters.search.trim()}`);
+  const activeChips: Array<{ key: string; label: string; clear: Partial<Filters> }> = [];
+  if (filters.search.trim()) {
+    activeChips.push({
+      key: 'search',
+      label: `Busca: ${filters.search.trim()}`,
+      clear: { search: '' },
+    });
+  }
   if (filters.boardId) {
     const board = boards.find((item) => item.id === filters.boardId);
-    if (board) activeChips.push(board.name);
+    if (board) {
+      activeChips.push({
+        key: 'board',
+        label: board.name,
+        clear: { boardId: '', listId: '' },
+      });
+    }
   }
   if (filters.listId) {
     const list = lists.find((item) => item.id === filters.listId);
-    if (list) activeChips.push(list.name);
+    if (list) {
+      activeChips.push({ key: 'list', label: list.name, clear: { listId: '' } });
+    }
   }
   if (filters.processType) {
-    activeChips.push(
-      filters.processType === '__none__'
-        ? 'Sem tipo de processo'
-        : types.find((item) => item.value === filters.processType)?.label ?? filters.processType,
-    );
+    activeChips.push({
+      key: 'type',
+      label:
+        filters.processType === '__none__'
+          ? 'Sem tipo de processo'
+          : types.find((item) => item.value === filters.processType)?.label ?? filters.processType,
+      clear: { processType: '' },
+    });
   }
   for (const labelId of filters.labelIds) {
     const label = labels.find((item) => item.label.id === labelId)?.label;
-    if (label) activeChips.push(label.name || label.color || 'Etiqueta');
+    if (label) {
+      activeChips.push({
+        key: `label:${labelId}`,
+        label: label.name || label.color || 'Etiqueta',
+        clear: { labelIds: filters.labelIds.filter((id) => id !== labelId) },
+      });
+    }
   }
-  if (filters.withoutLabels) activeChips.push('Sem etiqueta');
+  if (filters.withoutLabels) {
+    activeChips.push({ key: 'withoutLabels', label: 'Sem etiqueta', clear: { withoutLabels: false } });
+  }
   if (filters.due !== 'any') {
-    activeChips.push(
-      DUE_FILTER_OPTIONS.find((option) => option.value === filters.due)?.label ?? filters.due,
-    );
+    activeChips.push({
+      key: 'due',
+      label: DUE_FILTER_OPTIONS.find((option) => option.value === filters.due)?.label ?? filters.due,
+      clear: { due: 'any' },
+    });
   }
   if (filters.activity !== 'any') {
-    activeChips.push(
-      ACTIVITY_FILTER_OPTIONS.find((option) => option.value === filters.activity)?.label ??
+    activeChips.push({
+      key: 'activity',
+      label:
+        ACTIVITY_FILTER_OPTIONS.find((option) => option.value === filters.activity)?.label ??
         filters.activity,
-    );
+      clear: { activity: 'any' },
+    });
   }
   if (filters.processUpdate !== 'any') {
-    activeChips.push(
-      PROCESS_UPDATE_OPTIONS.find((option) => option.value === filters.processUpdate)?.label ??
+    activeChips.push({
+      key: 'processUpdate',
+      label:
+        PROCESS_UPDATE_OPTIONS.find((option) => option.value === filters.processUpdate)?.label ??
         filters.processUpdate,
-    );
+      clear: { processUpdate: 'any' },
+    });
+  }
+  if (filters.link === 'unlinked') {
+    activeChips.push({ key: 'link', label: 'Sem vínculo SEI', clear: { link: 'linked' } });
   }
 
   return (
@@ -391,7 +573,9 @@ function Dashboard() {
                 title={
                   settings?.allSites
                     ? 'SEI Flow ativo em todos os sites'
-                    : settings?.activatedOrigins.join(', ') || 'Nenhum site autorizado'
+                    : settings?.autoSeiHosts
+                      ? 'SEI Flow ativo em qualquer site que comece com “sei”'
+                      : settings?.activatedOrigins.join(', ') || 'Nenhum site autorizado'
                 }
               >
                 <span className="sdo-status__dot" />
@@ -407,6 +591,16 @@ function Dashboard() {
           </div>
         </div>
         <div className="sdo-hero__actions">
+          <button
+            type="button"
+            className="sfo-btn sfo-btn--sm sfo-btn--primary"
+            onClick={() => setShowCreate(true)}
+            disabled={!connected}
+            title="Criar cartão no Trello sem abrir o Trello"
+          >
+            <Icon name="plus" size={14} />
+            Novo cartão
+          </button>
           {seiTab?.url && (
             <a className="sfo-btn sfo-btn--sm" href={seiTab.url} target="_blank" rel="noreferrer">
               <Icon name="external" size={14} />
@@ -429,6 +623,15 @@ function Dashboard() {
           >
             <Icon name="settings" size={14} />
             Opções
+          </button>
+          <button
+            type="button"
+            className="sfo-btn sfo-btn--sm sdo-theme-toggle"
+            onClick={() => void toggleTheme()}
+            title={settings?.theme === 'dark' ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'}
+            aria-label={settings?.theme === 'dark' ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'}
+          >
+            <Icon name={settings?.theme === 'dark' ? 'sun' : 'moon'} size={14} />
           </button>
         </div>
       </header>
@@ -483,9 +686,12 @@ function Dashboard() {
       <section className="sdo-metrics" aria-label="Resumo dos cartões">
         <button
           type="button"
-          className="sdo-metric sdo-metric--danger"
-          onClick={() => updateFilters({ due: 'overdue' })}
-          title="Filtrar atrasados"
+          className={`sdo-metric sdo-metric--danger${
+            filters.due === 'overdue' ? ' sdo-metric--active' : ''
+          }`}
+          onClick={() => toggleDue('overdue')}
+          aria-pressed={filters.due === 'overdue'}
+          title={filters.due === 'overdue' ? 'Remover filtro de atrasados' : 'Filtrar atrasados'}
         >
           <span className="sdo-metric__icon">
             <Icon name="alert" size={16} />
@@ -495,12 +701,20 @@ function Dashboard() {
             <strong>{summary.overdue}</strong>
             <small>precisam de atenção</small>
           </span>
+          {filters.due === 'overdue' && (
+            <span className="sdo-metric__flag" aria-hidden="true">
+              <Icon name="check" size={11} />
+            </span>
+          )}
         </button>
         <button
           type="button"
-          className="sdo-metric sdo-metric--warning"
-          onClick={() => updateFilters({ due: 'today' })}
-          title="Filtrar vencendo hoje"
+          className={`sdo-metric sdo-metric--warning${
+            filters.due === 'today' ? ' sdo-metric--active' : ''
+          }`}
+          onClick={() => toggleDue('today')}
+          aria-pressed={filters.due === 'today'}
+          title={filters.due === 'today' ? 'Remover filtro de vencendo hoje' : 'Filtrar vencendo hoje'}
         >
           <span className="sdo-metric__icon">
             <Icon name="calendar" size={16} />
@@ -510,12 +724,20 @@ function Dashboard() {
             <strong>{summary.today}</strong>
             <small>prazos do dia</small>
           </span>
+          {filters.due === 'today' && (
+            <span className="sdo-metric__flag" aria-hidden="true">
+              <Icon name="check" size={11} />
+            </span>
+          )}
         </button>
         <button
           type="button"
-          className="sdo-metric sdo-metric--accent"
-          onClick={() => updateFilters({ due: 'soon' })}
-          title="Filtrar próximos 7 dias"
+          className={`sdo-metric sdo-metric--accent${
+            filters.due === 'soon' ? ' sdo-metric--active' : ''
+          }`}
+          onClick={() => toggleDue('soon')}
+          aria-pressed={filters.due === 'soon'}
+          title={filters.due === 'soon' ? 'Remover filtro dos próximos 7 dias' : 'Filtrar próximos 7 dias'}
         >
           <span className="sdo-metric__icon">
             <Icon name="clock" size={16} />
@@ -525,12 +747,24 @@ function Dashboard() {
             <strong>{summary.soon}</strong>
             <small>no radar</small>
           </span>
+          {filters.due === 'soon' && (
+            <span className="sdo-metric__flag" aria-hidden="true">
+              <Icon name="check" size={11} />
+            </span>
+          )}
         </button>
         <button
           type="button"
-          className="sdo-metric sdo-metric--updated"
-          onClick={() => updateFilters({ processUpdate: 'unread' })}
-          title="Filtrar processos atualizados no SEI"
+          className={`sdo-metric sdo-metric--updated${
+            filters.processUpdate === 'unread' ? ' sdo-metric--active' : ''
+          }`}
+          onClick={() => toggleProcessUpdate('unread')}
+          aria-pressed={filters.processUpdate === 'unread'}
+          title={
+            filters.processUpdate === 'unread'
+              ? 'Remover filtro de atualizações no SEI'
+              : 'Filtrar processos atualizados no SEI'
+          }
         >
           <span className="sdo-metric__icon">
             <Icon name="refresh" size={16} />
@@ -540,32 +774,56 @@ function Dashboard() {
             <strong>{summary.unread}</strong>
             <small>atualizações no SEI</small>
           </span>
+          {filters.processUpdate === 'unread' && (
+            <span className="sdo-metric__flag" aria-hidden="true">
+              <Icon name="check" size={11} />
+            </span>
+          )}
         </button>
         <button
           type="button"
           className="sdo-metric sdo-metric--total"
-          onClick={clearFilters}
-          title="Mostrar todos os cartões"
+          onClick={resetToScope}
+          title={
+            filters.boardId
+              ? `Mostrar todos os cartões do quadro ${scopeName}`
+              : 'Mostrar todos os cartões de todos os quadros'
+          }
         >
           <span className="sdo-metric__icon">
             <Icon name="link" size={16} />
           </span>
           <span className="sdo-metric__body">
-            <span>Total vinculado</span>
-            <strong>{summary.total}</strong>
-            <small>de {cards.length} cartões</small>
+            <span>{filters.link === 'unlinked' ? 'Total sem vínculo' : 'Total vinculado'}</span>
+            <strong>{scopeTotal}</strong>
+            <small>{scopeName}</small>
           </span>
         </button>
       </section>
 
       <div className="sdo-mini-metrics">
-        <button type="button" onClick={() => updateFilters({ due: 'none' })}>
+        <button
+          type="button"
+          className={filters.due === 'none' ? 'sdo-mini--active' : undefined}
+          onClick={() => toggleDue('none')}
+          aria-pressed={filters.due === 'none'}
+        >
           <Icon name="calendar" size={12} /> Sem prazo <strong>{summary.none}</strong>
         </button>
-        <button type="button" onClick={() => updateFilters({ due: 'complete' })}>
+        <button
+          type="button"
+          className={filters.due === 'complete' ? 'sdo-mini--active' : undefined}
+          onClick={() => toggleDue('complete')}
+          aria-pressed={filters.due === 'complete'}
+        >
           <Icon name="check" size={12} /> Concluídos <strong>{summary.done}</strong>
         </button>
-        <button type="button" onClick={() => updateFilters({ activity: '7d' })}>
+        <button
+          type="button"
+          className={filters.activity === '7d' ? 'sdo-mini--active' : undefined}
+          onClick={() => toggleActivity('7d')}
+          aria-pressed={filters.activity === '7d'}
+        >
           <Icon name="refresh" size={12} /> Trello 7 dias <strong>{summary.updated7d}</strong>
         </button>
         <span>
@@ -580,6 +838,30 @@ function Dashboard() {
       </div>
 
       <section className="sdo-command" aria-label="Busca e filtros">
+        <label className="sdo-board-picker" title="Escolher o quadro exibido no painel">
+          <Icon name="board" size={15} />
+          <span className="sdo-board-picker__label">Quadro</span>
+          <select
+            className="sdo-board-picker__select"
+            value={filters.boardId}
+            onChange={(event) => updateFilters({ boardId: event.target.value, listId: '' })}
+            aria-label="Quadro"
+          >
+            <option value="">Todos os quadros</option>
+            {boards.map((board) => (
+              <option key={board.id} value={board.id}>
+                {board.name}
+              </option>
+            ))}
+            {filters.boardId && !boards.some((board) => board.id === filters.boardId) && (
+              <option value={filters.boardId}>
+                {settings?.defaultBoardId === filters.boardId && settings.defaultBoardName
+                  ? settings.defaultBoardName
+                  : 'Quadro selecionado'}
+              </option>
+            )}
+          </select>
+        </label>
         <div className="sdo-search">
           <Icon name="search" size={16} />
           <input
@@ -634,40 +916,92 @@ function Dashboard() {
       </section>
 
       {filters.boardId && listCounts.length > 0 && (
-        <div className="sdo-list-chips" aria-label="Cartões por lista">
-          <span className="sdo-list-chips__label">Listas</span>
-          <button
-            type="button"
-            className={`sdo-list-chip${filters.listId ? '' : ' sdo-list-chip--on'}`}
-            onClick={() => updateFilters({ listId: '' })}
-          >
-            Todas
-            <span className="sdo-list-chip__count">{listTotal}</span>
-          </button>
-          {listCounts.map((list) => (
-            <button
-              key={list.id}
-              type="button"
-              className={`sdo-list-chip${filters.listId === list.id ? ' sdo-list-chip--on' : ''}`}
-              onClick={() =>
-                updateFilters({ listId: filters.listId === list.id ? '' : list.id })
-              }
-              title={`Ver ${list.count} cartão(ões) em ${list.name}`}
-            >
-              {list.name}
-              <span className="sdo-list-chip__count">{list.count}</span>
-            </button>
-          ))}
-        </div>
+        <section className="sdo-lists" aria-label="Cartões por lista">
+          <div className="sdo-lists__head">
+            <span className="sdo-lists__title">
+              <Icon name="list" size={14} />
+              Listas do quadro
+            </span>
+            <div className="sdo-lists__tools">
+              <button
+                type="button"
+                className={`sdo-unlinked-toggle${
+                  filters.link === 'unlinked' ? ' sdo-unlinked-toggle--on' : ''
+                }`}
+                onClick={toggleLinkFilter}
+                aria-pressed={filters.link === 'unlinked'}
+                title="Mostrar apenas cartões sem vínculo com o SEI"
+              >
+                <Icon name="unlink" size={13} />
+                Sem vínculo
+                {filters.link === 'unlinked' && (
+                  <span className="sdo-unlinked-toggle__count">{cards.length}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                className={`sdo-lists__all${
+                  filters.listId || filters.link === 'unlinked' ? ' sdo-lists__all--clear' : ''
+                }`}
+                onClick={() => updateFilters({ listId: '', link: 'linked' })}
+                title={
+                  filters.listId || filters.link === 'unlinked'
+                    ? 'Mostrar todas as listas e remover o filtro “Sem vínculo”'
+                    : 'Mostrar todas as listas do quadro'
+                }
+              >
+                {filters.listId ? <Icon name="close" size={12} /> : null}
+                Todas as listas
+                <span className="sdo-lists__all-count">{listTotal}</span>
+              </button>
+            </div>
+          </div>
+          <div className="sdo-lists__grid">
+            {listCounts.map((list) => {
+              const selected = filters.listId === list.id;
+              return (
+                <button
+                  key={list.id}
+                  type="button"
+                  className={`sdo-list-card${selected ? ' sdo-list-card--on' : ''}`}
+                  onClick={() => updateFilters({ listId: selected ? '' : list.id })}
+                  aria-pressed={selected}
+                  title={`Filtrar por ${list.name}`}
+                >
+                  <span className="sdo-list-card__icon">
+                    <Icon name="list" size={16} />
+                  </span>
+                  <span className="sdo-list-card__body">
+                    <span className="sdo-list-card__name">{list.name}</span>
+                    <strong>{list.count}</strong>
+                    <small>{list.count === 1 ? 'cartão' : 'cartões'}</small>
+                  </span>
+                  {selected && (
+                    <span className="sdo-list-card__check" aria-hidden="true">
+                      <Icon name="check" size={12} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       {activeChips.length > 0 && (
         <div className="sdo-active-chips">
           <span className="sdo-active-chips__label">Filtros ativos</span>
-          {activeChips.map((chip, index) => (
-            <span key={`${chip}-${index}`} className="sdo-chip">
-              {chip}
-            </span>
+          {activeChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              className="sdo-chip sdo-chip--removable"
+              onClick={() => updateFilters(chip.clear)}
+              title={`Remover filtro: ${chip.label}`}
+            >
+              {chip.label}
+              <Icon name="close" size={10} />
+            </button>
           ))}
           <button type="button" className="sdo-chip sdo-chip--clear" onClick={clearFilters}>
             <Icon name="close" size={11} /> Limpar
@@ -704,7 +1038,9 @@ function Dashboard() {
           <strong>Nenhum cartão encontrado</strong>
           <span>
             {cards.length === 0
-              ? 'Vincule cartões aos processos do SEI para vê-los aqui.'
+              ? filters.link === 'unlinked'
+                ? 'Nenhum cartão sem vínculo neste quadro. Crie um em "Novo cartão".'
+                : 'Vincule cartões aos processos do SEI para vê-los aqui.'
               : 'Ajuste os filtros para ampliar os resultados.'}
           </span>
           {active > 0 && (
@@ -744,6 +1080,25 @@ function Dashboard() {
         <span>SEI Flow · painel de controle · Desenvolvido por Engenheiro Leonardo Almeida de Oliveira</span>
         <span className="sdo-footer__links">Sem coleta de dados · suporte em Opções → Diagnóstico</span>
       </footer>
+
+      {showCreate && (
+        <CreateCardDialog
+          defaultName=""
+          initialBoardId={filters.boardId || settings?.defaultBoardId}
+          initialListId={filters.listId || settings?.defaultListId}
+          onClose={() => setShowCreate(false)}
+          onCreated={(card) => {
+            if (filters.link === 'unlinked') {
+              if (card.idBoard && card.idBoard !== filters.boardId) {
+                updateFilters({ boardId: card.idBoard, listId: '' });
+              }
+              setCards((previous) => [card, ...previous]);
+            } else {
+              updateFilters({ link: 'unlinked', boardId: card.idBoard });
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

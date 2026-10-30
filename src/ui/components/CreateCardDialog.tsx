@@ -20,8 +20,10 @@ import { Modal } from './Modal';
 import { ErrorState, Spinner } from './common';
 
 export interface CreateCardDialogProps {
-  processNumber: string;
+  processNumber?: string;
   defaultName?: string;
+  initialBoardId?: string;
+  initialListId?: string;
   onClose: () => void;
   onCreated: (card: TrelloCard) => void;
 }
@@ -29,11 +31,13 @@ export interface CreateCardDialogProps {
 export function CreateCardDialog({
   processNumber,
   defaultName,
+  initialBoardId,
+  initialListId,
   onClose,
   onCreated,
 }: CreateCardDialogProps) {
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [name, setName] = useState(defaultName ?? processNumber);
+  const [name, setName] = useState(defaultName ?? processNumber ?? '');
   const [description, setDescription] = useState('');
   const [start, setStart] = useState('');
   const [due, setDue] = useState('');
@@ -62,8 +66,8 @@ export function CreateCardDialog({
       .then((value) => {
         if (!active) return;
         setSettings(value);
-        setBoardId(value.defaultBoardId ?? '');
-        setListId(value.defaultListId ?? '');
+        setBoardId(initialBoardId || value.defaultBoardId || '');
+        setListId(initialListId || value.defaultListId || '');
       })
       .catch((cause) => {
         if (active) setError(errorMessage(cause));
@@ -74,7 +78,7 @@ export function CreateCardDialog({
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialBoardId, initialListId]);
 
   useEffect(() => {
     if (!settings) return;
@@ -88,7 +92,9 @@ export function CreateCardDialog({
         setBoardId((previous) => {
           if (previous && items.some((board) => board.id === previous)) return previous;
           const fallback =
-            items.find((board) => board.id === settings.defaultBoardId) ?? items[0];
+            items.find(
+              (board) => board.id === (initialBoardId || settings.defaultBoardId),
+            ) ?? items[0];
           return fallback?.id ?? '';
         });
       })
@@ -101,7 +107,7 @@ export function CreateCardDialog({
     return () => {
       active = false;
     };
-  }, [settings]);
+  }, [settings, initialBoardId]);
 
   useEffect(() => {
     if (!boardId) {
@@ -118,7 +124,9 @@ export function CreateCardDialog({
         setLists(items);
         setListId((previous) => {
           if (previous && items.some((list) => list.id === previous)) return previous;
-          const preferred = items.find((list) => list.id === settings?.defaultListId);
+          const preferred = items.find(
+            (list) => list.id === (initialListId || settings?.defaultListId),
+          );
           return (preferred ?? items[0])?.id ?? '';
         });
       })
@@ -131,7 +139,7 @@ export function CreateCardDialog({
     return () => {
       active = false;
     };
-  }, [boardId, settings]);
+  }, [boardId, settings, initialListId]);
 
   useEffect(() => {
     if (!boardId) {
@@ -244,7 +252,11 @@ export function CreateCardDialog({
   return (
     <Modal
       title="Novo cartão no Trello"
-      subtitle={`Vinculado ao processo ${processNumber}`}
+      subtitle={
+        processNumber
+          ? `Vinculado ao processo ${processNumber}`
+          : 'Sem vínculo com processo SEI (você pode vincular depois)'
+      }
       onClose={onClose}
       footer={
         <>
@@ -520,7 +532,14 @@ export function CreateCardDialog({
           </div>
 
           <div className="sf-hint">
-            O vínculo <code>SEI {processNumber}</code> será mantido na última linha da descrição.
+            {processNumber ? (
+              <>
+                O bloco <code>SEI {processNumber}</code> será mantido no fim da descrição, com o
+                aviso de não alterar.
+              </>
+            ) : (
+              <>O cartão será criado sem vínculo com processo SEI; você pode vincular depois.</>
+            )}
           </div>
         </div>
       )}

@@ -6,6 +6,7 @@ export type ActivityFilter = 'any' | 'today' | '7d' | '30d' | 'sinceVisit';
 export type ProcessUpdateFilter = 'any' | 'unread' | 'read';
 export type GroupMode = 'due' | 'board' | 'list' | 'type' | 'label' | 'none';
 export type SortMode = 'due' | 'activity' | 'name' | 'list' | 'board' | 'label' | 'type';
+export type LinkFilter = 'linked' | 'unlinked';
 
 export interface DashboardFilters {
   search: string;
@@ -19,6 +20,7 @@ export interface DashboardFilters {
   processUpdate: ProcessUpdateFilter;
   sort: SortMode;
   group: GroupMode;
+  link: LinkFilter;
 }
 
 export const DEFAULT_FILTERS: DashboardFilters = {
@@ -31,8 +33,9 @@ export const DEFAULT_FILTERS: DashboardFilters = {
   due: 'any',
   activity: 'any',
   processUpdate: 'any',
-  sort: 'due',
-  group: 'due',
+  sort: 'list',
+  group: 'list',
+  link: 'linked',
 };
 
 export type DueBucket = 'overdue' | 'today' | 'soon' | 'later' | 'none' | 'done';
@@ -100,7 +103,8 @@ export const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
   { value: 'type', label: 'Tipo de processo' },
 ];
 
-const FILTERS_KEY = 'sei-flow:dashboard:filters:v1';
+const FILTERS_KEY = 'sei-flow:dashboard:filters:v2';
+const LEGACY_FILTERS_KEY = 'sei-flow:dashboard:filters:v1';
 const LAST_VISIT_KEY = 'sei-flow:dashboard:last-visit:v1';
 
 function startOfDay(date: Date): Date {
@@ -185,6 +189,8 @@ export function matchesFilters(
   catalog: ProcessCatalog,
   lastVisit: number,
 ): boolean {
+  if (filters.link === 'linked' && card.links.length === 0) return false;
+  if (filters.link === 'unlinked' && card.links.length > 0) return false;
   if (filters.boardId && card.idBoard !== filters.boardId) return false;
   if (filters.listId && card.idList !== filters.listId) return false;
 
@@ -231,9 +237,19 @@ export function sortCards(
   cards: TrelloCard[],
   sort: SortMode,
   catalog: ProcessCatalog = {},
+  listOrder?: Map<string, number>,
 ): TrelloCard[] {
   const sorted = [...cards];
   const byName = (a: TrelloCard, b: TrelloCard) => a.name.localeCompare(b.name, 'pt-BR');
+  const orderOf = (card: TrelloCard) => listOrder?.get(`${card.idBoard}:${card.idList}`);
+  const byListOrder = (a: TrelloCard, b: TrelloCard) => {
+    const posA = orderOf(a);
+    const posB = orderOf(b);
+    if (posA !== undefined && posB !== undefined && posA !== posB) return posA - posB;
+    if (posA !== undefined && posB === undefined) return -1;
+    if (posB !== undefined && posA === undefined) return 1;
+    return (a.list?.name ?? '').localeCompare(b.list?.name ?? '', 'pt-BR');
+  };
 
   sorted.sort((a, b) => {
     if (sort === 'activity') return activityTime(b) - activityTime(a);
@@ -241,15 +257,15 @@ export function sortCards(
     if (sort === 'board') {
       const boardCompare = (a.board?.name ?? '').localeCompare(b.board?.name ?? '', 'pt-BR');
       if (boardCompare !== 0) return boardCompare;
-      const listCompare = (a.list?.name ?? '').localeCompare(b.list?.name ?? '', 'pt-BR');
+      const listCompare = byListOrder(a, b);
       if (listCompare !== 0) return listCompare;
       return byName(a, b);
     }
     if (sort === 'list') {
-      const listCompare = (a.list?.name ?? '').localeCompare(b.list?.name ?? '', 'pt-BR');
-      if (listCompare !== 0) return listCompare;
       const boardCompare = (a.board?.name ?? '').localeCompare(b.board?.name ?? '', 'pt-BR');
       if (boardCompare !== 0) return boardCompare;
+      const listCompare = byListOrder(a, b);
+      if (listCompare !== 0) return listCompare;
       return byName(a, b);
     }
     if (sort === 'label') {
@@ -289,8 +305,9 @@ export function groupCards(
   group: GroupMode,
   sort: SortMode,
   catalog: ProcessCatalog,
+  listOrder?: Map<string, number>,
 ): CardGroup[] {
-  const sorted = sortCards(cards, sort, catalog);
+  const sorted = sortCards(cards, sort, catalog, listOrder);
 
   if (group === 'none') {
     return sorted.length > 0 ? [{ key: 'all', title: '', cards: sorted }] : [];
@@ -361,9 +378,14 @@ export function groupCards(
     }
   }
 
-  return Array.from(map.values())
-    .map((bucket) => ({ ...bucket, cards: sortCards(bucket.cards, sort, catalog) }))
-    .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
+  const groups = Array.from(map.values()).map((bucket) => ({
+    ...bucket,
+    cards: sortCards(bucket.cards, sort, catalog, listOrder),
+  }));
+
+  // Listas seguem a ordem do Trello; os demais grupos ficam em ordem alfabética.
+  if (group === 'list') return groups;
+  return groups.sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
 }
 
 export function activeFilterCount(filters: DashboardFilters): number {
@@ -377,28 +399,33 @@ export function activeFilterCount(filters: DashboardFilters): number {
   if (filters.due !== 'any') count += 1;
   if (filters.activity !== 'any') count += 1;
   if (filters.processUpdate !== 'any') count += 1;
-  if (filters.sort !== 'due') count += 1;
+  if (filters.link !== 'linked') count += 1;
   return count;
 }
 
 export function loadFilters(): DashboardFilters {
   try {
-    const raw = window.localStorage.getItem(FILTERS_KEY);
+    const current = window.localStorage.getItem(FILTERS_KEY);
+    const legacy = current ? null : window.localStorage.getItem(LEGACY_FILTERS_KEY);
+    const raw = current ?? legacy;
     if (!raw) return { ...DEFAULT_FILTERS };
     const parsed = JSON.parse(raw) as Partial<DashboardFilters>;
     const sortValues: SortMode[] = ['due', 'activity', 'name', 'list', 'board', 'label', 'type'];
     const groupValues: GroupMode[] = ['due', 'board', 'list', 'type', 'label', 'none'];
-    const sort = sortValues.includes(parsed.sort as SortMode)
+    // Quem vem da versão antiga mantém os filtros, mas adota a nova ordenação padrão.
+    const sort = !legacy && sortValues.includes(parsed.sort as SortMode)
       ? (parsed.sort as SortMode)
       : DEFAULT_FILTERS.sort;
-    const group = groupValues.includes(parsed.group as GroupMode)
+    const group = !legacy && groupValues.includes(parsed.group as GroupMode)
       ? (parsed.group as GroupMode)
       : SORT_GROUPS[sort];
-    return {
+    const link: LinkFilter = parsed.link === 'unlinked' ? 'unlinked' : 'linked';
+    const filters: DashboardFilters = {
       ...DEFAULT_FILTERS,
       ...parsed,
       sort,
       group,
+      link,
       labelIds: Array.isArray(parsed.labelIds)
         ? parsed.labelIds.filter((value): value is string => typeof value === 'string')
         : [],
@@ -408,6 +435,8 @@ export function loadFilters(): DashboardFilters {
       listId: typeof parsed.listId === 'string' ? parsed.listId : '',
       processType: typeof parsed.processType === 'string' ? parsed.processType : '',
     };
+    if (legacy) saveFilters(filters);
+    return filters;
   } catch {
     return { ...DEFAULT_FILTERS };
   }

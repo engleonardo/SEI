@@ -26,6 +26,7 @@ function pickSettings(settings: Settings): Partial<Settings> {
     defaultListName: settings.defaultListName,
     activatedOrigins: [...settings.activatedOrigins],
     allSites: settings.allSites,
+    autoSeiHosts: settings.autoSeiHosts,
     theme: settings.theme,
     compact: settings.compact,
     notificationsEnabled: settings.notificationsEnabled,
@@ -103,6 +104,8 @@ export async function importBackup(value: unknown): Promise<ImportResult> {
   const origins = await reconcileOrigins(incomingOrigins);
   const wantsAllSites = asBoolean(incoming.allSites, current.allSites);
   const allSites = wantsAllSites ? await hasPermission(['*://*/*']) : false;
+  const wantsAutoSeiHosts = asBoolean(incoming.autoSeiHosts, current.autoSeiHosts);
+  const autoSeiHosts = wantsAutoSeiHosts ? await hasPermission(['*://*/*']) : false;
 
   const patch: Partial<Settings> = {
     defaultBoardId: asString(incoming.defaultBoardId, current.defaultBoardId),
@@ -111,6 +114,7 @@ export async function importBackup(value: unknown): Promise<ImportResult> {
     defaultListName: asString(incoming.defaultListName, current.defaultListName),
     activatedOrigins: origins,
     allSites,
+    autoSeiHosts,
     theme: incoming.theme === 'dark' ? 'dark' : 'light',
     compact: asBoolean(incoming.compact, current.compact),
     notificationsEnabled: asBoolean(

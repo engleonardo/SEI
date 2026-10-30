@@ -161,6 +161,21 @@ export function DashboardFilters({
           </select>
         </label>
 
+        <label className="sdo-field" htmlFor="sdo-link">
+          <span>Vínculo com o SEI</span>
+          <select
+            id="sdo-link"
+            className="sfo-select"
+            value={filters.link}
+            onChange={(event) =>
+              onChange({ link: event.target.value as DashboardFilters['link'] })
+            }
+          >
+            <option value="linked">Somente vinculados</option>
+            <option value="unlinked">Somente sem vínculo</option>
+          </select>
+        </label>
+
         <label className="sdo-field" htmlFor="sdo-type">
           <span>Tipo de processo</span>
           <select

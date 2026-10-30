@@ -95,8 +95,9 @@ async function onPermissionsRemoved(details: { origins?: string[] }): Promise<vo
   const settings = await getSettings();
   let next = settings;
 
-  if (origins.includes('*://*/*') && settings.allSites) {
-    next = await saveSettings({ allSites: false });
+  if (origins.includes('*://*/*')) {
+    if (settings.allSites) next = await saveSettings({ allSites: false });
+    if (settings.autoSeiHosts) next = await saveSettings({ autoSeiHosts: false });
   }
 
   for (const pattern of origins) {

@@ -63,6 +63,7 @@ const settings = {
   defaultListName: 'Em análise',
   activatedOrigins: ['http://sei.test'],
   allSites: false,
+  autoSeiHosts: false,
   theme: 'light',
   compact: true,
   notificationsEnabled: true,
@@ -143,21 +144,46 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
     await dashboard.goto(`chrome-extension://${extensionId}/dashboard.html`);
 
     await expect(dashboard.getByRole('heading', { name: /Painel SEI Flow/ })).toBeVisible();
+    await expect(dashboard.getByRole('combobox', { name: 'Quadro' })).toBeVisible();
+    const totalMetric = dashboard.locator('.sdo-metric--total');
+    await expect(totalMetric).toContainText('2');
+    await expect(totalMetric).toContainText('Contratos');
+
+    // Alternância de tema aplica na hora e persiste.
+    await dashboard.locator('.sdo-theme-toggle').click();
+    await expect(dashboard.locator('html')).toHaveAttribute('data-sf-theme', 'dark');
+    await dashboard.locator('.sdo-theme-toggle').click();
+    await expect(dashboard.locator('html')).toHaveAttribute('data-sf-theme', 'light');
     await expect(dashboard.getByText('Revisar contrato')).toBeVisible();
     await expect(dashboard.getByText('Publicar edital')).toBeVisible();
     await expect(
       dashboard.getByText('Desenvolvido por Engenheiro Leonardo Almeida de Oliveira'),
     ).toBeVisible();
 
-    // Chips de lista: o quadro padrão já vem escolhido e mostra a contagem por lista.
-    await expect(dashboard.getByText('Listas', { exact: true })).toBeVisible();
-    const listChip = dashboard.locator('.sdo-list-chip').filter({ hasText: 'Em análise' }).first();
-    await expect(listChip).toBeVisible();
-    await listChip.click();
+    // Cartões de lista: o quadro padrão já vem escolhido e mostra a contagem por lista.
+    await expect(dashboard.getByText('Listas do quadro')).toBeVisible();
+    await expect(dashboard.getByRole('button', { name: /Sem vínculo/ })).toBeVisible();
+    const listCard = dashboard.locator('.sdo-list-card').filter({ hasText: 'Em análise' }).first();
+    await expect(listCard).toBeVisible();
+    await listCard.click();
     await expect(dashboard.getByText('Revisar contrato')).toBeVisible();
-    await expect(dashboard.locator('.sdo-list-chip--on')).toHaveText(/Em análise/);
-    await listChip.click();
-    await expect(dashboard.locator('.sdo-list-chip--on')).toHaveText(/Todas/);
+    await expect(dashboard.locator('.sdo-list-card--on')).toHaveText(/Em análise/);
+    await expect(dashboard.locator('.sdo-list-card--on')).toHaveCount(1);
+    await dashboard.getByRole('button', { name: /Todas as listas/ }).click();
+    await expect(dashboard.locator('.sdo-list-card--on')).toHaveCount(0);
+
+    // Indicadores alternam o filtro: clicar de novo remove o filtro.
+    const overdueMetric = dashboard.locator('.sdo-metric--danger');
+    await overdueMetric.click();
+    await expect(overdueMetric).toHaveClass(/sdo-metric--active/);
+    // Total vinculado limpa os filtros sem sair do quadro atual.
+    await dashboard.locator('.sdo-metric--total').click();
+    await expect(overdueMetric).not.toHaveClass(/sdo-metric--active/);
+    await expect(dashboard.getByRole('combobox', { name: 'Quadro' })).toHaveValue('board-1');
+    await overdueMetric.click();
+    await expect(overdueMetric).toHaveClass(/sdo-metric--active/);
+    await overdueMetric.click();
+    await expect(overdueMetric).not.toHaveClass(/sdo-metric--active/);
 
     // Link do processo abre a página real do SEI.
     const processLink = dashboard.getByRole('link', {
