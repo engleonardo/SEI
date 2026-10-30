@@ -34,7 +34,7 @@ import { toCard, toCards } from './normalize';
 const CARD_FIELDS =
   'id,name,desc,shortUrl,due,dueComplete,idBoard,idList,idChecklists,labels,dateLastActivity';
 const BOARD_FIELDS = 'id,name';
-const LIST_FIELDS = 'id,name';
+const LIST_FIELDS = 'id,name,pos';
 const LABEL_FIELDS = 'id,name,color';
 const MAX_CARDS = 1000;
 
@@ -96,12 +96,20 @@ export class TrelloRepository {
         filter: 'open',
         fields: LIST_FIELDS,
       });
-      return (response ?? []).filter((list) => Boolean(list?.id && list?.name));
+      return (response ?? [])
+        .filter((list) => Boolean(list?.id && list?.name))
+        .sort((a, b) => (a.pos ?? 0) - (b.pos ?? 0));
     };
     if (fresh) {
-      const lists = await load();
-      await cacheSet(`lists:${boardId}`, lists);
-      return lists;
+      try {
+        const lists = await load();
+        await cacheSet(`lists:${boardId}`, lists);
+        return lists;
+      } catch (error) {
+        const cached = await cacheGet<TrelloList[]>(`lists:${boardId}`, Number.POSITIVE_INFINITY);
+        if (cached) return cached;
+        throw error;
+      }
     }
     return cacheGetOrSet(`lists:${boardId}`, CACHE_TTL.boardLists, load);
   }
@@ -120,9 +128,18 @@ export class TrelloRepository {
     };
 
     if (fresh) {
-      const cards = await load();
-      await cacheSet(`boardcards:${boardId}`, cards);
-      return cards;
+      try {
+        const cards = await load();
+        await cacheSet(`boardcards:${boardId}`, cards);
+        return cards;
+      } catch (error) {
+        const cached = await cacheGet<TrelloCard[]>(
+          `boardcards:${boardId}`,
+          Number.POSITIVE_INFINITY,
+        );
+        if (cached) return cached;
+        throw error;
+      }
     }
 
     return cacheGetOrSet(`boardcards:${boardId}`, CACHE_TTL.boardCards, load);

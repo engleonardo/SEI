@@ -1300,6 +1300,12 @@
   color: #fff;
 }
 
+.sdo-list-chip--on:hover {
+  border-color: transparent;
+  background: var(--accent-hover, var(--accent));
+  color: #fff;
+}
+
 .sdo-list-chip__count {
   display: inline-flex;
   align-items: center;

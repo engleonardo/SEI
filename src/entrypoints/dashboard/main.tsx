@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
-import type { Settings, TrelloCard, TrelloLabel } from '../../core/domain/types';
+import type { Settings, TrelloCard, TrelloLabel, TrelloList } from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
 import { openOptionsPage } from '../../core/messaging/actions';
 import type { LastActionTab } from '../../core/storage/last-tab';
@@ -9,6 +9,7 @@ import type { ProcessCatalog, ProcessRecord } from '../../core/storage/processes
 import { isOriginActivated } from '../../core/storage/settings';
 import { looksLikeSeiUrl } from '../../core/sei/detect';
 import { BrandMark } from '../../ui/BrandMark';
+import { CreateCardDialog } from '../../ui/components/CreateCardDialog';
 import { Icon } from '../../ui/icons';
 import { showToast } from '../../ui/toast';
 import { setThemePreference } from '../../ui/theme';
@@ -91,6 +92,8 @@ function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [boardLists, setBoardLists] = useState<TrelloList[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
 
   const version = browser.runtime.getManifest().version;
   const connected = Boolean(settings?.appKey && settings?.appToken);
@@ -115,8 +118,21 @@ function Dashboard() {
       setLastTab(nextLastTab);
 
       if (nextSettings.appKey && nextSettings.appToken) {
-        const nextCards = await callRpc('trello:all-linked-cards', { fresh: true });
-        setCards(nextCards);
+        if (filters.link === 'unlinked') {
+          const boardId = filters.boardId || nextSettings.defaultBoardId;
+          if (!boardId) {
+            setCards([]);
+          } else {
+            const boardCards = await callRpc('trello:board-cards', {
+              boardId,
+              fresh: true,
+            });
+            setCards(boardCards.filter((card) => card.links.length === 0));
+          }
+        } else {
+          const nextCards = await callRpc('trello:all-linked-cards', { fresh: true });
+          setCards(nextCards);
+        }
       } else {
         setCards([]);
       }
@@ -127,7 +143,7 @@ function Dashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [filters.link, filters.boardId]);
 
   useEffect(() => {
     void load();
@@ -149,6 +165,25 @@ function Dashboard() {
       return next;
     });
   }, [settings]);
+
+  useEffect(() => {
+    const boardId = filters.boardId;
+    if (!boardId) {
+      setBoardLists([]);
+      return;
+    }
+    let active = true;
+    callRpc('trello:lists', { boardId, fresh: true })
+      .then((value) => {
+        if (active) setBoardLists(Array.isArray(value) ? value : []);
+      })
+      .catch(() => {
+        if (active) setBoardLists([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [filters.boardId]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -211,6 +246,14 @@ function Dashboard() {
   }, [cards]);
 
   const lists = useMemo(() => {
+    if (filters.boardId && boardLists.length > 0) {
+      return boardLists.map((list) => ({
+        id: list.id,
+        name: list.name,
+        boardId: filters.boardId,
+      }));
+    }
+
     const map = new Map<string, { id: string; name: string; boardId: string }>();
     for (const card of cards) {
       if (filters.boardId && card.idBoard !== filters.boardId) continue;
@@ -229,7 +272,7 @@ function Dashboard() {
       const boardCompare = boardA.localeCompare(boardB, 'pt-BR');
       return boardCompare !== 0 ? boardCompare : a.name.localeCompare(b.name, 'pt-BR');
     });
-  }, [cards, filters.boardId]);
+  }, [cards, filters.boardId, boardLists]);
 
   const labels = useMemo<LabelFilterOption[]>(() => {
     const map = new Map<string, { label: TrelloLabel; count: number }>();
@@ -319,6 +362,14 @@ function Dashboard() {
       withoutLabels: false,
     });
   };
+
+  const toggleLinkFilter = () => {
+    const link = filters.link === 'unlinked' ? 'linked' : 'unlinked';
+    updateFilters({
+      link,
+      boardId: filters.boardId || settings?.defaultBoardId || '',
+    });
+  };
   const active = activeFilterCount(filters);
   const seiTab = lastTab?.url && looksLikeSeiUrl(lastTab.url) ? lastTab : null;
   const hasActivatedSite = Boolean(
@@ -367,6 +418,7 @@ function Dashboard() {
         filters.processUpdate,
     );
   }
+  if (filters.link === 'unlinked') activeChips.push('Sem vínculo SEI');
 
   return (
     <div className="sdo-page">
@@ -407,6 +459,16 @@ function Dashboard() {
           </div>
         </div>
         <div className="sdo-hero__actions">
+          <button
+            type="button"
+            className="sfo-btn sfo-btn--sm sfo-btn--primary"
+            onClick={() => setShowCreate(true)}
+            disabled={!connected}
+            title="Criar cartão no Trello sem abrir o Trello"
+          >
+            <Icon name="plus" size={14} />
+            Novo cartão
+          </button>
           {seiTab?.url && (
             <a className="sfo-btn sfo-btn--sm" href={seiTab.url} target="_blank" rel="noreferrer">
               <Icon name="external" size={14} />
@@ -551,7 +613,7 @@ function Dashboard() {
             <Icon name="link" size={16} />
           </span>
           <span className="sdo-metric__body">
-            <span>Total vinculado</span>
+            <span>{filters.link === 'unlinked' ? 'Total sem vínculo' : 'Total vinculado'}</span>
             <strong>{summary.total}</strong>
             <small>de {cards.length} cartões</small>
           </span>
@@ -658,6 +720,15 @@ function Dashboard() {
               <span className="sdo-list-chip__count">{list.count}</span>
             </button>
           ))}
+          <button
+            type="button"
+            className={`sdo-list-chip${filters.link === 'unlinked' ? ' sdo-list-chip--on' : ''}`}
+            onClick={toggleLinkFilter}
+            title="Mostrar apenas cartões sem vínculo com o SEI"
+          >
+            <Icon name="unlink" size={11} />
+            Sem vínculo
+          </button>
         </div>
       )}
 
@@ -704,7 +775,9 @@ function Dashboard() {
           <strong>Nenhum cartão encontrado</strong>
           <span>
             {cards.length === 0
-              ? 'Vincule cartões aos processos do SEI para vê-los aqui.'
+              ? filters.link === 'unlinked'
+                ? 'Nenhum cartão sem vínculo neste quadro. Crie um em "Novo cartão".'
+                : 'Vincule cartões aos processos do SEI para vê-los aqui.'
               : 'Ajuste os filtros para ampliar os resultados.'}
           </span>
           {active > 0 && (
@@ -744,6 +817,22 @@ function Dashboard() {
         <span>SEI Flow · painel de controle · Desenvolvido por Engenheiro Leonardo Almeida de Oliveira</span>
         <span className="sdo-footer__links">Sem coleta de dados · suporte em Opções → Diagnóstico</span>
       </footer>
+
+      {showCreate && (
+        <CreateCardDialog
+          defaultName=""
+          initialBoardId={filters.boardId || settings?.defaultBoardId}
+          initialListId={filters.listId || settings?.defaultListId}
+          onClose={() => setShowCreate(false)}
+          onCreated={(card) => {
+            if (filters.link === 'unlinked') {
+              setCards((previous) => [card, ...previous]);
+            } else {
+              updateFilters({ link: 'unlinked', boardId: card.idBoard });
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

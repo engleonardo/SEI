@@ -141,8 +141,18 @@ describe('modelo do dashboard', () => {
     expect(names('type')).toEqual(['Beta', 'Alfa', 'Gama']);
   });
 
+  it('filtra por vínculo com o SEI', () => {
+    const linked = card();
+    const unlinked = card({ links: [], desc: 'Sem vínculo', description: 'Sem vínculo' });
+    expect(matchesFilters(linked, filters(), catalog, 0)).toBe(true);
+    expect(matchesFilters(unlinked, filters(), catalog, 0)).toBe(false);
+    expect(matchesFilters(unlinked, filters({ link: 'unlinked' }), catalog, 0)).toBe(true);
+    expect(matchesFilters(linked, filters({ link: 'unlinked' }), catalog, 0)).toBe(false);
+  });
+
   it('conta filtros ativos e exporta CSV', () => {
     expect(activeFilterCount(filters())).toBe(0);
+    expect(activeFilterCount(filters({ link: 'unlinked' }))).toBe(1);
     expect(
       activeFilterCount(
         filters({ labelIds: ['label-1'], due: 'overdue', activity: '7d', processType: 'X' }),

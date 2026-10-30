@@ -6,6 +6,7 @@ export type ActivityFilter = 'any' | 'today' | '7d' | '30d' | 'sinceVisit';
 export type ProcessUpdateFilter = 'any' | 'unread' | 'read';
 export type GroupMode = 'due' | 'board' | 'list' | 'type' | 'label' | 'none';
 export type SortMode = 'due' | 'activity' | 'name' | 'list' | 'board' | 'label' | 'type';
+export type LinkFilter = 'linked' | 'unlinked';
 
 export interface DashboardFilters {
   search: string;
@@ -19,6 +20,7 @@ export interface DashboardFilters {
   processUpdate: ProcessUpdateFilter;
   sort: SortMode;
   group: GroupMode;
+  link: LinkFilter;
 }
 
 export const DEFAULT_FILTERS: DashboardFilters = {
@@ -33,6 +35,7 @@ export const DEFAULT_FILTERS: DashboardFilters = {
   processUpdate: 'any',
   sort: 'due',
   group: 'due',
+  link: 'linked',
 };
 
 export type DueBucket = 'overdue' | 'today' | 'soon' | 'later' | 'none' | 'done';
@@ -185,6 +188,8 @@ export function matchesFilters(
   catalog: ProcessCatalog,
   lastVisit: number,
 ): boolean {
+  if (filters.link === 'linked' && card.links.length === 0) return false;
+  if (filters.link === 'unlinked' && card.links.length > 0) return false;
   if (filters.boardId && card.idBoard !== filters.boardId) return false;
   if (filters.listId && card.idList !== filters.listId) return false;
 
@@ -378,6 +383,7 @@ export function activeFilterCount(filters: DashboardFilters): number {
   if (filters.activity !== 'any') count += 1;
   if (filters.processUpdate !== 'any') count += 1;
   if (filters.sort !== 'due') count += 1;
+  if (filters.link !== 'linked') count += 1;
   return count;
 }
 
@@ -394,11 +400,13 @@ export function loadFilters(): DashboardFilters {
     const group = groupValues.includes(parsed.group as GroupMode)
       ? (parsed.group as GroupMode)
       : SORT_GROUPS[sort];
+    const link: LinkFilter = parsed.link === 'unlinked' ? 'unlinked' : 'linked';
     return {
       ...DEFAULT_FILTERS,
       ...parsed,
       sort,
       group,
+      link,
       labelIds: Array.isArray(parsed.labelIds)
         ? parsed.labelIds.filter((value): value is string => typeof value === 'string')
         : [],

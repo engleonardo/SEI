@@ -26,6 +26,7 @@ export interface TrelloBoard {
 export interface TrelloList {
   id: string;
   name: string;
+  pos?: number;
 }
 
 export interface TrelloChecklistItem {
