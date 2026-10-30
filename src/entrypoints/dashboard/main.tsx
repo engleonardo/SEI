@@ -104,13 +104,16 @@ function Dashboard() {
 
   const version = browser.runtime.getManifest().version;
   const connected = Boolean(settings?.appKey && settings?.appToken);
+  const loadSeq = useRef(0);
 
   const load = useCallback(async (silent = false) => {
+    const seq = ++loadSeq.current;
     if (!silent) setLoading(true);
     setRefreshing(true);
     setError(null);
     try {
       const nextSettings = await callRpc('settings:get', undefined);
+      if (seq !== loadSeq.current) return;
       setSettings(nextSettings);
 
       const [processRecords, nextLastTab, nextBoards] = await Promise.all([
@@ -120,6 +123,7 @@ function Dashboard() {
           ? callRpc('trello:boards', { fresh: false }).catch(() => [] as TrelloBoard[])
           : Promise.resolve([] as TrelloBoard[]),
       ]);
+      if (seq !== loadSeq.current) return;
       const nextCatalog: ProcessCatalog = {};
       for (const record of processRecords as ProcessRecord[]) {
         nextCatalog[record.number] = record;
@@ -132,27 +136,31 @@ function Dashboard() {
         if (filters.link === 'unlinked') {
           const boardId = filters.boardId || nextSettings.defaultBoardId;
           if (!boardId) {
-            setCards([]);
+            if (seq === loadSeq.current) setCards([]);
           } else {
             const boardCards = await callRpc('trello:board-cards', {
               boardId,
               fresh: true,
             });
-            setCards(boardCards.filter((card) => card.links.length === 0));
+            if (seq === loadSeq.current) {
+              setCards(boardCards.filter((card) => card.links.length === 0));
+            }
           }
         } else {
           const nextCards = await callRpc('trello:all-linked-cards', { fresh: true });
-          setCards(nextCards);
+          if (seq === loadSeq.current) setCards(nextCards);
         }
-      } else {
+      } else if (seq === loadSeq.current) {
         setCards([]);
       }
-      writeLastVisit();
+      if (seq === loadSeq.current) writeLastVisit();
     } catch (cause) {
-      setError(errorMessage(cause));
+      if (seq === loadSeq.current) setError(errorMessage(cause));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (seq === loadSeq.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [filters.link, filters.boardId]);
 
@@ -1081,6 +1089,9 @@ function Dashboard() {
           onClose={() => setShowCreate(false)}
           onCreated={(card) => {
             if (filters.link === 'unlinked') {
+              if (card.idBoard && card.idBoard !== filters.boardId) {
+                updateFilters({ boardId: card.idBoard, listId: '' });
+              }
               setCards((previous) => [card, ...previous]);
             } else {
               updateFilters({ link: 'unlinked', boardId: card.idBoard });
