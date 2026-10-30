@@ -312,15 +312,20 @@ export class ListManager {
 
     const cardCell = entry.cardRow.cells[0];
     if (cardCell) {
-      this.snapshotCell(cardCell);
-      cardCell.style.borderTop = `1px solid ${border}`;
-      cardCell.style.borderLeft = `1px solid ${border}`;
-      cardCell.style.borderRight = `1px solid ${border}`;
-      cardCell.style.borderBottom = `1px solid ${border}`;
-      cardCell.style.borderBottomLeftRadius = '14px';
-      cardCell.style.borderBottomRightRadius = '14px';
-      cardCell.style.backgroundColor = colors.body;
-      cardCell.style.overflow = 'hidden';
+      if (dark) {
+        // Só o cartão em si fica escuro; a faixa da tabela ao redor permanece do SEI.
+        this.restoreCell(cardCell);
+      } else {
+        this.snapshotCell(cardCell);
+        cardCell.style.borderTop = `1px solid ${border}`;
+        cardCell.style.borderLeft = `1px solid ${border}`;
+        cardCell.style.borderRight = `1px solid ${border}`;
+        cardCell.style.borderBottom = `1px solid ${border}`;
+        cardCell.style.borderBottomLeftRadius = '14px';
+        cardCell.style.borderBottomRightRadius = '14px';
+        cardCell.style.backgroundColor = colors.body;
+        cardCell.style.overflow = 'hidden';
+      }
     }
   }
 
