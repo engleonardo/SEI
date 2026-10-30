@@ -8,6 +8,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 ### Corrigido
 
 - No tema escuro, o SEI continua claro: apenas os cartões e a interface do SEI Flow ficam escuros. A linha do processo e o restante da página não são mais alterados.
+- A faixa da tabela ao redor do cartão também permanece clara; só o cartão em si fica escuro.
 - O tema não é mais aplicado ao documento das páginas do SEI; ele fica restrito ao Shadow DOM da extensão.
 - Alternar o tema com uma página do SEI aberta atualiza os cartões sem recarregar.
 
@@ -47,3 +48,4 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - Cartões criados pela extensão disparam as regras de entrada em lista.
 
 Versões anteriores: consulte as releases em https://github.com/engleonardo/SEI/releases.
+

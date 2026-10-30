@@ -359,4 +359,14 @@ test('modo escuro escurece só os cartões e mantém o SEI claro', async ({ page
     .first()
     .evaluate((element) => getComputedStyle(element).backgroundColor);
   expect(cardBackground).toBe('rgb(59, 35, 35)');
+
+  const cardCellBackground = await page
+    .locator('.sf-card')
+    .first()
+    .evaluate((element) => {
+      const host = (element.getRootNode() as ShadowRoot).host as HTMLElement | undefined;
+      const cell = host?.closest('td');
+      return cell ? getComputedStyle(cell).backgroundColor : null;
+    });
+  expect(cardCellBackground).not.toBe('rgb(28, 31, 36)');
 });
