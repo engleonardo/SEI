@@ -12,7 +12,7 @@ import { callRpc, errorMessage } from '../../core/messaging/client';
 import { openOptionsPage } from '../../core/messaging/actions';
 import type { LastActionTab } from '../../core/storage/last-tab';
 import type { ProcessCatalog, ProcessRecord } from '../../core/storage/processes';
-import { isOriginActivated } from '../../core/storage/settings';
+import { isOriginActivated, watchSettings } from '../../core/storage/settings';
 import { looksLikeSeiUrl } from '../../core/sei/detect';
 import { BrandMark } from '../../ui/BrandMark';
 import { CreateCardDialog } from '../../ui/components/CreateCardDialog';
@@ -163,6 +163,8 @@ function Dashboard() {
   useEffect(() => {
     if (settings) setThemePreference(settings.theme);
   }, [settings]);
+
+  useEffect(() => watchSettings((next) => setThemePreference(next.theme)), []);
 
   const defaultBoardApplied = useRef(false);
   useEffect(() => {
@@ -343,6 +345,15 @@ function Dashboard() {
 
   const summary = useMemo(() => summarize(visibleCards, catalog), [visibleCards, catalog]);
 
+  const scopeCards = useMemo(
+    () => (filters.boardId ? cards.filter((card) => card.idBoard === filters.boardId) : cards),
+    [cards, filters.boardId],
+  );
+  const scopeTotal = scopeCards.length;
+  const scopeName = filters.boardId
+    ? (boards.find((board) => board.id === filters.boardId)?.name ?? 'Quadro selecionado')
+    : 'Todos os quadros';
+
   const listCounts = useMemo(() => {
     if (!filters.boardId) return [];
     const base = cards.filter((card) =>
@@ -415,6 +426,18 @@ function Dashboard() {
 
   const toggleActivity = (value: Filters['activity']) => {
     updateFilters({ activity: filters.activity === value ? 'any' : value });
+  };
+
+  const toggleTheme = async () => {
+    const next = settings?.theme === 'dark' ? 'light' : 'dark';
+    setThemePreference(next);
+    try {
+      const updated = await callRpc('settings:save', { theme: next });
+      setSettings(updated);
+    } catch (cause) {
+      setThemePreference(settings?.theme ?? 'light');
+      showToast(errorMessage(cause), 'error');
+    }
   };
   const active = activeFilterCount(filters);
   const seiTab = lastTab?.url && looksLikeSeiUrl(lastTab.url) ? lastTab : null;
@@ -575,6 +598,15 @@ function Dashboard() {
             <Icon name="settings" size={14} />
             Opções
           </button>
+          <button
+            type="button"
+            className="sfo-btn sfo-btn--sm sdo-theme-toggle"
+            onClick={() => void toggleTheme()}
+            title={settings?.theme === 'dark' ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'}
+            aria-label={settings?.theme === 'dark' ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'}
+          >
+            <Icon name={settings?.theme === 'dark' ? 'sun' : 'moon'} size={14} />
+          </button>
         </div>
       </header>
 
@@ -733,8 +765,8 @@ function Dashboard() {
           </span>
           <span className="sdo-metric__body">
             <span>{filters.link === 'unlinked' ? 'Total sem vínculo' : 'Total vinculado'}</span>
-            <strong>{summary.total}</strong>
-            <small>de {cards.length} cartões</small>
+            <strong>{scopeTotal}</strong>
+            <small>{scopeName}</small>
           </span>
         </button>
       </section>

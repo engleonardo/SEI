@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Settings, ThemePreference } from '../../../core/domain/types';
 import { Icon } from '../../../ui/icons';
+import { setThemePreference } from '../../../ui/theme';
 import { SectionCard, Spinner, type Notice } from './shared';
 
 export function PreferencesSection({
@@ -52,7 +53,7 @@ export function PreferencesSection({
   return (
     <SectionCard
       title="Preferências da interface"
-      subtitle="Ajustes visuais e de sincronização aplicados dentro do SEI."
+      subtitle="Ajustes visuais e de sincronização do SEI Flow."
       icon="tag"
       footer={
         <>
@@ -77,12 +78,28 @@ export function PreferencesSection({
             id="sfo-theme"
             className="sfo-select"
             value={theme === 'dark' ? 'dark' : 'light'}
-            onChange={(event) => setTheme(event.target.value as ThemePreference)}
+            onChange={(event) => {
+              const next = event.target.value as ThemePreference;
+              setTheme(next);
+              setThemePreference(next);
+              void save({ theme: next })
+                .then(() => notify({ kind: 'success', text: 'Tema atualizado.' }))
+                .catch((cause) => {
+                  setTheme(settings.theme);
+                  setThemePreference(settings.theme);
+                  notify({
+                    kind: 'error',
+                    text: cause instanceof Error ? cause.message : 'Erro ao salvar o tema.',
+                  });
+                });
+            }}
           >
             <option value="light">Claro (padrão)</option>
             <option value="dark">Escuro</option>
           </select>
-          <span className="sfo-hint">O tema é aplicado dentro do Shadow DOM, sem alterar o SEI.</span>
+          <span className="sfo-hint">
+            Aplicado ao painel, a estas opções e aos painéis dentro do SEI, sem alterar o SEI.
+          </span>
         </div>
 
         <div className="sfo-field">
@@ -127,8 +144,7 @@ export function PreferencesSection({
         <span className="sfo-toggle-row__body">
           <span className="sfo-toggle-row__title">Notificações de prazos</span>
           <span className="sfo-toggle-row__text">
-            Envia um aviso por dia quando houver cartões atrasados ou vencendo hoje, além do badge
-            com a contagem no ícone da extensão.
+            Envia um aviso por dia quando houver cartões atrasados ou vencendo hoje.
           </span>
         </span>
       </label>

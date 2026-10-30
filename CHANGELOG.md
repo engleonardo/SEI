@@ -7,6 +7,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 ### Adicionado
 
+- **Modo escuro** no painel e nas opções, com alternância instantânea e preferência sincronizada entre abas e painéis abertos no SEI.
 - Filtro **Sem vínculo** no painel para ver cartões do quadro que ainda não estão vinculados a processos do SEI.
 - Botão **Novo cartão** no painel para criar cartões no Trello sem abrir o Trello (com etiquetas, quadro/lista e datas).
 - **Vincular cartões desvinculados** (Opções -> Diagnóstico): procura cartões sem vínculo que citam um número de processo SEI, mostra os candidatos e vincula somente após confirmação, sem alterar o comentário.
@@ -21,6 +22,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - **Todas as listas** e **Sem vínculo** saíram do meio das listas e ficaram como controles discretos no cabeçalho da seção.
 - Listas do painel (chips e filtro) seguem a **ordem do Trello**.
 - A ordenação **Por lista** no painel agora segue exatamente a posição das listas no Trello.
+- O cartão **Total vinculado** mostra o total do quadro selecionado e o nome do quadro (ou "Todos os quadros").
 - Clicar em **Todas as listas** também remove o filtro **Sem vínculo**.
 - Indicadores de prazo e atalhos do painel alternam o filtro ao clicar de novo, e cada filtro ativo pode ser removido individualmente.
 - Regras ganharam botão **Salvar regras** com indicação de salvamento automático.

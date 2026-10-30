@@ -1,7 +1,7 @@
 import { defineUnlistedScript } from 'wxt/utils/define-unlisted-script';
 import { detectPageKind } from '../core/sei/detect';
 import { startProcessContent } from '../core/sei/process-content';
-import { getSettings } from '../core/storage/settings';
+import { getSettings, watchSettings } from '../core/storage/settings';
 import { startListManager } from '../ui/list/manager';
 import { setThemePreference } from '../ui/theme';
 
@@ -16,6 +16,13 @@ declare global {
 export default defineUnlistedScript(() => {
   if (window.__seiFlowInjected) return;
   window.__seiFlowInjected = true;
+
+  // Mantém o tema sincronizado quando o usuário alterna no painel ou nas opções.
+  try {
+    watchSettings((settings) => setThemePreference(settings.theme));
+  } catch {
+    // segue com o tema carregado no boot
+  }
 
   let cleanup: (() => void) | null = null;
   let mode: 'list' | 'content' | null = null;

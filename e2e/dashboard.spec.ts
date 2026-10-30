@@ -145,6 +145,15 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
 
     await expect(dashboard.getByRole('heading', { name: /Painel SEI Flow/ })).toBeVisible();
     await expect(dashboard.getByRole('combobox', { name: 'Quadro' })).toBeVisible();
+    const totalMetric = dashboard.locator('.sdo-metric--total');
+    await expect(totalMetric).toContainText('2');
+    await expect(totalMetric).toContainText('Contratos');
+
+    // Alternância de tema aplica na hora e persiste.
+    await dashboard.locator('.sdo-theme-toggle').click();
+    await expect(dashboard.locator('html')).toHaveAttribute('data-sf-theme', 'dark');
+    await dashboard.locator('.sdo-theme-toggle').click();
+    await expect(dashboard.locator('html')).toHaveAttribute('data-sf-theme', 'light');
     await expect(dashboard.getByText('Revisar contrato')).toBeVisible();
     await expect(dashboard.getByText('Publicar edital')).toBeVisible();
     await expect(

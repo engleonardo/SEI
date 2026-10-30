@@ -4,6 +4,7 @@ import { browser } from 'wxt/browser';
 import type { Settings, TrelloBoard } from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
 import { openDashboard } from '../../core/messaging/actions';
+import { watchSettings } from '../../core/storage/settings';
 import { BrandMark } from '../../ui/BrandMark';
 import { Icon, type IconName } from '../../ui/icons';
 import { ConnectionSection } from './sections/ConnectionSection';
@@ -13,6 +14,7 @@ import { PreferencesSection } from './sections/PreferencesSection';
 import { RulesSection } from './sections/RulesSection';
 import { SitesSection } from './sections/SitesSection';
 import { Spinner, type Notice } from './sections/shared';
+import { setThemePreference } from '../../ui/theme';
 import './style.css';
 
 type Tab = 'connection' | 'destination' | 'rules' | 'sites' | 'preferences' | 'diagnostics';
@@ -79,6 +81,25 @@ function App() {
     setSettings(next);
     return next;
   }, []);
+
+  useEffect(() => {
+    if (settings) setThemePreference(settings.theme);
+  }, [settings]);
+
+  useEffect(() => watchSettings((next) => setThemePreference(next.theme)), []);
+
+  const dark = settings?.theme === 'dark';
+
+  const toggleTheme = useCallback(async () => {
+    const next = settings?.theme === 'dark' ? 'light' : 'dark';
+    setThemePreference(next);
+    try {
+      await save({ theme: next });
+    } catch (cause) {
+      setThemePreference(settings?.theme ?? 'light');
+      notify({ kind: 'error', text: errorMessage(cause) });
+    }
+  }, [settings, save, notify]);
 
   const reloadBoards = useCallback(async () => {
     try {
@@ -180,6 +201,16 @@ function App() {
             <h1 className="sfo-page-title">{page.title}</h1>
             <p className="sfo-page-sub">{page.subtitle}</p>
           </div>
+          <button
+            type="button"
+            className="sfo-theme-toggle"
+            onClick={() => void toggleTheme()}
+            title={dark ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'}
+            aria-label={dark ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'}
+          >
+            <Icon name={dark ? 'sun' : 'moon'} size={15} />
+            {dark ? 'Tema claro' : 'Tema escuro'}
+          </button>
         </header>
 
         {notice && <div className={`sfo-alert sfo-alert--${notice.kind}`}>{notice.text}</div>}

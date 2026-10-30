@@ -57,6 +57,10 @@
   --sf-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
 }
 
+:host([data-sf-theme='dark']) .sf-btn--primary {
+  color: #0d1420;
+}
+
 *,
 *::before,
 *::after {
