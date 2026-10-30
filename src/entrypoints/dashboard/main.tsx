@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
-import type { Settings, TrelloCard, TrelloLabel, TrelloList } from '../../core/domain/types';
+import type {
+  Settings,
+  TrelloBoard,
+  TrelloCard,
+  TrelloLabel,
+  TrelloList,
+} from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
 import { openOptionsPage } from '../../core/messaging/actions';
 import type { LastActionTab } from '../../core/storage/last-tab';
@@ -92,6 +98,7 @@ function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [trelloBoards, setTrelloBoards] = useState<TrelloBoard[]>([]);
   const [boardLists, setBoardLists] = useState<TrelloList[]>([]);
   const [showCreate, setShowCreate] = useState(false);
 
@@ -106,15 +113,19 @@ function Dashboard() {
       const nextSettings = await callRpc('settings:get', undefined);
       setSettings(nextSettings);
 
-      const [processRecords, nextLastTab] = await Promise.all([
+      const [processRecords, nextLastTab, nextBoards] = await Promise.all([
         callRpc('processes:list', undefined),
         callRpc('activation:last-tab', undefined),
+        nextSettings.appKey && nextSettings.appToken
+          ? callRpc('trello:boards', { fresh: false }).catch(() => [] as TrelloBoard[])
+          : Promise.resolve([] as TrelloBoard[]),
       ]);
       const nextCatalog: ProcessCatalog = {};
       for (const record of processRecords as ProcessRecord[]) {
         nextCatalog[record.number] = record;
       }
       setCatalog(nextCatalog);
+      setTrelloBoards(Array.isArray(nextBoards) ? nextBoards : []);
       setLastTab(nextLastTab);
 
       if (nextSettings.appKey && nextSettings.appToken) {
@@ -235,6 +246,9 @@ function Dashboard() {
 
   const boards = useMemo(() => {
     const map = new Map<string, string>();
+    for (const board of trelloBoards) {
+      if (board.id) map.set(board.id, board.name);
+    }
     for (const card of cards) {
       if (card.idBoard && !map.has(card.idBoard)) {
         map.set(card.idBoard, card.board?.name ?? 'Quadro');
@@ -243,7 +257,7 @@ function Dashboard() {
     return Array.from(map.entries())
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-  }, [cards]);
+  }, [cards, trelloBoards]);
 
   const lists = useMemo(() => {
     if (filters.boardId && boardLists.length > 0) {
@@ -642,6 +656,30 @@ function Dashboard() {
       </div>
 
       <section className="sdo-command" aria-label="Busca e filtros">
+        <label className="sdo-board-picker" title="Escolher o quadro exibido no painel">
+          <Icon name="board" size={15} />
+          <span className="sdo-board-picker__label">Quadro</span>
+          <select
+            className="sdo-board-picker__select"
+            value={filters.boardId}
+            onChange={(event) => updateFilters({ boardId: event.target.value, listId: '' })}
+            aria-label="Quadro"
+          >
+            <option value="">Todos os quadros</option>
+            {boards.map((board) => (
+              <option key={board.id} value={board.id}>
+                {board.name}
+              </option>
+            ))}
+            {filters.boardId && !boards.some((board) => board.id === filters.boardId) && (
+              <option value={filters.boardId}>
+                {settings?.defaultBoardId === filters.boardId && settings.defaultBoardName
+                  ? settings.defaultBoardName
+                  : 'Quadro selecionado'}
+              </option>
+            )}
+          </select>
+        </label>
         <div className="sdo-search">
           <Icon name="search" size={16} />
           <input
@@ -696,40 +734,68 @@ function Dashboard() {
       </section>
 
       {filters.boardId && listCounts.length > 0 && (
-        <div className="sdo-list-chips" aria-label="Cartões por lista">
-          <span className="sdo-list-chips__label">Listas</span>
-          <button
-            type="button"
-            className={`sdo-list-chip${filters.listId ? '' : ' sdo-list-chip--on'}`}
-            onClick={() => updateFilters({ listId: '' })}
-          >
-            Todas
-            <span className="sdo-list-chip__count">{listTotal}</span>
-          </button>
-          {listCounts.map((list) => (
+        <section className="sdo-lists" aria-label="Cartões por lista">
+          <div className="sdo-lists__head">
+            <span className="sdo-lists__title">
+              <Icon name="list" size={14} />
+              Listas do quadro
+            </span>
+            <span className="sdo-lists__hint">Clique em uma lista para filtrar os cartões</span>
+          </div>
+          <div className="sdo-lists__grid">
             <button
-              key={list.id}
               type="button"
-              className={`sdo-list-chip${filters.listId === list.id ? ' sdo-list-chip--on' : ''}`}
-              onClick={() =>
-                updateFilters({ listId: filters.listId === list.id ? '' : list.id })
-              }
-              title={`Ver ${list.count} cartão(ões) em ${list.name}`}
+              className={`sdo-list-card${filters.listId ? '' : ' sdo-list-card--on'}`}
+              onClick={() => updateFilters({ listId: '' })}
             >
-              {list.name}
-              <span className="sdo-list-chip__count">{list.count}</span>
+              <span className="sdo-list-card__icon">
+                <Icon name="list" size={16} />
+              </span>
+              <span className="sdo-list-card__body">
+                <span className="sdo-list-card__name">Todas as listas</span>
+                <strong>{listTotal}</strong>
+                <small>cartões no quadro</small>
+              </span>
             </button>
-          ))}
-          <button
-            type="button"
-            className={`sdo-list-chip${filters.link === 'unlinked' ? ' sdo-list-chip--on' : ''}`}
-            onClick={toggleLinkFilter}
-            title="Mostrar apenas cartões sem vínculo com o SEI"
-          >
-            <Icon name="unlink" size={11} />
-            Sem vínculo
-          </button>
-        </div>
+            {listCounts.map((list) => (
+              <button
+                key={list.id}
+                type="button"
+                className={`sdo-list-card${filters.listId === list.id ? ' sdo-list-card--on' : ''}`}
+                onClick={() =>
+                  updateFilters({ listId: filters.listId === list.id ? '' : list.id })
+                }
+                title={`Filtrar por ${list.name}`}
+              >
+                <span className="sdo-list-card__icon">
+                  <Icon name="list" size={16} />
+                </span>
+                <span className="sdo-list-card__body">
+                  <span className="sdo-list-card__name">{list.name}</span>
+                  <strong>{list.count}</strong>
+                  <small>{list.count === 1 ? 'cartão' : 'cartões'}</small>
+                </span>
+              </button>
+            ))}
+            <button
+              type="button"
+              className={`sdo-list-card sdo-list-card--action${
+                filters.link === 'unlinked' ? ' sdo-list-card--on' : ''
+              }`}
+              onClick={toggleLinkFilter}
+              title="Mostrar apenas cartões sem vínculo com o SEI"
+            >
+              <span className="sdo-list-card__icon">
+                <Icon name="unlink" size={16} />
+              </span>
+              <span className="sdo-list-card__body">
+                <span className="sdo-list-card__name">Sem vínculo</span>
+                <strong>{filters.link === 'unlinked' ? cards.length : 'Filtrar'}</strong>
+                <small>cartões sem processo SEI</small>
+              </span>
+            </button>
+          </div>
+        </section>
       )}
 
       {activeChips.length > 0 && (

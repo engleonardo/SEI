@@ -143,21 +143,22 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
     await dashboard.goto(`chrome-extension://${extensionId}/dashboard.html`);
 
     await expect(dashboard.getByRole('heading', { name: /Painel SEI Flow/ })).toBeVisible();
+    await expect(dashboard.getByRole('combobox', { name: 'Quadro' })).toBeVisible();
     await expect(dashboard.getByText('Revisar contrato')).toBeVisible();
     await expect(dashboard.getByText('Publicar edital')).toBeVisible();
     await expect(
       dashboard.getByText('Desenvolvido por Engenheiro Leonardo Almeida de Oliveira'),
     ).toBeVisible();
 
-    // Chips de lista: o quadro padrão já vem escolhido e mostra a contagem por lista.
-    await expect(dashboard.getByText('Listas', { exact: true })).toBeVisible();
-    const listChip = dashboard.locator('.sdo-list-chip').filter({ hasText: 'Em análise' }).first();
-    await expect(listChip).toBeVisible();
-    await listChip.click();
+    // Cartões de lista: o quadro padrão já vem escolhido e mostra a contagem por lista.
+    await expect(dashboard.getByText('Listas do quadro')).toBeVisible();
+    const listCard = dashboard.locator('.sdo-list-card').filter({ hasText: 'Em análise' }).first();
+    await expect(listCard).toBeVisible();
+    await listCard.click();
     await expect(dashboard.getByText('Revisar contrato')).toBeVisible();
-    await expect(dashboard.locator('.sdo-list-chip--on')).toHaveText(/Em análise/);
-    await listChip.click();
-    await expect(dashboard.locator('.sdo-list-chip--on')).toHaveText(/Todas/);
+    await expect(dashboard.locator('.sdo-list-card--on')).toHaveText(/Em análise/);
+    await listCard.click();
+    await expect(dashboard.locator('.sdo-list-card--on')).toHaveText(/Todas as listas/);
 
     // Link do processo abre a página real do SEI.
     const processLink = dashboard.getByRole('link', {

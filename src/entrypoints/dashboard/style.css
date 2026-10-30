@@ -435,6 +435,49 @@
   backdrop-filter: blur(16px);
 }
 
+.sdo-board-picker {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 10px 0 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 7%, white);
+  color: var(--accent);
+}
+
+.sdo-board-picker:hover,
+.sdo-board-picker:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.sdo-board-picker__label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sdo-board-picker__select {
+  max-width: 190px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sdo-board-picker__select:focus-visible {
+  outline: none;
+}
+
 .sdo-search {
   position: relative;
   display: flex;
@@ -1254,73 +1297,164 @@
 
 /* ---------------------------------------------------------------- listas */
 
-.sdo-list-chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 10px;
+.sdo-lists {
+  margin: 12px 0 16px;
 }
 
-.sdo-list-chips__label {
+.sdo-lists__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+  margin-bottom: 8px;
+}
+
+.sdo-lists__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--muted);
   font-size: 10.5px;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-.sdo-list-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border: 1px solid rgba(219, 228, 238, 0.95);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.85);
-  color: var(--text-soft);
-  font: inherit;
+.sdo-lists__hint {
+  color: var(--muted);
   font-size: 11.5px;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease,
-    background 0.15s ease;
 }
 
-.sdo-list-chip:hover {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+.sdo-lists__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.sdo-list-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  overflow: hidden;
+  padding: 13px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.8)),
+    radial-gradient(180px 100px at 100% 0%, rgba(29, 78, 216, 0.1), transparent 75%);
+  box-shadow:
+    0 14px 38px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.sdo-list-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--accent);
+  opacity: 0.35;
+}
+
+.sdo-list-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  box-shadow:
+    0 20px 50px rgba(15, 23, 42, 0.1),
+    0 0 0 4px color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.sdo-list-card--action::before {
+  background: var(--warning);
+}
+
+.sdo-list-card--on {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background:
+    linear-gradient(150deg, color-mix(in srgb, var(--accent) 14%, white), rgba(255, 255, 255, 0.94)),
+    radial-gradient(200px 110px at 100% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 75%);
+  box-shadow:
+    0 16px 40px rgba(29, 78, 216, 0.16),
+    0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.sdo-list-card--on::before,
+.sdo-list-card--on.sdo-list-card--action::before {
+  opacity: 1;
+}
+
+.sdo-list-card__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 12%, white);
   color: var(--accent);
 }
 
-.sdo-list-chip--on {
-  border-color: transparent;
-  background: var(--accent);
-  color: #fff;
+.sdo-list-card--action .sdo-list-card__icon {
+  background: color-mix(in srgb, var(--warning) 14%, white);
+  color: var(--warning);
 }
 
-.sdo-list-chip--on:hover {
-  border-color: transparent;
-  background: var(--accent-hover, var(--accent));
-  color: #fff;
+.sdo-list-card--on .sdo-list-card__icon {
+  background: #fff;
 }
 
-.sdo-list-chip__count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.08);
-  color: inherit;
+.sdo-list-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sdo-list-card__name {
+  overflow: hidden;
+  color: var(--muted);
   font-size: 10.5px;
   font-weight: 800;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.sdo-list-chip--on .sdo-list-chip__count {
-  background: rgba(255, 255, 255, 0.24);
+.sdo-list-card__body strong {
+  color: var(--text);
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.sdo-list-card--action .sdo-list-card__body strong {
+  color: var(--text-soft);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.sdo-list-card--on .sdo-list-card__body strong {
+  color: var(--accent);
+}
+
+.sdo-list-card__body small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sdo-pill {
@@ -1422,6 +1556,19 @@
 
   .sdo-command {
     align-items: stretch;
+  }
+
+  .sdo-board-picker {
+    flex-basis: 100%;
+  }
+
+  .sdo-board-picker__select {
+    flex: 1;
+    max-width: none;
+  }
+
+  .sdo-lists__grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
 
   .sdo-search {
