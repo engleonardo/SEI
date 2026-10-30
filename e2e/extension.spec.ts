@@ -51,6 +51,7 @@ test('extensão carrega, injeta no SEI e abre opções/dashboard', async () => {
       defaultListName: '',
       activatedOrigins: ['http://sei.test'],
       allSites: false,
+      autoSeiHosts: false,
       theme: 'light',
       compact: true,
       autoRefreshMinutes: 0,

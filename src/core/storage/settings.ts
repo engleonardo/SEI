@@ -2,7 +2,6 @@ import { browser } from 'wxt/browser';
 import type { Settings } from '../domain/types';
 
 const SETTINGS_KEY = 'sei-flow:settings:v1';
-
 export const DEFAULT_SETTINGS: Settings = {
   appKey: '',
   appToken: '',
@@ -12,6 +11,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultListName: '',
   activatedOrigins: [],
   allSites: false,
+  autoSeiHosts: false,
   theme: 'light',
   compact: true,
   notificationsEnabled: true,
@@ -28,6 +28,7 @@ function sanitize(value: Partial<Settings> | null | undefined): Settings {
     activatedOrigins: Array.isArray(value?.activatedOrigins)
       ? [...new Set(value.activatedOrigins.filter((origin) => typeof origin === 'string' && origin.length > 0))]
       : [],
+    autoSeiHosts: value?.autoSeiHosts === true,
     autoRefreshMinutes:
       typeof value?.autoRefreshMinutes === 'number' && value.autoRefreshMinutes >= 0
         ? value.autoRefreshMinutes
@@ -91,7 +92,19 @@ export function isOriginActivated(url: string, settings: Settings): boolean {
   const origin = normalizeOrigin(url);
   if (!origin) return false;
   if (settings.allSites) return true;
+  if (settings.autoSeiHosts && isSeiHost(origin)) return true;
   return settings.activatedOrigins.includes(origin);
+}
+
+/** Sites cujo host começa com "sei" (ex.: sei.ufsc.br, seiprocesos...). */
+export function isSeiHost(url: string): boolean {
+  const origin = normalizeOrigin(url);
+  if (!origin) return false;
+  try {
+    return new URL(origin).hostname.toLowerCase().startsWith('sei');
+  } catch {
+    return false;
+  }
 }
 
 export function addActivatedOrigin(settings: Settings, origin: string): Settings {
@@ -105,4 +118,24 @@ export function removeActivatedOrigin(settings: Settings, origin: string): Setti
   const normalized = normalizeOrigin(origin);
   if (!normalized) return settings;
   return { ...settings, activatedOrigins: settings.activatedOrigins.filter((item) => item !== normalized) };
+}
+
+/**
+ * Avisa quando as configurações mudam em outra página (ex.: tema alterado no painel
+ * ou nas opções) para atualizar a interface já aberta.
+ */
+export function watchSettings(listener: (settings: Settings) => void): () => void {
+  const onChanged = browser.storage?.onChanged;
+  if (!onChanged?.addListener) return () => undefined;
+  const handler = (
+    changes: Record<string, { newValue?: unknown }>,
+    area: string,
+  ): void => {
+    if (area !== 'local') return;
+    const next = changes[SETTINGS_KEY]?.newValue;
+    if (!next) return;
+    listener(sanitize(next as Partial<Settings>));
+  };
+  onChanged.addListener(handler);
+  return () => onChanged.removeListener(handler);
 }

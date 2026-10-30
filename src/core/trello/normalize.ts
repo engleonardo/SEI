@@ -30,7 +30,7 @@ export function toCard(
         }))
       : [],
     board: board ? { id: board.id, name: board.name } : null,
-    list: list ? { id: list.id, name: list.name } : null,
+    list: list ? { id: list.id, name: list.name, pos: list.pos } : null,
     links,
     hasChecklist: Array.isArray(raw.idChecklists) && raw.idChecklists.length > 0,
     lastActivity: raw.dateLastActivity ?? null,

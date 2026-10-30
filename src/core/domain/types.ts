@@ -26,6 +26,7 @@ export interface TrelloBoard {
 export interface TrelloList {
   id: string;
   name: string;
+  pos?: number;
 }
 
 export interface TrelloChecklistItem {
@@ -55,7 +56,7 @@ export interface TrelloCardApi {
   labels?: TrelloLabel[];
   dateLastActivity?: string | null;
   board?: { id: string; name: string } | null;
-  list?: { id: string; name: string } | null;
+  list?: { id: string; name: string; pos?: number } | null;
   closed?: boolean;
 }
 
@@ -105,6 +106,7 @@ export interface Settings {
   defaultListName: string;
   activatedOrigins: string[];
   allSites: boolean;
+  autoSeiHosts: boolean;
   theme: ThemePreference;
   compact: boolean;
   notificationsEnabled: boolean;
