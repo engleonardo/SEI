@@ -2,7 +2,7 @@ import type { Root } from 'react-dom/client';
 import type { SeiProcessRow } from '../../core/domain/types';
 import { normalizeProcessNumber } from '../../core/domain/process';
 import { findCommandBar, findProcessRows, findProcessTable, parseTooltip } from '../../core/sei/rows';
-import { getSettings } from '../../core/storage/settings';
+import { getSettings, watchSettings } from '../../core/storage/settings';
 import { callRpc } from '../../core/messaging/client';
 import { createShadowHost, mountReact } from '../shadow';
 import { setThemePreference } from '../theme';
@@ -98,6 +98,7 @@ export class ListManager {
   private cardObserver: IntersectionObserver | null = null;
   private keyHandler: ((event: KeyboardEvent) => void) | null = null;
   private unsubscribe: (() => void) | null = null;
+  private unwatchSettings: (() => void) | null = null;
   private timer: number | null = null;
   private refreshTimer: number | null = null;
   private catalogTimer: number | null = null;
@@ -117,6 +118,14 @@ export class ListManager {
     this.mountToolbar();
     this.prepareTable();
     this.unsubscribe = listStore.subscribe(() => this.scheduleSync());
+    this.unwatchSettings = watchSettings((next) => {
+      const theme = next.theme === 'dark' ? 'dark' : 'light';
+      setThemePreference(next.theme);
+      if (theme === this.theme) return;
+      this.theme = theme;
+      for (const entry of this.entries.values()) this.restoreCardShell(entry);
+      this.scheduleSync();
+    });
     this.observer = new MutationObserver(() => this.scheduleReconcile());
     this.observer.observe(document.body, { childList: true, subtree: true });
 
@@ -168,6 +177,7 @@ export class ListManager {
     this.cardObserver?.disconnect();
     if (this.keyHandler) document.removeEventListener('keydown', this.keyHandler);
     this.unsubscribe?.();
+    this.unwatchSettings?.();
     if (this.timer) window.clearTimeout(this.timer);
     if (this.catalogTimer) window.clearTimeout(this.catalogTimer);
     if (this.refreshTimer) window.clearInterval(this.refreshTimer);
@@ -266,28 +276,39 @@ export class ListManager {
   private applyCardShell(entry: RowEntry, hasCards: boolean, highlight: boolean): void {
     const colors = this.cardColors();
     const border = highlight ? colors.danger : colors.border;
-    const header = highlight ? colors.dangerBg : colors.header;
     const cells = Array.from(entry.row.cells);
+    const dark = this.theme === 'dark';
 
-    if (!this.originalRowBackgrounds.has(entry.row)) {
-      this.originalRowBackgrounds.set(entry.row, entry.row.style.backgroundColor);
+    if (dark) {
+      // No tema escuro, a linha do SEI não é alterada: só o cartão injetado fica escuro.
+      for (const cell of cells) this.restoreCell(cell);
+      const originalBackground = this.originalRowBackgrounds.get(entry.row);
+      if (originalBackground !== undefined) {
+        entry.row.style.backgroundColor = originalBackground;
+        this.originalRowBackgrounds.delete(entry.row);
+      }
+    } else {
+      const header = highlight ? colors.dangerBg : colors.header;
+      if (!this.originalRowBackgrounds.has(entry.row)) {
+        this.originalRowBackgrounds.set(entry.row, entry.row.style.backgroundColor);
+      }
+      entry.row.style.backgroundColor = 'transparent';
+
+      cells.forEach((cell, index) => {
+        this.snapshotCell(cell);
+        const first = index === 0;
+        const last = index === cells.length - 1;
+        cell.style.borderTop = `1px solid ${border}`;
+        cell.style.borderLeft = first ? `1px solid ${border}` : '0';
+        cell.style.borderRight = last ? `1px solid ${border}` : '0';
+        cell.style.borderBottom = hasCards ? '0' : `1px solid ${border}`;
+        cell.style.borderTopLeftRadius = first ? '14px' : '0';
+        cell.style.borderTopRightRadius = last ? '14px' : '0';
+        cell.style.borderBottomLeftRadius = !hasCards && first ? '14px' : '0';
+        cell.style.borderBottomRightRadius = !hasCards && last ? '14px' : '0';
+        cell.style.backgroundColor = header;
+      });
     }
-    entry.row.style.backgroundColor = 'transparent';
-
-    cells.forEach((cell, index) => {
-      this.snapshotCell(cell);
-      const first = index === 0;
-      const last = index === cells.length - 1;
-      cell.style.borderTop = `1px solid ${border}`;
-      cell.style.borderLeft = first ? `1px solid ${border}` : '0';
-      cell.style.borderRight = last ? `1px solid ${border}` : '0';
-      cell.style.borderBottom = hasCards ? '0' : `1px solid ${border}`;
-      cell.style.borderTopLeftRadius = first ? '14px' : '0';
-      cell.style.borderTopRightRadius = last ? '14px' : '0';
-      cell.style.borderBottomLeftRadius = !hasCards && first ? '14px' : '0';
-      cell.style.borderBottomRightRadius = !hasCards && last ? '14px' : '0';
-      cell.style.backgroundColor = header;
-    });
 
     const cardCell = entry.cardRow.cells[0];
     if (cardCell) {

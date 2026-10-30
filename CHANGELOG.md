@@ -3,6 +3,14 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [Não lançado]
+
+### Corrigido
+
+- No tema escuro, o SEI continua claro: apenas os cartões e a interface do SEI Flow ficam escuros. A linha do processo e o restante da página não são mais alterados.
+- O tema não é mais aplicado ao documento das páginas do SEI; ele fica restrito ao Shadow DOM da extensão.
+- Alternar o tema com uma página do SEI aberta atualiza os cartões sem recarregar.
+
 ## [1.3.0] - 2026-10-30
 
 ### Adicionado
