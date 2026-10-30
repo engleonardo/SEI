@@ -176,6 +176,12 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
     const overdueMetric = dashboard.locator('.sdo-metric--danger');
     await overdueMetric.click();
     await expect(overdueMetric).toHaveClass(/sdo-metric--active/);
+    // Total vinculado limpa os filtros sem sair do quadro atual.
+    await dashboard.locator('.sdo-metric--total').click();
+    await expect(overdueMetric).not.toHaveClass(/sdo-metric--active/);
+    await expect(dashboard.getByRole('combobox', { name: 'Quadro' })).toHaveValue('board-1');
+    await overdueMetric.click();
+    await expect(overdueMetric).toHaveClass(/sdo-metric--active/);
     await overdueMetric.click();
     await expect(overdueMetric).not.toHaveClass(/sdo-metric--active/);
 

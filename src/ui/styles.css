@@ -61,6 +61,16 @@
   color: #0d1420;
 }
 
+:host([data-sf-theme='dark']) select {
+  color-scheme: dark;
+}
+
+:host([data-sf-theme='dark']) option,
+:host([data-sf-theme='dark']) optgroup {
+  background-color: #2a2e35;
+  color: #e7e9ed;
+}
+
 *,
 *::before,
 *::after {

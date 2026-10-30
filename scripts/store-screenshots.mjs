@@ -5,10 +5,9 @@
  *   npm run build
  *   node scripts/store-screenshots.mjs
  */
-import { cpSync, mkdtempSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 import { chromium } from '@playwright/test';
 
@@ -32,6 +31,7 @@ const settings = {
   defaultListName: 'Em andamento',
   activatedOrigins: ['http://sei.test'],
   allSites: false,
+  autoSeiHosts: false,
   theme: 'light',
   compact: true,
   notificationsEnabled: true,
@@ -170,9 +170,9 @@ const boards = [
   { id: 'board-2', name: 'CONTRATOS' },
 ];
 const lists = [
-  { id: 'list-1', name: 'Em andamento' },
-  { id: 'list-2', name: 'Aguardando informação' },
-  { id: 'list-3', name: 'Concluído' },
+  { id: 'list-1', name: 'Em andamento', pos: 1 },
+  { id: 'list-2', name: 'Aguardando informação', pos: 2 },
+  { id: 'list-3', name: 'Concluído', pos: 3 },
 ];
 const labels = [
   { id: 'label-1', name: 'Adicional', color: 'orange_light' },
@@ -249,6 +249,10 @@ function pageStub({ settingsData, boardsData, listsData, labelsData, rulesData, 
           case 'settings:get':
             response = ok(settingsData);
             break;
+          case 'settings:save':
+            settingsData = { ...settingsData, ...(message.payload ?? {}) };
+            response = ok(settingsData);
+            break;
           case 'trello:boards':
             response = ok(boardsData);
             break;
@@ -286,7 +290,7 @@ function pageStub({ settingsData, boardsData, listsData, labelsData, rulesData, 
         return withCallback(response, callback);
       },
       openOptionsPage: () => Promise.resolve(),
-      getManifest: () => ({ version: '1.1.1', permissions: [], host_permissions: [] }),
+      getManifest: () => ({ version: '1.3.0', permissions: [], host_permissions: [] }),
     },
     storage: {
       local: {
@@ -333,55 +337,71 @@ async function shootPage({ fixture, url, out, after }) {
   await browser.close();
 }
 
+// Servidor local com os arquivos da extensão, para capturar o painel e as opções
+// com dados fictícios e ordem de listas controlada.
+async function startOutputServer() {
+  const OUTPUT = join(ROOT, '.output', 'chrome-mv3');
+  const types = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.png': 'image/png',
+  };
+  const server = createServer(async (req, res) => {
+    try {
+      const url = (req.url ?? '/').split('?')[0];
+      const name = url === '/' ? '/dashboard.html' : url;
+      if (!/^\/[\w./-]+$/.test(name)) throw new Error('caminho inválido');
+      const body = await readFile(join(OUTPUT, name.replace(/^\//, '')));
+      res.writeHead(200, {
+        'content-type': types[extname(name)] ?? 'application/octet-stream',
+      });
+      res.end(body);
+    } catch {
+      res.writeHead(404).end('not found');
+    }
+  });
+  await new Promise((resolve) => server.listen(4190, '127.0.0.1', resolve));
+  return server;
+}
+
+const outputServer = await startOutputServer();
+const stubData = {
+  settingsData: settings,
+  boardsData: boards,
+  listsData: lists,
+  labelsData: labels,
+  rulesData: rules,
+  statsData: stats,
+  runData: lastRun,
+  cardsData: cards,
+  catalogData: catalog,
+  iconUrl: iconDataUrl,
+};
+
 // 1) Painel inicial
 {
-  const extensionDir = mkdtempSync(join(tmpdir(), 'sf-store-'));
-  const profileDir = mkdtempSync(join(tmpdir(), 'sf-store-profile-'));
-  cpSync(join(ROOT, '.output', 'chrome-mv3'), extensionDir, { recursive: true });
-  const context = await chromium.launchPersistentContext(profileDir, {
-    headless: false,
-    args: [`--disable-extensions-except=${extensionDir}`, `--load-extension=${extensionDir}`],
-    viewport: VIEWPORT,
-  });
-  let worker = context.serviceWorkers()[0];
-  if (!worker) worker = await context.waitForEvent('serviceworker', { timeout: 20000 });
-  const extensionId = new URL(worker.url()).host;
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-  await worker.evaluate(
-    async ({ settingsData, cardsData, catalogData, lastTab }) => {
-      await chrome.storage.local.set({
-        'sei-flow:settings:v1': settingsData,
-        'sei-flow:processes:v1': catalogData,
-        'sei-flow:cache:v2:all-linked': { at: Date.now(), value: cardsData },
-      });
-      await chrome.storage.session.set({ 'sei-flow:last-action-tab': lastTab });
-    },
-    {
-      settingsData: settings,
-      cardsData: cards,
-      catalogData: catalog,
-      lastTab: {
-        id: 1,
-        url: 'http://sei.test/sei/controlador.php?acao=procedimento_controlar',
-        title: 'SEI - Controle de Processos',
-        capturedAt: now,
-      },
-    },
-  );
-
-  const page = await context.newPage();
-  await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: VIEWPORT });
+  await page.addInitScript(pageStub, stubData);
+  await page.goto('http://127.0.0.1:4190/dashboard.html');
   await page.waitForSelector('.sdo-card', { timeout: 25000 });
   await page.waitForTimeout(900);
-  await page.locator('#sdo-sort').selectOption('name');
-  await page.waitForTimeout(400);
+  // A ordenação padrão é Lista, seguindo a ordem do Trello.
   await page.screenshot({ path: join(OUT, 'dashboard-1280x800.png') });
 
-  // 2) Filtros e etiquetas
+  // 2) Painel no modo escuro
+  await page.locator('.sdo-theme-toggle').click();
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: join(OUT, 'dashboard-dark-1280x800.png') });
+  await page.locator('.sdo-theme-toggle').click();
+  await page.waitForTimeout(500);
+
+  // 3) Filtros e etiquetas
   await page.getByRole('button', { name: /^Filtros/ }).click();
   await page.waitForTimeout(700);
   await page.screenshot({ path: join(OUT, 'filter-1280x800.png') });
-  await context.close();
+  await browser.close();
 }
 
 // 3) Lista de processos
@@ -411,70 +431,27 @@ await shootPage({
 
 // 6) Regras automáticas
 {
-  // Serve apenas os arquivos referenciados pelo options.html (sem caminho vindo da requisição).
-  const OUTPUT = join(ROOT, '.output', 'chrome-mv3');
-  const optionsHtml = await readFile(join(OUTPUT, 'options.html'), 'utf8');
-  const referenced = new Set(
-    Array.from(optionsHtml.matchAll(/(?:src|href)="(\/[^"]+)"/g), (match) => match[1]),
-  );
-  referenced.add('/options.html');
-  const types = {
-    '.html': 'text/html; charset=utf-8',
-    '.js': 'text/javascript; charset=utf-8',
-    '.css': 'text/css; charset=utf-8',
-    '.png': 'image/png',
-  };
-  const files = new Map();
-  for (const asset of referenced) {
-    const name = asset.replace(/^\//, '');
-    if (!/^[\w./-]+$/.test(name)) continue;
-    try {
-      files.set(asset, {
-        body: await readFile(join(OUTPUT, name)),
-        type: types[extname(name)] ?? 'application/octet-stream',
-      });
-    } catch {
-      // arquivo opcional ausente
-    }
-  }
-
-  const server = createServer((req, res) => {
-    const url = (req.url ?? '/').split('?')[0];
-    const entry = files.get(url === '/' ? '/options.html' : url);
-    if (!entry) {
-      res.writeHead(404).end('not found');
-      return;
-    }
-    res.writeHead(200, { 'content-type': entry.type });
-    res.end(entry.body);
-  });
-  await new Promise((resolve) => server.listen(4190, '127.0.0.1', resolve));
-
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: VIEWPORT });
-  await page.addInitScript(pageStub, {
-    settingsData: settings,
-    boardsData: boards,
-    listsData: lists,
-    labelsData: labels,
-    rulesData: rules,
-    statsData: stats,
-    runData: lastRun,
-    cardsData: cards,
-    catalogData: catalog,
-    iconUrl: iconDataUrl,
-  });
+  await page.addInitScript(pageStub, stubData);
   await page.goto('http://127.0.0.1:4190/options.html');
   await page.waitForTimeout(900);
   await page.getByRole('button', { name: 'Regras' }).click();
   await page.waitForTimeout(900);
   await page.screenshot({ path: join(OUT, 'rules-1280x800.png') });
 
+  await page.locator('.sfo-theme-toggle').click();
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: join(OUT, 'rules-dark-1280x800.png') });
+  await page.locator('.sfo-theme-toggle').click();
+  await page.waitForTimeout(500);
+
   await page.getByRole('button', { name: 'Diagnóstico' }).click();
   await page.waitForTimeout(600);
   await page.screenshot({ path: join(OUT, 'options-1280x800.png') });
   await browser.close();
-  server.close();
 }
+
+outputServer.close();
 
 console.log('Capturas geradas em', OUT);

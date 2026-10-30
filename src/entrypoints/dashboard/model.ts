@@ -33,8 +33,8 @@ export const DEFAULT_FILTERS: DashboardFilters = {
   due: 'any',
   activity: 'any',
   processUpdate: 'any',
-  sort: 'due',
-  group: 'due',
+  sort: 'list',
+  group: 'list',
   link: 'linked',
 };
 
@@ -103,7 +103,8 @@ export const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
   { value: 'type', label: 'Tipo de processo' },
 ];
 
-const FILTERS_KEY = 'sei-flow:dashboard:filters:v1';
+const FILTERS_KEY = 'sei-flow:dashboard:filters:v2';
+const LEGACY_FILTERS_KEY = 'sei-flow:dashboard:filters:v1';
 const LAST_VISIT_KEY = 'sei-flow:dashboard:last-visit:v1';
 
 function startOfDay(date: Date): Date {
@@ -398,26 +399,28 @@ export function activeFilterCount(filters: DashboardFilters): number {
   if (filters.due !== 'any') count += 1;
   if (filters.activity !== 'any') count += 1;
   if (filters.processUpdate !== 'any') count += 1;
-  if (filters.sort !== 'due') count += 1;
   if (filters.link !== 'linked') count += 1;
   return count;
 }
 
 export function loadFilters(): DashboardFilters {
   try {
-    const raw = window.localStorage.getItem(FILTERS_KEY);
+    const current = window.localStorage.getItem(FILTERS_KEY);
+    const legacy = current ? null : window.localStorage.getItem(LEGACY_FILTERS_KEY);
+    const raw = current ?? legacy;
     if (!raw) return { ...DEFAULT_FILTERS };
     const parsed = JSON.parse(raw) as Partial<DashboardFilters>;
     const sortValues: SortMode[] = ['due', 'activity', 'name', 'list', 'board', 'label', 'type'];
     const groupValues: GroupMode[] = ['due', 'board', 'list', 'type', 'label', 'none'];
-    const sort = sortValues.includes(parsed.sort as SortMode)
+    // Quem vem da versão antiga mantém os filtros, mas adota a nova ordenação padrão.
+    const sort = !legacy && sortValues.includes(parsed.sort as SortMode)
       ? (parsed.sort as SortMode)
       : DEFAULT_FILTERS.sort;
-    const group = groupValues.includes(parsed.group as GroupMode)
+    const group = !legacy && groupValues.includes(parsed.group as GroupMode)
       ? (parsed.group as GroupMode)
       : SORT_GROUPS[sort];
     const link: LinkFilter = parsed.link === 'unlinked' ? 'unlinked' : 'linked';
-    return {
+    const filters: DashboardFilters = {
       ...DEFAULT_FILTERS,
       ...parsed,
       sort,
@@ -432,6 +435,8 @@ export function loadFilters(): DashboardFilters {
       listId: typeof parsed.listId === 'string' ? parsed.listId : '',
       processType: typeof parsed.processType === 'string' ? parsed.processType : '',
     };
+    if (legacy) saveFilters(filters);
+    return filters;
   } catch {
     return { ...DEFAULT_FILTERS };
   }

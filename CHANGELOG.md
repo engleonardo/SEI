@@ -21,8 +21,10 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - O seletor de **Quadro** ficou visível na barra de busca do painel (e continua nos filtros).
 - **Todas as listas** e **Sem vínculo** saíram do meio das listas e ficaram como controles discretos no cabeçalho da seção.
 - Listas do painel (chips e filtro) seguem a **ordem do Trello**.
-- A ordenação **Por lista** no painel agora segue exatamente a posição das listas no Trello.
-- O cartão **Total vinculado** mostra o total do quadro selecionado e o nome do quadro (ou "Todos os quadros").
+- A ordenação **Por lista** no painel agora segue exatamente a posição das listas no Trello e passou a ser a ordenação padrão.
+- O cartão **Total vinculado** mostra o total do quadro selecionado e o nome do quadro (ou "Todos os quadros"); clicar nele limpa os filtros sem sair do quadro.
+- **Limpar filtros** mantém o quadro atual; para ver todos os quadros, use o seletor de quadro.
+- No modo escuro, listas suspensas nativas, barras de rolagem e campos de arquivo também seguem o tema.
 - Clicar em **Todas as listas** também remove o filtro **Sem vínculo**.
 - Indicadores de prazo e atalhos do painel alternam o filtro ao clicar de novo, e cada filtro ativo pode ser removido individualmente.
 - Regras ganharam botão **Salvar regras** com indicação de salvamento automático.

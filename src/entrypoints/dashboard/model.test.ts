@@ -7,6 +7,7 @@ import {
   cardsToCsv,
   dueBucket,
   groupCards,
+  loadFilters,
   matchesFilters,
   processTypesFor,
   type DashboardFilters,
@@ -166,8 +167,22 @@ describe('modelo do dashboard', () => {
     expect(groups.map((group) => group.title)).toEqual(['Zeta', 'Alfa']);
   });
 
-  it('filtra por vínculo com o SEI', () => {
-    const linked = card();
+  it('usa Lista como ordenação padrão e migra filtros antigos', () => {
+    window.localStorage.clear();
+    expect(loadFilters().sort).toBe('list');
+
+    window.localStorage.setItem(
+      'sei-flow:dashboard:filters:v1',
+      JSON.stringify({ ...DEFAULT_FILTERS, sort: 'due', group: 'due', boardId: 'board-1' }),
+    );
+    const migrated = loadFilters();
+    expect(migrated.sort).toBe('list');
+    expect(migrated.group).toBe('list');
+    expect(migrated.boardId).toBe('board-1');
+    expect(window.localStorage.getItem('sei-flow:dashboard:filters:v2')).toBeTruthy();
+  });
+
+  it('filtra por vínculo com o SEI', () => {    const linked = card();
     const unlinked = card({ links: [], desc: 'Sem vínculo', description: 'Sem vínculo' });
     expect(matchesFilters(linked, filters(), catalog, 0)).toBe(true);
     expect(matchesFilters(unlinked, filters(), catalog, 0)).toBe(false);

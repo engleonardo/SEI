@@ -234,10 +234,15 @@ function Dashboard() {
   }, []);
 
   const clearFilters = useCallback(() => {
-    const next = { ...DEFAULT_FILTERS };
+    const next = {
+      ...DEFAULT_FILTERS,
+      boardId: filters.boardId,
+      sort: filters.sort,
+      group: SORT_GROUPS[filters.sort],
+    };
     setFilters(next);
     saveFilters(next);
-  }, []);
+  }, [filters.boardId, filters.sort]);
 
   const markSeen = useCallback(() => {
     const now = Date.now();
@@ -426,6 +431,19 @@ function Dashboard() {
 
   const toggleActivity = (value: Filters['activity']) => {
     updateFilters({ activity: filters.activity === value ? 'any' : value });
+  };
+
+  const resetToScope = () => {
+    updateFilters({
+      search: '',
+      listId: '',
+      processType: '',
+      labelIds: [],
+      withoutLabels: false,
+      due: 'any',
+      activity: 'any',
+      processUpdate: 'any',
+    });
   };
 
   const toggleTheme = async () => {
@@ -757,8 +775,12 @@ function Dashboard() {
         <button
           type="button"
           className="sdo-metric sdo-metric--total"
-          onClick={clearFilters}
-          title="Limpar todos os filtros"
+          onClick={resetToScope}
+          title={
+            filters.boardId
+              ? `Mostrar todos os cartões do quadro ${scopeName}`
+              : 'Mostrar todos os cartões de todos os quadros'
+          }
         >
           <span className="sdo-metric__icon">
             <Icon name="link" size={16} />

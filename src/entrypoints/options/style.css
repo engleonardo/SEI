@@ -48,6 +48,36 @@
   color: #0d1420;
 }
 
+:root[data-sf-theme='dark'] {
+  scrollbar-color: #47505c #12151a;
+}
+
+:root[data-sf-theme='dark'] select {
+  color-scheme: dark;
+}
+
+:root[data-sf-theme='dark'] option,
+:root[data-sf-theme='dark'] optgroup {
+  background-color: #1b1f26;
+  color: #e9ecf1;
+}
+
+:root[data-sf-theme='dark'] input[type='file'] {
+  color: var(--text-soft);
+}
+
+:root[data-sf-theme='dark'] input[type='file']::file-selector-button {
+  margin-right: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 * {
   box-sizing: border-box;
 }
