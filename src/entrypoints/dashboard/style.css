@@ -385,6 +385,31 @@
   --metric-glow: rgba(71, 85, 105, 0.1);
 }
 
+.sdo-metric--active {
+  border-color: color-mix(in srgb, var(--metric-color, var(--accent)) 55%, var(--border));
+  box-shadow:
+    0 16px 38px rgba(15, 23, 42, 0.1),
+    0 0 0 3px color-mix(in srgb, var(--metric-color, var(--accent)) 14%, transparent);
+}
+
+.sdo-metric--active::before {
+  width: 6px;
+}
+
+.sdo-metric__flag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--metric-color, var(--accent)) 16%, white);
+  color: var(--metric-color, var(--accent));
+}
+
 .sdo-mini-metrics {
   display: flex;
   flex-wrap: wrap;
@@ -412,6 +437,16 @@
   border-color: var(--accent);
   color: var(--accent);
   background: rgba(255, 255, 255, 0.95);
+}
+
+.sdo-mini-metrics button.sdo-mini--active {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.sdo-mini-metrics button.sdo-mini--active strong {
+  color: var(--accent);
 }
 
 .sdo-mini-metrics strong {
@@ -652,6 +687,21 @@
   border-color: var(--border);
   background: rgba(255, 255, 255, 0.8);
   color: var(--muted);
+}
+
+.sdo-chip--removable {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.sdo-chip--removable:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: #fff;
 }
 
 .sdo-chip--clear:hover {

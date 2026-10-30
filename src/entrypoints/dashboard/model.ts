@@ -236,9 +236,19 @@ export function sortCards(
   cards: TrelloCard[],
   sort: SortMode,
   catalog: ProcessCatalog = {},
+  listOrder?: Map<string, number>,
 ): TrelloCard[] {
   const sorted = [...cards];
   const byName = (a: TrelloCard, b: TrelloCard) => a.name.localeCompare(b.name, 'pt-BR');
+  const orderOf = (card: TrelloCard) => listOrder?.get(`${card.idBoard}:${card.idList}`);
+  const byListOrder = (a: TrelloCard, b: TrelloCard) => {
+    const posA = orderOf(a);
+    const posB = orderOf(b);
+    if (posA !== undefined && posB !== undefined && posA !== posB) return posA - posB;
+    if (posA !== undefined && posB === undefined) return -1;
+    if (posB !== undefined && posA === undefined) return 1;
+    return (a.list?.name ?? '').localeCompare(b.list?.name ?? '', 'pt-BR');
+  };
 
   sorted.sort((a, b) => {
     if (sort === 'activity') return activityTime(b) - activityTime(a);
@@ -246,15 +256,15 @@ export function sortCards(
     if (sort === 'board') {
       const boardCompare = (a.board?.name ?? '').localeCompare(b.board?.name ?? '', 'pt-BR');
       if (boardCompare !== 0) return boardCompare;
-      const listCompare = (a.list?.name ?? '').localeCompare(b.list?.name ?? '', 'pt-BR');
+      const listCompare = byListOrder(a, b);
       if (listCompare !== 0) return listCompare;
       return byName(a, b);
     }
     if (sort === 'list') {
-      const listCompare = (a.list?.name ?? '').localeCompare(b.list?.name ?? '', 'pt-BR');
-      if (listCompare !== 0) return listCompare;
       const boardCompare = (a.board?.name ?? '').localeCompare(b.board?.name ?? '', 'pt-BR');
       if (boardCompare !== 0) return boardCompare;
+      const listCompare = byListOrder(a, b);
+      if (listCompare !== 0) return listCompare;
       return byName(a, b);
     }
     if (sort === 'label') {
@@ -294,8 +304,9 @@ export function groupCards(
   group: GroupMode,
   sort: SortMode,
   catalog: ProcessCatalog,
+  listOrder?: Map<string, number>,
 ): CardGroup[] {
-  const sorted = sortCards(cards, sort, catalog);
+  const sorted = sortCards(cards, sort, catalog, listOrder);
 
   if (group === 'none') {
     return sorted.length > 0 ? [{ key: 'all', title: '', cards: sorted }] : [];
@@ -366,9 +377,14 @@ export function groupCards(
     }
   }
 
-  return Array.from(map.values())
-    .map((bucket) => ({ ...bucket, cards: sortCards(bucket.cards, sort, catalog) }))
-    .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
+  const groups = Array.from(map.values()).map((bucket) => ({
+    ...bucket,
+    cards: sortCards(bucket.cards, sort, catalog, listOrder),
+  }));
+
+  // Listas seguem a ordem do Trello; os demais grupos ficam em ordem alfabética.
+  if (group === 'list') return groups;
+  return groups.sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
 }
 
 export function activeFilterCount(filters: DashboardFilters): number {

@@ -265,10 +265,11 @@ function Dashboard() {
         id: list.id,
         name: list.name,
         boardId: filters.boardId,
+        pos: list.pos,
       }));
     }
 
-    const map = new Map<string, { id: string; name: string; boardId: string }>();
+    const map = new Map<string, { id: string; name: string; boardId: string; pos?: number }>();
     for (const card of cards) {
       if (filters.boardId && card.idBoard !== filters.boardId) continue;
       if (card.idList && !map.has(card.idList)) {
@@ -276,17 +277,36 @@ function Dashboard() {
           id: card.idList,
           name: card.list?.name ?? 'Lista',
           boardId: card.idBoard,
+          pos: card.list?.pos,
         });
       }
     }
     return Array.from(map.values()).sort((a, b) => {
-      if (filters.boardId) return a.name.localeCompare(b.name, 'pt-BR');
       const boardA = cards.find((card) => card.idBoard === a.boardId)?.board?.name ?? '';
       const boardB = cards.find((card) => card.idBoard === b.boardId)?.board?.name ?? '';
       const boardCompare = boardA.localeCompare(boardB, 'pt-BR');
-      return boardCompare !== 0 ? boardCompare : a.name.localeCompare(b.name, 'pt-BR');
+      if (boardCompare !== 0) return boardCompare;
+      if (typeof a.pos === 'number' && typeof b.pos === 'number' && a.pos !== b.pos) {
+        return a.pos - b.pos;
+      }
+      return a.name.localeCompare(b.name, 'pt-BR');
     });
   }, [cards, filters.boardId, boardLists]);
+
+  const listOrder = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const list of boardLists) {
+      if (filters.boardId && typeof list.pos === 'number') {
+        map.set(`${filters.boardId}:${list.id}`, list.pos);
+      }
+    }
+    for (const card of cards) {
+      if (typeof card.list?.pos === 'number') {
+        map.set(`${card.idBoard}:${card.idList}`, card.list.pos);
+      }
+    }
+    return map;
+  }, [boardLists, cards, filters.boardId]);
 
   const labels = useMemo<LabelFilterOption[]>(() => {
     const map = new Map<string, { label: TrelloLabel; count: number }>();
@@ -338,8 +358,8 @@ function Dashboard() {
   const listTotal = listCounts.reduce((sum, item) => sum + item.count, 0);
 
   const groups = useMemo(
-    () => groupCards(visibleCards, SORT_GROUPS[filters.sort], filters.sort, catalog),
-    [visibleCards, filters.sort, catalog],
+    () => groupCards(visibleCards, SORT_GROUPS[filters.sort], filters.sort, catalog, listOrder),
+    [visibleCards, filters.sort, catalog, listOrder],
   );
 
   const exportCsv = () => {
@@ -384,55 +404,102 @@ function Dashboard() {
       boardId: filters.boardId || settings?.defaultBoardId || '',
     });
   };
+
+  const toggleDue = (value: Filters['due']) => {
+    updateFilters({ due: filters.due === value ? 'any' : value });
+  };
+
+  const toggleProcessUpdate = (value: Filters['processUpdate']) => {
+    updateFilters({ processUpdate: filters.processUpdate === value ? 'any' : value });
+  };
+
+  const toggleActivity = (value: Filters['activity']) => {
+    updateFilters({ activity: filters.activity === value ? 'any' : value });
+  };
   const active = activeFilterCount(filters);
   const seiTab = lastTab?.url && looksLikeSeiUrl(lastTab.url) ? lastTab : null;
   const hasActivatedSite = Boolean(
-    settings && (settings.allSites || settings.activatedOrigins.length > 0),
+    settings && (settings.allSites || settings.autoSeiHosts || settings.activatedOrigins.length > 0),
   );
   const seiOriginActive = Boolean(
     seiTab?.url && settings && isOriginActivated(seiTab.url, settings),
   );
 
-  const activeChips: string[] = [];
-  if (filters.search.trim()) activeChips.push(`Busca: ${filters.search.trim()}`);
+  const activeChips: Array<{ key: string; label: string; clear: Partial<Filters> }> = [];
+  if (filters.search.trim()) {
+    activeChips.push({
+      key: 'search',
+      label: `Busca: ${filters.search.trim()}`,
+      clear: { search: '' },
+    });
+  }
   if (filters.boardId) {
     const board = boards.find((item) => item.id === filters.boardId);
-    if (board) activeChips.push(board.name);
+    if (board) {
+      activeChips.push({
+        key: 'board',
+        label: board.name,
+        clear: { boardId: '', listId: '' },
+      });
+    }
   }
   if (filters.listId) {
     const list = lists.find((item) => item.id === filters.listId);
-    if (list) activeChips.push(list.name);
+    if (list) {
+      activeChips.push({ key: 'list', label: list.name, clear: { listId: '' } });
+    }
   }
   if (filters.processType) {
-    activeChips.push(
-      filters.processType === '__none__'
-        ? 'Sem tipo de processo'
-        : types.find((item) => item.value === filters.processType)?.label ?? filters.processType,
-    );
+    activeChips.push({
+      key: 'type',
+      label:
+        filters.processType === '__none__'
+          ? 'Sem tipo de processo'
+          : types.find((item) => item.value === filters.processType)?.label ?? filters.processType,
+      clear: { processType: '' },
+    });
   }
   for (const labelId of filters.labelIds) {
     const label = labels.find((item) => item.label.id === labelId)?.label;
-    if (label) activeChips.push(label.name || label.color || 'Etiqueta');
+    if (label) {
+      activeChips.push({
+        key: `label:${labelId}`,
+        label: label.name || label.color || 'Etiqueta',
+        clear: { labelIds: filters.labelIds.filter((id) => id !== labelId) },
+      });
+    }
   }
-  if (filters.withoutLabels) activeChips.push('Sem etiqueta');
+  if (filters.withoutLabels) {
+    activeChips.push({ key: 'withoutLabels', label: 'Sem etiqueta', clear: { withoutLabels: false } });
+  }
   if (filters.due !== 'any') {
-    activeChips.push(
-      DUE_FILTER_OPTIONS.find((option) => option.value === filters.due)?.label ?? filters.due,
-    );
+    activeChips.push({
+      key: 'due',
+      label: DUE_FILTER_OPTIONS.find((option) => option.value === filters.due)?.label ?? filters.due,
+      clear: { due: 'any' },
+    });
   }
   if (filters.activity !== 'any') {
-    activeChips.push(
-      ACTIVITY_FILTER_OPTIONS.find((option) => option.value === filters.activity)?.label ??
+    activeChips.push({
+      key: 'activity',
+      label:
+        ACTIVITY_FILTER_OPTIONS.find((option) => option.value === filters.activity)?.label ??
         filters.activity,
-    );
+      clear: { activity: 'any' },
+    });
   }
   if (filters.processUpdate !== 'any') {
-    activeChips.push(
-      PROCESS_UPDATE_OPTIONS.find((option) => option.value === filters.processUpdate)?.label ??
+    activeChips.push({
+      key: 'processUpdate',
+      label:
+        PROCESS_UPDATE_OPTIONS.find((option) => option.value === filters.processUpdate)?.label ??
         filters.processUpdate,
-    );
+      clear: { processUpdate: 'any' },
+    });
   }
-  if (filters.link === 'unlinked') activeChips.push('Sem vínculo SEI');
+  if (filters.link === 'unlinked') {
+    activeChips.push({ key: 'link', label: 'Sem vínculo SEI', clear: { link: 'linked' } });
+  }
 
   return (
     <div className="sdo-page">
@@ -457,7 +524,9 @@ function Dashboard() {
                 title={
                   settings?.allSites
                     ? 'SEI Flow ativo em todos os sites'
-                    : settings?.activatedOrigins.join(', ') || 'Nenhum site autorizado'
+                    : settings?.autoSeiHosts
+                      ? 'SEI Flow ativo em qualquer site que comece com “sei”'
+                      : settings?.activatedOrigins.join(', ') || 'Nenhum site autorizado'
                 }
               >
                 <span className="sdo-status__dot" />
@@ -559,9 +628,12 @@ function Dashboard() {
       <section className="sdo-metrics" aria-label="Resumo dos cartões">
         <button
           type="button"
-          className="sdo-metric sdo-metric--danger"
-          onClick={() => updateFilters({ due: 'overdue' })}
-          title="Filtrar atrasados"
+          className={`sdo-metric sdo-metric--danger${
+            filters.due === 'overdue' ? ' sdo-metric--active' : ''
+          }`}
+          onClick={() => toggleDue('overdue')}
+          aria-pressed={filters.due === 'overdue'}
+          title={filters.due === 'overdue' ? 'Remover filtro de atrasados' : 'Filtrar atrasados'}
         >
           <span className="sdo-metric__icon">
             <Icon name="alert" size={16} />
@@ -571,12 +643,20 @@ function Dashboard() {
             <strong>{summary.overdue}</strong>
             <small>precisam de atenção</small>
           </span>
+          {filters.due === 'overdue' && (
+            <span className="sdo-metric__flag" aria-hidden="true">
+              <Icon name="check" size={11} />
+            </span>
+          )}
         </button>
         <button
           type="button"
-          className="sdo-metric sdo-metric--warning"
-          onClick={() => updateFilters({ due: 'today' })}
-          title="Filtrar vencendo hoje"
+          className={`sdo-metric sdo-metric--warning${
+            filters.due === 'today' ? ' sdo-metric--active' : ''
+          }`}
+          onClick={() => toggleDue('today')}
+          aria-pressed={filters.due === 'today'}
+          title={filters.due === 'today' ? 'Remover filtro de vencendo hoje' : 'Filtrar vencendo hoje'}
         >
           <span className="sdo-metric__icon">
             <Icon name="calendar" size={16} />
@@ -586,12 +666,20 @@ function Dashboard() {
             <strong>{summary.today}</strong>
             <small>prazos do dia</small>
           </span>
+          {filters.due === 'today' && (
+            <span className="sdo-metric__flag" aria-hidden="true">
+              <Icon name="check" size={11} />
+            </span>
+          )}
         </button>
         <button
           type="button"
-          className="sdo-metric sdo-metric--accent"
-          onClick={() => updateFilters({ due: 'soon' })}
-          title="Filtrar próximos 7 dias"
+          className={`sdo-metric sdo-metric--accent${
+            filters.due === 'soon' ? ' sdo-metric--active' : ''
+          }`}
+          onClick={() => toggleDue('soon')}
+          aria-pressed={filters.due === 'soon'}
+          title={filters.due === 'soon' ? 'Remover filtro dos próximos 7 dias' : 'Filtrar próximos 7 dias'}
         >
           <span className="sdo-metric__icon">
             <Icon name="clock" size={16} />
@@ -601,12 +689,24 @@ function Dashboard() {
             <strong>{summary.soon}</strong>
             <small>no radar</small>
           </span>
+          {filters.due === 'soon' && (
+            <span className="sdo-metric__flag" aria-hidden="true">
+              <Icon name="check" size={11} />
+            </span>
+          )}
         </button>
         <button
           type="button"
-          className="sdo-metric sdo-metric--updated"
-          onClick={() => updateFilters({ processUpdate: 'unread' })}
-          title="Filtrar processos atualizados no SEI"
+          className={`sdo-metric sdo-metric--updated${
+            filters.processUpdate === 'unread' ? ' sdo-metric--active' : ''
+          }`}
+          onClick={() => toggleProcessUpdate('unread')}
+          aria-pressed={filters.processUpdate === 'unread'}
+          title={
+            filters.processUpdate === 'unread'
+              ? 'Remover filtro de atualizações no SEI'
+              : 'Filtrar processos atualizados no SEI'
+          }
         >
           <span className="sdo-metric__icon">
             <Icon name="refresh" size={16} />
@@ -616,12 +716,17 @@ function Dashboard() {
             <strong>{summary.unread}</strong>
             <small>atualizações no SEI</small>
           </span>
+          {filters.processUpdate === 'unread' && (
+            <span className="sdo-metric__flag" aria-hidden="true">
+              <Icon name="check" size={11} />
+            </span>
+          )}
         </button>
         <button
           type="button"
           className="sdo-metric sdo-metric--total"
           onClick={clearFilters}
-          title="Mostrar todos os cartões"
+          title="Limpar todos os filtros"
         >
           <span className="sdo-metric__icon">
             <Icon name="link" size={16} />
@@ -635,13 +740,28 @@ function Dashboard() {
       </section>
 
       <div className="sdo-mini-metrics">
-        <button type="button" onClick={() => updateFilters({ due: 'none' })}>
+        <button
+          type="button"
+          className={filters.due === 'none' ? 'sdo-mini--active' : undefined}
+          onClick={() => toggleDue('none')}
+          aria-pressed={filters.due === 'none'}
+        >
           <Icon name="calendar" size={12} /> Sem prazo <strong>{summary.none}</strong>
         </button>
-        <button type="button" onClick={() => updateFilters({ due: 'complete' })}>
+        <button
+          type="button"
+          className={filters.due === 'complete' ? 'sdo-mini--active' : undefined}
+          onClick={() => toggleDue('complete')}
+          aria-pressed={filters.due === 'complete'}
+        >
           <Icon name="check" size={12} /> Concluídos <strong>{summary.done}</strong>
         </button>
-        <button type="button" onClick={() => updateFilters({ activity: '7d' })}>
+        <button
+          type="button"
+          className={filters.activity === '7d' ? 'sdo-mini--active' : undefined}
+          onClick={() => toggleActivity('7d')}
+          aria-pressed={filters.activity === '7d'}
+        >
           <Icon name="refresh" size={12} /> Trello 7 dias <strong>{summary.updated7d}</strong>
         </button>
         <span>
@@ -758,10 +878,15 @@ function Dashboard() {
               </button>
               <button
                 type="button"
-                className={`sdo-lists__all${filters.listId ? ' sdo-lists__all--clear' : ''}`}
-                onClick={() => updateFilters({ listId: '' })}
-                aria-pressed={!filters.listId}
-                title="Mostrar todas as listas do quadro"
+                className={`sdo-lists__all${
+                  filters.listId || filters.link === 'unlinked' ? ' sdo-lists__all--clear' : ''
+                }`}
+                onClick={() => updateFilters({ listId: '', link: 'linked' })}
+                title={
+                  filters.listId || filters.link === 'unlinked'
+                    ? 'Mostrar todas as listas e remover o filtro “Sem vínculo”'
+                    : 'Mostrar todas as listas do quadro'
+                }
               >
                 {filters.listId ? <Icon name="close" size={12} /> : null}
                 Todas as listas
@@ -804,10 +929,17 @@ function Dashboard() {
       {activeChips.length > 0 && (
         <div className="sdo-active-chips">
           <span className="sdo-active-chips__label">Filtros ativos</span>
-          {activeChips.map((chip, index) => (
-            <span key={`${chip}-${index}`} className="sdo-chip">
-              {chip}
-            </span>
+          {activeChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              className="sdo-chip sdo-chip--removable"
+              onClick={() => updateFilters(chip.clear)}
+              title={`Remover filtro: ${chip.label}`}
+            >
+              {chip.label}
+              <Icon name="close" size={10} />
+            </button>
           ))}
           <button type="button" className="sdo-chip sdo-chip--clear" onClick={clearFilters}>
             <Icon name="close" size={11} /> Limpar

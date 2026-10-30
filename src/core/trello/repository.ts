@@ -293,7 +293,7 @@ export class TrelloRepository {
         }
       }
 
-      const merged = mergeById(toCards(asCardList(searched)), fromDefaultBoard);
+      const merged = mergeById(fromDefaultBoard, toCards(asCardList(searched)));
       return this.applyBoardLabels(merged.filter((card) => card.links.includes(process)));
     };
 
@@ -328,7 +328,7 @@ export class TrelloRepository {
         }
       }
 
-      const merged = mergeById(toCards(asCardList(searched)), fromDefaultBoard);
+      const merged = mergeById(fromDefaultBoard, toCards(asCardList(searched)));
       return this.applyBoardLabels(merged.filter((card) => card.links.length > 0));
     };
 

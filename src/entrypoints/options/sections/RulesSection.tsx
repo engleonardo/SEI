@@ -42,7 +42,9 @@ export function RulesSection({
   const [log, setLog] = useState<RuleLogEntry[]>([]);
   const [undoOpen, setUndoOpen] = useState(false);
   const [undoing, setUndoing] = useState(false);
+  const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
   const queue = useRef<Promise<void>>(Promise.resolve());
+  const saveSeq = useRef(0);
 
   const loadLastRun = useCallback(async () => {
     try {
@@ -117,16 +119,63 @@ export function RulesSection({
 
   const persist = (next: Rule[], message?: string) => {
     setRules(next);
+    const seq = ++saveSeq.current;
+    setSaveState('saving');
     queue.current = queue.current
       .then(async () => {
         await callRpc('rules:save', { rules: next });
       })
       .then(() => {
+        if (seq === saveSeq.current) setSaveState('saved');
         if (message) notify({ kind: 'success', text: message });
       })
       .catch((cause) => {
+        if (seq === saveSeq.current) setSaveState('error');
         notify({ kind: 'error', text: errorMessage(cause) });
       });
+  };
+
+  const saveNow = () => {
+    const seq = ++saveSeq.current;
+    setSaveState('saving');
+    queue.current = queue.current
+      .then(async () => {
+        await callRpc('rules:save', { rules });
+      })
+      .then(() => {
+        if (seq !== saveSeq.current) return;
+        setSaveState('saved');
+        notify({ kind: 'success', text: 'Regras salvas.' });
+      })
+      .catch((cause) => {
+        if (seq === saveSeq.current) setSaveState('error');
+        notify({ kind: 'error', text: errorMessage(cause) });
+      });
+  };
+
+  const exportRules = () => {
+    if (rules.length === 0) {
+      notify({ kind: 'info', text: 'Nenhuma regra para exportar.' });
+      return;
+    }
+    const payload = {
+      app: 'sei-flow-rules',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      rules,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `sei-flow-regras-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    notify({ kind: 'success', text: `${rules.length} regra(s) exportada(s).` });
   };
 
   const updateRule = (ruleId: string, patch: Partial<Rule>) => {
@@ -298,7 +347,7 @@ export function RulesSection({
     <>
       <SectionCard
       title="Regras automáticas"
-      subtitle="Cada regra pertence a um quadro e só altera cartões vinculados ao SEI."
+      subtitle="Cada regra pertence a um quadro e só altera cartões vinculados ao SEI. Cadeia limitada a 5 níveis."
       icon="refresh"
       footer={
         <div className="sfo-actions">
@@ -306,9 +355,37 @@ export function RulesSection({
             <Icon name="plus" size={14} />
             Nova regra
           </button>
-          <span className="sfo-hint">
-            Os cartões nunca saem do quadro da regra. Cadeia limitada a 5 níveis.
+          <button
+            type="button"
+            className="sfo-btn"
+            onClick={saveNow}
+            disabled={saveState === 'saving'}
+          >
+            {saveState === 'saving' ? <Spinner /> : <Icon name="check" size={14} />}
+            Salvar regras
+          </button>
+          <button
+            type="button"
+            className="sfo-btn"
+            onClick={exportRules}
+            disabled={rules.length === 0}
+          >
+            <Icon name="external" size={14} />
+            Exportar regras
+          </button>
+          <span className={`sfo-rules-save${saveState === 'error' ? ' sfo-rules-save--error' : ''}`}>
+            {saveState === 'saving' ? (
+              <Spinner />
+            ) : (
+              <Icon name={saveState === 'error' ? 'alert' : 'check'} size={13} />
+            )}
+            {saveState === 'saving'
+              ? 'Salvando…'
+              : saveState === 'error'
+                ? 'Falha ao salvar'
+                : 'Salvo automaticamente'}
           </span>
+          <span style={{ flex: 1 }} />
           {Object.keys(stats).length > 0 && (
             <button type="button" className="sfo-btn sfo-btn--sm" onClick={() => void clearStats()}>
               Zerar contadores

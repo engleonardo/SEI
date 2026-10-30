@@ -2,11 +2,10 @@ import { useMemo, useState } from 'react';
 import { browser } from 'wxt/browser';
 import type { Settings, TrelloBoard } from '../../../core/domain/types';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
-import { openDashboard } from '../../../core/messaging/actions';
 import type { LinkCandidate } from '../../../core/link/scan';
 import { Icon } from '../../../ui/icons';
 import { ConfirmDialog } from '../../../ui/components/Modal';
-import { SectionCard, Spinner, type Notice } from './shared';
+import { CollapsibleCard, Spinner, type Notice } from './shared';
 
 function candidateKey(candidate: LinkCandidate): string {
   return `${candidate.cardId}|${candidate.processNumber}`;
@@ -227,10 +226,11 @@ export function DiagnosticsSection({
 
   return (
     <>
-      <SectionCard
-        title="Diagnóstico"
-        subtitle="Informações úteis para suporte e solução de problemas."
+      <CollapsibleCard
+        title="Diagnóstico técnico"
+        subtitle="Versão, permissões, cache e informações para suporte."
         icon="info"
+        badge={`v${manifest.version}`}
         footer={
           <>
             <button type="button" className="sfo-btn" onClick={() => void copy()}>
@@ -271,40 +271,9 @@ export function DiagnosticsSection({
             Credenciais e preferências em <code>storage.local</code>; cache com TTL no mesmo local.
           </dd>
         </dl>
-      </SectionCard>
+      </CollapsibleCard>
 
-      <SectionCard title="Links úteis" subtitle="Documentação, suporte e privacidade." icon="external">
-        <div className="sfo-links">
-          <button type="button" className="sfo-link" onClick={() => void openDashboard()}>
-            <Icon name="board" size={13} />
-            Abrir dashboard
-          </button>
-          <a
-            className="sfo-link"
-            href="https://github.com/engleonardo/SEI/issues"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Icon name="alert" size={13} />
-            Reportar um problema
-          </a>
-          <a
-            className="sfo-link"
-            href="https://github.com/engleonardo/SEI/blob/main/PRIVACY.md"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Icon name="info" size={13} />
-            Privacidade
-          </a>
-          <a className="sfo-link" href="https://trello.com/app-key" target="_blank" rel="noreferrer">
-            <Icon name="settings" size={13} />
-            Chave e token do Trello
-          </a>
-        </div>
-      </SectionCard>
-
-      <SectionCard
+      <CollapsibleCard
         title="Backup das configurações"
         subtitle="Leve regras, destino, preferências e sites para outro computador."
         icon="link"
@@ -371,12 +340,12 @@ export function DiagnosticsSection({
             concedidas novamente no navegador.
           </span>
         </div>
-      </SectionCard>
+      </CollapsibleCard>
 
-      <SectionCard
-        title="Vínculo por número no comentário"
-        subtitle="Encontre cartões sem vínculo que citam um processo SEI e confirme a vinculação."
-        icon="link"
+      <CollapsibleCard
+        title="Vincular cartões desvinculados"
+        subtitle="Encontre cartões sem vínculo que citam um número de processo no comentário e confirme a vinculação."
+        icon="unlink"
       >
         <div className="sfo-grid-2">
           <label className="sfo-field" htmlFor="sfo-link-board">
@@ -496,7 +465,7 @@ export function DiagnosticsSection({
             </div>
           </>
         )}
-      </SectionCard>
+      </CollapsibleCard>
 
       {pendingImport && (
         <ConfirmDialog

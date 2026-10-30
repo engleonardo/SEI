@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
     defaultListName: 'Lista',
     activatedOrigins: [],
     allSites: false,
+    autoSeiHosts: false,
     theme: 'auto' as const,
     compact: true,
     autoRefreshMinutes: 0,

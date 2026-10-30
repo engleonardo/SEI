@@ -9,7 +9,9 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 - Filtro **Sem vínculo** no painel para ver cartões do quadro que ainda não estão vinculados a processos do SEI.
 - Botão **Novo cartão** no painel para criar cartões no Trello sem abrir o Trello (com etiquetas, quadro/lista e datas).
-- **Vínculo por número no comentário** (Opções -> Diagnóstico): procura cartões sem vínculo que citam um número de processo SEI, mostra os candidatos e vincula somente após confirmação, sem alterar o comentário.
+- **Vincular cartões desvinculados** (Opções -> Diagnóstico): procura cartões sem vínculo que citam um número de processo SEI, mostra os candidatos e vincula somente após confirmação, sem alterar o comentário.
+- **Exportar regras** na aba Regras, gerando um arquivo JSON apenas com as regras.
+- **Ativação automática de sites que começam com “sei”** nas Opções, cobrindo endereços como `sei.ufsc.br` sem cadastrar um por um.
 
 ### Alterado
 
@@ -17,6 +19,13 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - O seletor de **Quadro** ficou visível na barra de busca do painel (e continua nos filtros).
 - **Todas as listas** e **Sem vínculo** saíram do meio das listas e ficaram como controles discretos no cabeçalho da seção.
 - Listas do painel (chips e filtro) seguem a **ordem do Trello**.
+- A ordenação **Por lista** no painel agora segue exatamente a posição das listas no Trello.
+- Clicar em **Todas as listas** também remove o filtro **Sem vínculo**.
+- Indicadores de prazo e atalhos do painel alternam o filtro ao clicar de novo, e cada filtro ativo pode ser removido individualmente.
+- Regras ganharam botão **Salvar regras** com indicação de salvamento automático.
+- Diagnóstico usa seções recolhíveis; **Links úteis** passou para o rodapé de todas as páginas de opções.
+- A aba **Destino** agora se chama **Destino principal**.
+- O campo de site do SEI aceita o endereço sem `https://`.
 
 ## [1.2.0] - 2026-10-28
 

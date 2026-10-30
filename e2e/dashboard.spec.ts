@@ -63,6 +63,7 @@ const settings = {
   defaultListName: 'Em análise',
   activatedOrigins: ['http://sei.test'],
   allSites: false,
+  autoSeiHosts: false,
   theme: 'light',
   compact: true,
   notificationsEnabled: true,
@@ -161,6 +162,13 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
     await expect(dashboard.locator('.sdo-list-card--on')).toHaveCount(1);
     await dashboard.getByRole('button', { name: /Todas as listas/ }).click();
     await expect(dashboard.locator('.sdo-list-card--on')).toHaveCount(0);
+
+    // Indicadores alternam o filtro: clicar de novo remove o filtro.
+    const overdueMetric = dashboard.locator('.sdo-metric--danger');
+    await overdueMetric.click();
+    await expect(overdueMetric).toHaveClass(/sdo-metric--active/);
+    await overdueMetric.click();
+    await expect(overdueMetric).not.toHaveClass(/sdo-metric--active/);
 
     // Link do processo abre a página real do SEI.
     const processLink = dashboard.getByRole('link', {

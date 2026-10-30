@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultListName: '',
   activatedOrigins: [],
   allSites: false,
+  autoSeiHosts: false,
   theme: 'light',
   compact: true,
   notificationsEnabled: true,
@@ -28,6 +29,7 @@ function sanitize(value: Partial<Settings> | null | undefined): Settings {
     activatedOrigins: Array.isArray(value?.activatedOrigins)
       ? [...new Set(value.activatedOrigins.filter((origin) => typeof origin === 'string' && origin.length > 0))]
       : [],
+    autoSeiHosts: value?.autoSeiHosts === true,
     autoRefreshMinutes:
       typeof value?.autoRefreshMinutes === 'number' && value.autoRefreshMinutes >= 0
         ? value.autoRefreshMinutes
@@ -91,7 +93,19 @@ export function isOriginActivated(url: string, settings: Settings): boolean {
   const origin = normalizeOrigin(url);
   if (!origin) return false;
   if (settings.allSites) return true;
+  if (settings.autoSeiHosts && isSeiHost(origin)) return true;
   return settings.activatedOrigins.includes(origin);
+}
+
+/** Sites cujo host começa com "sei" (ex.: sei.ufsc.br, seiprocesos...). */
+export function isSeiHost(url: string): boolean {
+  const origin = normalizeOrigin(url);
+  if (!origin) return false;
+  try {
+    return new URL(origin).hostname.toLowerCase().startsWith('sei');
+  } catch {
+    return false;
+  }
 }
 
 export function addActivatedOrigin(settings: Settings, origin: string): Settings {

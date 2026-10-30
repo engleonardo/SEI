@@ -141,6 +141,31 @@ describe('modelo do dashboard', () => {
     expect(names('type')).toEqual(['Beta', 'Alfa', 'Gama']);
   });
 
+  it('ordena por lista seguindo a posição do Trello', () => {
+    const zeta = card({
+      id: 'card-zeta',
+      name: 'Zeta',
+      idList: 'list-z',
+      list: { id: 'list-z', name: 'Zeta' },
+    });
+    const alfa = card({
+      id: 'card-alfa',
+      name: 'Alfa',
+      idList: 'list-a',
+      list: { id: 'list-a', name: 'Alfa' },
+    });
+    const order = new Map([
+      ['board-1:list-z', 1024],
+      ['board-1:list-a', 2048],
+    ]);
+
+    const sorted = groupCards([alfa, zeta], 'none', 'list', catalog, order)[0]?.cards;
+    expect(sorted?.map((item) => item.name)).toEqual(['Zeta', 'Alfa']);
+
+    const groups = groupCards([alfa, zeta], 'list', 'list', catalog, order);
+    expect(groups.map((group) => group.title)).toEqual(['Zeta', 'Alfa']);
+  });
+
   it('filtra por vínculo com o SEI', () => {
     const linked = card();
     const unlinked = card({ links: [], desc: 'Sem vínculo', description: 'Sem vínculo' });

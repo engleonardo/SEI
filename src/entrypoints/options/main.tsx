@@ -32,8 +32,8 @@ const PAGE_TITLES: Record<Tab, { title: string; subtitle: string }> = {
     subtitle: 'Autorize o SEI Flow a falar com a sua conta do Trello.',
   },
   destination: {
-    title: 'Destino dos cartões',
-    subtitle: 'Defina o quadro e a lista usados ao criar cartões pelo SEI.',
+    title: 'Destino principal',
+    subtitle: 'Defina onde os cartões criados pelo SEI serão adicionados.',
   },
   rules: {
     title: 'Regras automáticas',
@@ -49,7 +49,7 @@ const PAGE_TITLES: Record<Tab, { title: string; subtitle: string }> = {
   },
   diagnostics: {
     title: 'Diagnóstico',
-    subtitle: 'Versão, permissões, cache e canais de suporte.',
+    subtitle: 'Ferramentas de manutenção, backup e suporte.',
   },
 };
 
@@ -170,7 +170,7 @@ function App() {
 
         <div className="sfo-sidebar__footer">
           <span>Versão {version}</span>
-          <span>Suporte e privacidade em Diagnóstico</span>
+          <span>Suporte em Diagnóstico</span>
         </div>
       </aside>
 
@@ -228,7 +228,12 @@ function App() {
         {tab === 'rules' && <RulesSection boards={boards} notify={notify} />}
 
         {tab === 'sites' && (
-          <SitesSection settings={settings} applySettings={applySettings} notify={notify} />
+          <SitesSection
+            settings={settings}
+            applySettings={applySettings}
+            save={save}
+            notify={notify}
+          />
         )}
 
         {tab === 'preferences' && (
@@ -248,6 +253,36 @@ function App() {
             criador não tem ingerência sobre as informações desses sistemas.
           </div>
         </div>
+
+        <nav className="sfo-global-links" aria-label="Links úteis">
+          <span className="sfo-global-links__label">Links úteis</span>
+          <button type="button" className="sfo-link" onClick={() => void openDashboard()}>
+            <Icon name="board" size={13} />
+            Abrir dashboard
+          </button>
+          <a
+            className="sfo-link"
+            href="https://github.com/engleonardo/SEI/issues"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Icon name="alert" size={13} />
+            Reportar um problema
+          </a>
+          <a
+            className="sfo-link"
+            href="https://github.com/engleonardo/SEI/blob/main/PRIVACY.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Icon name="info" size={13} />
+            Privacidade
+          </a>
+          <a className="sfo-link" href="https://trello.com/app-key" target="_blank" rel="noreferrer">
+            <Icon name="settings" size={13} />
+            Chave e token do Trello
+          </a>
+        </nav>
 
         <footer className="sfo-footer">
           <span>
