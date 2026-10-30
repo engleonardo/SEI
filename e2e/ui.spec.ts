@@ -53,7 +53,7 @@ const iconDataUrl = `data:image/png;base64,${readFileSync(
   join(process.cwd(), 'public', 'icon-128.png'),
 ).toString('base64')}`;
 
-async function stubExtension(page: Page) {
+async function stubExtension(page: Page, theme: 'light' | 'dark' = 'light') {
   await page.addInitScript(
     ({ cardData, freeCardData, settingsData, iconUrl }) => {
       const ok = (data: unknown) => Promise.resolve({ ok: true, data });
@@ -65,7 +65,7 @@ async function stubExtension(page: Page) {
         return Promise.resolve(value);
       };
       const storageGet = (_keys?: unknown, callback?: (result: Record<string, unknown>) => void) =>
-        withCallback({}, callback);
+        withCallback({ 'sei-flow:settings:v1': settingsData }, callback);
       // Stub mínimo da API de extensão para executar o script real fora do Chrome.
       (window as unknown as { chrome: unknown }).chrome = {
         runtime: {
@@ -161,7 +161,7 @@ async function stubExtension(page: Page) {
         tabs: { query: () => Promise.resolve([]) },
       };
     },
-    { cardData: card, freeCardData: freeCard, settingsData: settings, iconUrl: iconDataUrl },
+    { cardData: card, freeCardData: freeCard, settingsData: { ...settings, theme }, iconUrl: iconDataUrl },
   );
 }
 
@@ -339,4 +339,24 @@ test('lote reconhece processos e lista cartões do quadro', async ({ page }) => 
   );
   await expect(dialog.getByText('3 processo(s) válido(s) reconhecido(s).')).toBeVisible();
   await expect(dialog.getByText('Cartão livre')).toBeVisible();
+});
+
+test('modo escuro escurece só os cartões e mantém o SEI claro', async ({ page }) => {
+  await stubExtension(page, 'dark');
+  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
+
+  await expect(page.getByText('Cartão vinculado')).toBeVisible();
+  const row = page.locator('tr').filter({ hasText: PROCESS }).first();
+  const cellBackground = await row
+    .locator('td')
+    .first()
+    .evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(cellBackground).not.toBe('rgb(42, 46, 53)');
+  expect(await page.locator('html').getAttribute('data-sf-theme')).toBeNull();
+
+  const cardBackground = await page
+    .locator('.sf-card')
+    .first()
+    .evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(cardBackground).toBe('rgb(59, 35, 35)');
 });

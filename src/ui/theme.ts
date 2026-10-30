@@ -20,7 +20,10 @@ function applyToHost(host: HTMLElement): void {
 }
 
 function applyToDocument(): void {
-  if (typeof document === 'undefined') return;
+  if (typeof document === 'undefined' || typeof location === 'undefined') return;
+  // Somente as páginas da própria extensão recebem o tema no <html>.
+  // Nunca altere o documento do SEI: o tema vale apenas para o Shadow DOM.
+  if (!/^(chrome|moz|edge)-extension:$/.test(location.protocol)) return;
   document.documentElement.dataset.sfTheme = effectiveTheme();
 }
 
