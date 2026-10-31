@@ -1,0 +1,73 @@
+name: Sign Firefox (AMO)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag existente (ex.: v1.3.0). Deixe vazio para usar a branch atual.'
+        required: false
+      channel:
+        description: 'listed = público na AMO; unlisted = auto-distribuição'
+        required: true
+        default: listed
+        type: choice
+        options:
+          - listed
+          - unlisted
+
+permissions:
+  contents: read
+
+jobs:
+  sign:
+    name: Build and sign for Firefox
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Read version
+        id: version
+        run: echo "value=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - run: npm run build:firefox
+      - run: npm run zip:firefox
+
+      - name: Check AMO credentials
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          if [ -z "$AMO_JWT_ISSUER" ] || [ -z "$AMO_JWT_SECRET" ]; then
+            echo "::error::Configure AMO_JWT_ISSUER e AMO_JWT_SECRET em Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+      - name: Sign and submit on AMO
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          npx --yes web-ext@10 sign \
+            --source-dir .output/firefox-mv3 \
+            --artifacts-dir .output/amo \
+            --api-key "$AMO_JWT_ISSUER" \
+            --api-secret "$AMO_JWT_SECRET" \
+            --channel "${{ inputs.channel }}" \
+            --upload-source-code ".output/sei-flow-${{ steps.version.outputs.value }}-sources.zip"
+          echo "::notice::Pacote enviado à AMO. A revisão da Mozilla é assíncrona."
+
+      - name: Upload signed package
+        uses: actions/upload-artifact@v7
+        with:
+          name: sei-flow-${{ steps.version.outputs.value }}-firefox-signed
+          path: .output/amo/*.xpi
+          if-no-files-found: warn
