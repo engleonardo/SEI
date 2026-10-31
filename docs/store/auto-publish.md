@@ -93,14 +93,37 @@ automaticamente.
 
 ## Firefox Add-ons (AMO) - opcional
 
-1. Crie as credenciais em [addons.mozilla.org/developers/addon/api/key](https://addons.mozilla.org/developers/addon/api/key/).
-2. Adicione os segredos:
-   - `AMO_JWT_ISSUER`
-   - `AMO_JWT_SECRET`
-3. O workflow envia `.output/firefox-mv3` com o código-fonte para revisão.
+A primeira publicação é **manual** no site da AMO; a partir da segunda, pode ser
+automatizada.
 
-O Firefox também atualiza os usuários automaticamente depois que a Mozilla
-aprova a versão.
+### Primeira publicação (manual)
+
+1. Crie uma conta em [addons.mozilla.org](https://addons.mozilla.org/) e abra
+   [Enviar um add-on](https://addons.mozilla.org/developers/addon/submit/distribution).
+2. Escolha **On this site** para listar publicamente (ou **On your own** para
+   auto-distribuição).
+3. Envie o arquivo `.output/sei-flow-1.3.0-firefox.zip`.
+4. Preencha nome, resumo, descrição, categoria **Productivity**, idioma
+   **Português (Brasil)**, política de privacidade e “nenhuma coleta de dados”.
+5. Como o pacote é gerado por bundler, anexe o código-fonte
+   `.output/sei-flow-1.3.0-sources.zip`.
+6. Envie para revisão. Depois da aprovação, a Mozilla assina e o add-on fica
+   disponível publicamente (ou o `.xpi` assinado é liberado, no modo
+   auto-distribuição).
+
+### Atualizações automáticas
+
+1. Gere as credenciais em
+   [addons.mozilla.org/developers/addon/api/key](https://addons.mozilla.org/developers/addon/api/key/).
+2. Adicione os segredos `AMO_JWT_ISSUER` e `AMO_JWT_SECRET` em
+   **Settings -> Secrets and variables -> Actions** (ou com `gh secret set`).
+3. Rode o workflow **Sign Firefox (AMO)** em **Actions**, informando a tag
+   (ex.: `v1.3.0`) e o canal `listed` ou `unlisted`. Ele não toca na Chrome Web
+   Store.
+4. O pacote assinado fica no artefato do workflow e em `.output/amo/*.xpi`.
+
+O Firefox atualiza os usuários automaticamente depois que a Mozilla aprova a
+versão.
 
 ## Microsoft Edge Add-ons
 
