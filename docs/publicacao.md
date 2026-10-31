@@ -111,7 +111,8 @@ Passo a passo em [`store/auto-publish.md`](store/auto-publish.md).
 - O manifest gerado inclui `browser_specific_settings.gecko` com ID `sei-flow@engleonardo` e `strict_min_version`.
 - Envie o zip do Firefox em [addons.mozilla.org/developers](https://addons.mozilla.org/developers/).
 - Informe a política de privacidade e marque “nenhuma coleta de dados”.
-- O código-fonte está neste repositório; a AMO pode solicitar link do fonte.
+- Anexe o zip de fontes (`.output/sei-flow-<versao>-sources.zip`), pois o pacote é gerado por bundler.
+- A primeira publicação é manual; as próximas podem ser assinadas pelo workflow **Sign Firefox (AMO)**. Passo a passo em [`store/auto-publish.md`](store/auto-publish.md).
 
 ## Edge Add-ons
 
