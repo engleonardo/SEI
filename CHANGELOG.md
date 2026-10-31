@@ -11,6 +11,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - A faixa da tabela ao redor do cartão também permanece clara; só o cartão em si fica escuro.
 - O tema não é mais aplicado ao documento das páginas do SEI; ele fica restrito ao Shadow DOM da extensão.
 - Alternar o tema com uma página do SEI aberta atualiza os cartões sem recarregar.
+- O manifest do Firefox declara suporte mínimo separado para Android (142+), removendo o aviso da AMO sobre `data_collection_permissions`.
 
 ## [1.3.0] - 2026-10-30
 

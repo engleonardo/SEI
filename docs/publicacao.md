@@ -113,6 +113,7 @@ Passo a passo em [`store/auto-publish.md`](store/auto-publish.md).
 - Informe a política de privacidade e marque “nenhuma coleta de dados”.
 - Anexe o zip de fontes (`.output/sei-flow-<versao>-sources.zip`), pois o pacote é gerado por bundler.
 - A primeira publicação é manual; as próximas podem ser assinadas pelo workflow **Sign Firefox (AMO)**. Passo a passo em [`store/auto-publish.md`](store/auto-publish.md).
+- Use as notas prontas de [`store/amo-review-notes.md`](store/amo-review-notes.md) no campo **Notes to reviewer**.
 
 ## Edge Add-ons
 
