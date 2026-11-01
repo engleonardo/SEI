@@ -5,6 +5,10 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 ## [Não lançado]
 
+### Adicionado
+
+- Ao clicar em **Concluir**, o cartão grava no prazo do Trello a data e hora do clique. Ao reabrir, o prazo é limpo para o cartão não aparecer atrasado.
+
 ### Corrigido
 
 - No tema escuro, o SEI continua claro: apenas os cartões e a interface do SEI Flow ficam escuros. A linha do processo e o restante da página não são mais alterados.

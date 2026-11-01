@@ -107,7 +107,11 @@ export function DashboardCard({
 
   const toggleComplete = async () => {
     const next = !card.dueComplete;
-    if (await update({ dueComplete: next })) {
+    // Ao concluir, grava o momento do clique no prazo do cartão.
+    const patch = next
+      ? { dueComplete: true, due: new Date().toISOString() }
+      : { dueComplete: false, due: null };
+    if (await update(patch)) {
       showToast(next ? 'Cartão concluído.' : 'Cartão reaberto.', 'success');
     }
   };
