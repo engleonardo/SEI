@@ -2,7 +2,14 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { TrelloCard } from '../../core/domain/types';
+import { callRpc } from '../../core/messaging/client';
 import { CardItem } from './CardItem';
+
+vi.mock('../../core/messaging/client', () => ({
+  callRpc: vi.fn(),
+  errorCode: () => 'unknown',
+  errorMessage: (error: unknown) => String(error),
+}));
 
 const card: TrelloCard = {
   id: 'card-1',
@@ -103,5 +110,34 @@ describe('CardItem', () => {
     );
 
     expect(container.querySelector('.sf-card--highlight')).toBeInTheDocument();
+  });
+
+  it('grava a data e hora ao concluir o cartão', async () => {
+    const user = userEvent.setup();
+    const before = Date.now();
+    vi.mocked(callRpc).mockResolvedValue({
+      ...card,
+      dueComplete: true,
+      due: new Date().toISOString(),
+    } as never);
+
+    render(
+      <CardItem
+        card={card}
+        processNumber="11111.111111/2024-60"
+        onChanged={vi.fn()}
+        onRemoved={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Concluir cartão' }));
+
+    const call = vi
+      .mocked(callRpc)
+      .mock.calls.find(([type]) => type === 'trello:update-card');
+    const patch = (call?.[1] as { patch: { dueComplete?: boolean; due?: string } }).patch;
+    expect(patch.dueComplete).toBe(true);
+    expect(patch.due).toBeTruthy();
+    expect(new Date(patch.due ?? 0).getTime()).toBeGreaterThanOrEqual(before);
   });
 });
