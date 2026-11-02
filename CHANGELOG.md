@@ -7,6 +7,8 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 ### Adicionado
 
+- O painel se atualiza sozinho ao voltar para a aba/janela e quando o SEI sinaliza que os dados mudaram, sem polling contínuo. O botão **Atualizar** continua disponível.
+- Botões **SEI** e **Trello** no cabeçalho do painel para abrir os dois sistemas diretamente.
 - Ao clicar em **Concluir**, o cartão grava no prazo do Trello a data e hora do clique. Ao reabrir, o prazo é limpo para o cartão não aparecer atrasado.
 
 ### Corrigido

@@ -1,5 +1,6 @@
 import type { Settings, TrelloCard } from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
+import { markSyncChanged } from '../../core/storage/sync-tick';
 import { EMPTY_FILTERS, type ListFilters } from '../filters';
 import { Store } from '../store';
 
@@ -60,6 +61,7 @@ export async function loadList(): Promise<void> {
         settings,
         lastUpdated: Date.now(),
       }));
+      void markSyncChanged();
     } catch (cause) {
       listStore.set((previous) => ({
         ...previous,
