@@ -160,7 +160,7 @@ function Dashboard() {
     } finally {
       if (seq === loadSeq.current) {
         setLoading(false);
-        if (!quiet) setRefreshing(false);
+        setRefreshing(false);
       }
     }
   }, [filters.link, filters.boardId]);
