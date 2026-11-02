@@ -1,4 +1,4 @@
-﻿name: Release
+name: Release
 
 on:
   push:
@@ -26,7 +26,7 @@ jobs:
       - name: List packages
         run: ls -la .output/*.zip
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: .output/*.zip
           generate_release_notes: true
