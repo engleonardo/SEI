@@ -12,6 +12,7 @@ import {
   saveSettings,
 } from '../core/storage/settings';
 import { saveLastActionTab } from '../core/storage/last-tab';
+import { markSyncChanged } from '../core/storage/sync-tick';
 import { looksLikeSeiUrl } from '../core/sei/detect';
 
 async function maybeInject(tabId: number, url: string): Promise<void> {
@@ -48,6 +49,28 @@ async function onInstalled(details: { reason: string }): Promise<void> {
 const DUE_ALARM = 'sei-flow:due-check';
 const NOTIFICATION_ID = 'sei-flow:due';
 const LAST_NOTIFICATION_KEY = 'sei-flow:last-due-notification';
+
+/** Alterações feitas dentro do SEI avisam o painel para recarregar. */
+const SYNC_MUTATION_RPCS = new Set([
+  'trello:create-card',
+  'trello:update-card',
+  'trello:delete-card',
+  'trello:link-cards',
+  'trello:link-cards-bulk',
+  'trello:unlink-card',
+  'trello:create-label',
+  'trello:add-label',
+  'trello:remove-label',
+  'trello:create-checklist',
+  'trello:add-check-item',
+  'trello:update-check-item',
+  'trello:delete-check-item',
+  'trello:delete-checklist',
+  'processes:upsert',
+  'rules:save',
+  'rules:apply-now',
+  'rules:undo',
+]);
 
 async function setupAlarms(): Promise<void> {
   try {
@@ -154,10 +177,17 @@ export default defineBackground(() => {
     void onPermissionsRemoved(removed as { origins?: string[] });
   });
 
-  browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!isRpcRequest(message)) return false;
     handleRpc(message)
       .then((response) => {
+        if (
+          response.ok &&
+          sender.tab &&
+          SYNC_MUTATION_RPCS.has(message.rpc)
+        ) {
+          void markSyncChanged();
+        }
         sendResponse(response);
       })
       .catch((error: unknown) => {

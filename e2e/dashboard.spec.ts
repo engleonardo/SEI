@@ -148,6 +148,12 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
     const totalMetric = dashboard.locator('.sdo-metric--total');
     await expect(totalMetric).toContainText('2');
     await expect(totalMetric).toContainText('Contratos');
+    await expect(
+      dashboard.locator('.sdo-hero__actions').getByRole('link', { name: 'SEI', exact: true }),
+    ).toHaveAttribute('href', /sei\.test/);
+    await expect(
+      dashboard.locator('.sdo-hero__actions').getByRole('link', { name: 'Trello', exact: true }),
+    ).toHaveAttribute('href', 'https://trello.com/b/board-1');
 
     // Alternância de tema aplica na hora e persiste.
     await dashboard.locator('.sdo-theme-toggle').click();

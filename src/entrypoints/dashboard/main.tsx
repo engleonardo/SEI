@@ -13,6 +13,7 @@ import { openOptionsPage } from '../../core/messaging/actions';
 import type { LastActionTab } from '../../core/storage/last-tab';
 import type { ProcessCatalog, ProcessRecord } from '../../core/storage/processes';
 import { isOriginActivated, watchSettings } from '../../core/storage/settings';
+import { watchSyncChanges } from '../../core/storage/sync-tick';
 import { looksLikeSeiUrl } from '../../core/sei/detect';
 import { BrandMark } from '../../ui/BrandMark';
 import { CreateCardDialog } from '../../ui/components/CreateCardDialog';
@@ -106,10 +107,10 @@ function Dashboard() {
   const connected = Boolean(settings?.appKey && settings?.appToken);
   const loadSeq = useRef(0);
 
-  const load = useCallback(async (silent = false) => {
+  const load = useCallback(async (silent = false, quiet = false) => {
     const seq = ++loadSeq.current;
     if (!silent) setLoading(true);
-    setRefreshing(true);
+    if (!quiet) setRefreshing(true);
     setError(null);
     try {
       const nextSettings = await callRpc('settings:get', undefined);
@@ -159,7 +160,7 @@ function Dashboard() {
     } finally {
       if (seq === loadSeq.current) {
         setLoading(false);
-        setRefreshing(false);
+        if (!quiet) setRefreshing(false);
       }
     }
   }, [filters.link, filters.boardId]);
@@ -173,6 +174,32 @@ function Dashboard() {
   }, [settings]);
 
   useEffect(() => watchSettings((next) => setThemePreference(next.theme)), []);
+
+  // Atualização sem clique: ao voltar ao painel e quando o SEI avisa que mudou algo.
+  useEffect(() => {
+    if (!connected) return;
+    let timer: number | null = null;
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = null;
+        void load(true, true);
+      }, 700);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisibility);
+    const unwatch = watchSyncChanges(refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisibility);
+      unwatch();
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [connected, load]);
 
   const defaultBoardApplied = useRef(false);
   useEffect(() => {
@@ -467,6 +494,17 @@ function Dashboard() {
   };
   const active = activeFilterCount(filters);
   const seiTab = lastTab?.url && looksLikeSeiUrl(lastTab.url) ? lastTab : null;
+  const catalogSeiUrl = useMemo(() => {
+    return (
+      Object.values(catalog)
+        .filter((record) => Boolean(record.url))
+        .sort((a, b) => b.updatedAt - a.updatedAt)[0]?.url ?? null
+    );
+  }, [catalog]);
+  const seiUrl = seiTab?.url ?? catalogSeiUrl;
+  const trelloUrl = settings?.defaultBoardId
+    ? `https://trello.com/b/${settings.defaultBoardId}`
+    : 'https://trello.com/';
   const hasActivatedSite = Boolean(
     settings && (settings.allSites || settings.autoSeiHosts || settings.activatedOrigins.length > 0),
   );
@@ -601,12 +639,38 @@ function Dashboard() {
             <Icon name="plus" size={14} />
             Novo cartão
           </button>
-          {seiTab?.url && (
-            <a className="sfo-btn sfo-btn--sm" href={seiTab.url} target="_blank" rel="noreferrer">
+          {seiUrl ? (
+            <a
+              className="sfo-btn sfo-btn--sm"
+              href={seiUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Abrir o SEI"
+            >
               <Icon name="external" size={14} />
-              Abrir SEI
+              SEI
             </a>
+          ) : (
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm"
+              disabled
+              title="Abra uma página do SEI para habilitar este atalho"
+            >
+              <Icon name="external" size={14} />
+              SEI
+            </button>
           )}
+          <a
+            className="sfo-btn sfo-btn--sm"
+            href={trelloUrl}
+            target="_blank"
+            rel="noreferrer"
+            title="Abrir o Trello"
+          >
+            <Icon name="board" size={14} />
+            Trello
+          </a>
           <button
             type="button"
             className="sfo-btn sfo-btn--sm"
