@@ -12,8 +12,8 @@ O **Painel SEI Flow** é a página inicial da extensão: reúne prazos, etiqueta
 
 ## Baixar e instalar
 
-- **Chrome / Edge:** [sei-flow-1.3.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.3.0/sei-flow-1.3.0-chrome.zip)
-- **Firefox:** [sei-flow-1.3.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.3.0/sei-flow-1.3.0-firefox.zip)
+- **Chrome / Edge:** [sei-flow-1.4.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.4.0/sei-flow-1.4.0-chrome.zip)
+- **Firefox:** [sei-flow-1.4.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.4.0/sei-flow-1.4.0-firefox.zip)
 - **Todas as versões:** [Releases](https://github.com/engleonardo/SEI/releases)
 
 Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` -> **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.
@@ -81,6 +81,9 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 | Filtros por quadro, lista, etiqueta, prazo e cartão | Sim |
 | Filtro **Sem vínculo** e vínculo por número no comentário | Sim |
 | Criar cartão direto pelo painel | Sim |
+| Atualização automática do painel sem clique | Sim |
+| Atalhos **SEI** e **Trello** no cabeçalho | Sim |
+| Data/hora da conclusão gravada no prazo do Trello | Sim |
 | Listas na ordem do Trello e ordenação padrão por lista | Sim |
 | Importar e exportar regras em JSON | Sim |
 | Tema claro/escuro no painel, opções e painéis do SEI | Sim |
