@@ -114,8 +114,9 @@ export function PreferencesSection({
             onChange={(event) => setAutoRefresh(event.target.value)}
           />
           <span className="sfo-hint">
-            Use <code>0</code> para atualizar apenas manualmente. Valores maiores reduzem o consumo
-            da API do Trello.
+            Intervalo de atualização da lista dentro do SEI. Use <code>0</code> para atualizar
+            apenas manualmente. O painel também se atualiza ao voltar o foco e quando o SEI avisa
+            mudanças.
           </span>
         </div>
       </div>

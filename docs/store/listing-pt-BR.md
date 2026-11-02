@@ -6,7 +6,7 @@ SEI Flow
 
 ## Resumo (até 132 caracteres)
 
-Crie, vincule e edite cartões do Trello no SEI. Painel com regras, prazos, etiquetas, modo escuro e atualizações.
+Gerencie cartões do Trello no SEI: crie, vincule, edite, automatize e mantenha tudo sincronizado em um painel com modo escuro.
 
 ## Descrição completa
 
@@ -20,11 +20,14 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Veja todos os cartões de um processo, sem esconder os adicionais.
 • Edite nome, descrição, etiquetas, checklist, prazo, quadro e lista dentro do SEI.
 • Conclua ou reabra o cartão com um clique, sem exigir prazo.
+• Ao concluir, a data e hora do clique ficam gravadas no prazo do cartão no Trello.
 • Regras automáticas por quadro: ao concluir, ao entrar em uma lista, ao entrar em qualquer lista e quando o processo do SEI recebe novidade.
 • Várias ações por regra (mover, mover para o topo, adicionar ou remover etiqueta), execução em cadeia, contador de aplicações, "Aplicar agora" com confirmação e "Desfazer" a última aplicação.
 • Importe e exporte regras em JSON, copiando o conteúdo ou usando um arquivo.
 • Sincronização nos dois sentidos: ao atualizar, o Trello é relido e as regras reagem também às mudanças feitas fora da extensão.
 • Painel SEI Flow como página inicial, com métricas, total do quadro, busca e ordenação por lista, prazo, nome, etiqueta ou tipo de processo.
+• Atualização automática do painel ao voltar para a aba/janela e quando o SEI sinaliza mudanças, sem polling contínuo.
+• Atalhos **SEI** e **Trello** no cabeçalho para abrir os dois sistemas rapidamente.
 • As listas aparecem na mesma ordem do Trello, com contagem de cartões.
 • Filtre por etiqueta (inclusive clicando na etiqueta do cartão), tipo de processo, prazo, quadro, lista, vínculo com o SEI, atualização no Trello e atualização no SEI.
 • Filtro "Sem vínculo" para localizar cartões que ainda não estão ligados a um processo.
