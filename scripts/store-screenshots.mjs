@@ -13,6 +13,7 @@ import { chromium } from '@playwright/test';
 
 const ROOT = process.cwd();
 const OUT = join(ROOT, 'docs', 'store', 'screenshots-1280x800');
+const VERSION = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
 const VIEWPORT = { width: 1280, height: 800 };
 const PROCESS = '08660.018176/2014-60';
 const OTHER = '12345.678901/2025-12';
@@ -220,7 +221,7 @@ const lastRun = {
   labels: [],
 };
 
-function pageStub({ settingsData, boardsData, listsData, labelsData, rulesData, statsData, runData, cardsData, catalogData, iconUrl }) {
+function pageStub({ settingsData, boardsData, listsData, labelsData, rulesData, statsData, runData, cardsData, catalogData, iconUrl, version }) {
   const ok = (data) => Promise.resolve({ ok: true, data });
   const withCallback = (value, callback) => {
     if (typeof callback === 'function') {
@@ -290,7 +291,7 @@ function pageStub({ settingsData, boardsData, listsData, labelsData, rulesData, 
         return withCallback(response, callback);
       },
       openOptionsPage: () => Promise.resolve(),
-      getManifest: () => ({ version: '1.3.0', permissions: [], host_permissions: [] }),
+      getManifest: () => ({ version, permissions: [], host_permissions: [] }),
     },
     storage: {
       local: {
@@ -324,6 +325,7 @@ async function shootPage({ fixture, url, out, after }) {
     cardsData: cards,
     catalogData: catalog,
     iconUrl: iconDataUrl,
+    version: VERSION,
   });
   const html = readFileSync(join(ROOT, 'src', 'test', 'fixtures', fixture), 'utf8');
   await page.route('http://sei.test/**', (route) =>
@@ -391,6 +393,7 @@ const stubData = {
   cardsData: cards,
   catalogData: catalog,
   iconUrl: iconDataUrl,
+  version: VERSION,
 };
 
 // 1) Painel inicial

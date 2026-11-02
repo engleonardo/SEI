@@ -502,8 +502,9 @@ function Dashboard() {
     );
   }, [catalog]);
   const seiUrl = seiTab?.url ?? catalogSeiUrl;
-  const trelloUrl = settings?.defaultBoardId
-    ? `https://trello.com/b/${settings.defaultBoardId}`
+  const trelloBoardId = filters.boardId || settings?.defaultBoardId || '';
+  const trelloUrl = trelloBoardId
+    ? `https://trello.com/b/${trelloBoardId}`
     : 'https://trello.com/';
   const hasActivatedSite = Boolean(
     settings && (settings.allSites || settings.autoSeiHosts || settings.activatedOrigins.length > 0),
