@@ -5,10 +5,10 @@ export default defineConfig({
   manifestVersion: 3,
   modules: ['@wxt-dev/module-react'],
   manifest: ({ browser }) => ({
-    name: 'SEI Flow',
+    name: '__MSG_extensionName__',
     short_name: 'SEI Flow',
-    description:
-      'Vincule cartões do Trello a processos do SEI, crie cartões e edite etiquetas, prazos e checklists sem sair do SEI.',
+    description: '__MSG_extensionDescription__',
+    default_locale: 'pt_BR',
     author: 'Engenheiro Leonardo Almeida de Oliveira',
     homepage_url: 'https://github.com/engleonardo/SEI',
     permissions: ['storage', 'scripting', 'activeTab', 'alarms', 'notifications'],
