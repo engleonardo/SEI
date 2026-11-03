@@ -40,6 +40,18 @@ describe('regras', () => {
     expect(ruleMatches(completed, { kind: 'completed' }, unlinked)).toBe(false);
   });
 
+  it('permite liberar cartões sem vínculo em uma regra específica', () => {
+    const completed = rule({
+      requiresSeiLink: false,
+      trigger: { type: 'completed' },
+      actions: [{ type: 'moveToTop' }],
+    });
+    expect(ruleMatches(completed, { kind: 'completed' }, card)).toBe(true);
+    expect(ruleMatches(completed, { kind: 'completed' }, unlinked)).toBe(true);
+    expect(ruleAppliesNow(completed, { ...unlinked, dueComplete: true })).toBe(true);
+    expect(ruleAppliesNow(completed, { ...unlinked, dueComplete: false })).toBe(false);
+  });
+
   it('não aplica regras em cartões de outro quadro', () => {
     const completed = rule({ trigger: { type: 'completed' }, actions: [{ type: 'moveToTop' }] });
     expect(ruleMatches(completed, { kind: 'completed' }, { ...card, idBoard: 'board-2' })).toBe(false);

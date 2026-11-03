@@ -4,6 +4,7 @@ import type { TrelloCard } from '../domain/types';
 const SYNC_KEY = 'sei-flow:sync:v1';
 
 export interface CardSnapshot {
+  idBoard: string;
   idList: string;
   dueComplete: boolean;
   name: string;
@@ -18,6 +19,7 @@ let memory: SyncSnapshot | null = null;
 
 export function snapshotOf(card: TrelloCard): CardSnapshot {
   return {
+    idBoard: card.idBoard,
     idList: card.idList,
     dueComplete: card.dueComplete,
     name: card.name,
@@ -35,6 +37,7 @@ function sanitize(value: unknown): SyncSnapshot {
     const item = entry as Record<string, unknown>;
     if (typeof item.idList !== 'string') continue;
     result[id] = {
+      idBoard: typeof item.idBoard === 'string' ? item.idBoard : '',
       idList: item.idList,
       dueComplete: Boolean(item.dueComplete),
       name: typeof item.name === 'string' ? item.name : '',

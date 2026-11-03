@@ -43,6 +43,12 @@ export interface Rule {
   boardId: string;
   trigger: RuleTrigger;
   actions: RuleAction[];
+  /**
+   * Quando `false`, a regra também vale para cartões sem vínculo com o SEI.
+   * O padrão (`true`/ausente) mantém o comportamento original: só cartões
+   * com o marcador `SEI <processo>` são alterados.
+   */
+  requiresSeiLink?: boolean;
 }
 
 export const RULE_TRIGGER_LABELS: Record<RuleTriggerType, string> = {
@@ -100,6 +106,7 @@ export function createRule(partial: Partial<Rule> = {}): Rule {
     boardId: '',
     trigger: { type: 'completed' },
     actions: [{ type: 'moveToTop' }],
+    requiresSeiLink: true,
     ...partial,
   };
 }
@@ -299,7 +306,7 @@ export function ruleMatches(
   card: { idBoard: string; idList: string; links: string[] },
 ): boolean {
   if (!rule.enabled) return false;
-  if (card.links.length === 0) return false;
+  if (rule.requiresSeiLink !== false && card.links.length === 0) return false;
   if (!rule.boardId || card.idBoard !== rule.boardId) return false;
   if (ruleIssue(rule)) return false;
 
@@ -445,7 +452,7 @@ export function ruleAppliesNow(
   card: { idBoard: string; idList: string; dueComplete: boolean; links: string[] },
   options: { seiUnread?: boolean } = {},
 ): boolean {
-  if (card.links.length === 0) return false;
+  if (rule.requiresSeiLink !== false && card.links.length === 0) return false;
   if (!rule.boardId || card.idBoard !== rule.boardId) return false;
   if (ruleIssue(rule)) return false;
 

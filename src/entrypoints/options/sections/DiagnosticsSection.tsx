@@ -21,12 +21,6 @@ export function DiagnosticsSection({
   notify: (notice: Notice) => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [includeCredentials, setIncludeCredentials] = useState(false);
-  const [importText, setImportText] = useState('');
-  const [importing, setImporting] = useState(false);
-  const [pendingImport, setPendingImport] = useState<{ data: unknown; rules: number } | null>(
-    null,
-  );
   const [linkBoardId, setLinkBoardId] = useState(settings.defaultBoardId);
   const [scanning, setScanning] = useState(false);
   const [candidates, setCandidates] = useState<LinkCandidate[]>([]);
@@ -46,68 +40,6 @@ export function DiagnosticsSection({
       notify({ kind: 'error', text: errorMessage(cause) });
     } finally {
       setBusy(false);
-    }
-  };
-
-  const exportSettings = async (mode: 'clipboard' | 'file') => {
-    try {
-      const backup = await callRpc('settings:export', { includeCredentials });
-      const json = JSON.stringify(backup, null, 2);
-
-      if (mode === 'clipboard') {
-        await navigator.clipboard.writeText(json);
-        notify({ kind: 'success', text: 'Configurações copiadas para a área de transferência.' });
-        return;
-      }
-
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `sei-flow-config-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
-      notify({ kind: 'success', text: 'Arquivo de configurações gerado.' });
-    } catch (cause) {
-      notify({ kind: 'error', text: errorMessage(cause) });
-    }
-  };
-
-  const prepareImport = () => {
-    if (!importText.trim()) {
-      notify({ kind: 'error', text: 'Cole o conteúdo do backup ou selecione um arquivo.' });
-      return;
-    }
-    try {
-      const parsed = JSON.parse(importText) as { app?: string; rules?: unknown[] };
-      if (parsed.app !== 'sei-flow') {
-        notify({ kind: 'error', text: 'Backup inválido. Use um arquivo gerado pelo SEI Flow.' });
-        return;
-      }
-      const rules = Array.isArray(parsed.rules) ? parsed.rules.length : 0;
-      setPendingImport({ data: parsed, rules });
-    } catch {
-      notify({ kind: 'error', text: 'JSON inválido. Confira o conteúdo colado.' });
-    }
-  };
-
-  const confirmImport = async () => {
-    if (!pendingImport) return;
-    setImporting(true);
-    try {
-      const result = await callRpc('settings:import', { data: pendingImport.data });
-      setPendingImport(null);
-      notify({
-        kind: 'success',
-        text: `Configurações importadas (${result.rules} regras). Recarregando a página…`,
-      });
-      window.setTimeout(() => window.location.reload(), 900);
-    } catch (cause) {
-      notify({ kind: 'error', text: errorMessage(cause) });
-    } finally {
-      setImporting(false);
     }
   };
 
@@ -201,9 +133,7 @@ export function DiagnosticsSection({
         });
       }
     }
-    return Array.from(map.values()).sort((a, b) =>
-      a.cardName.localeCompare(b.cardName, 'pt-BR'),
-    );
+    return Array.from(map.values()).sort((a, b) => a.cardName.localeCompare(b.cardName, 'pt-BR'));
   }, [candidates]);
 
   const diagnostics = [
@@ -274,75 +204,6 @@ export function DiagnosticsSection({
       </CollapsibleCard>
 
       <CollapsibleCard
-        title="Backup das configurações"
-        subtitle="Leve regras, destino, preferências e sites para outro computador."
-        icon="link"
-      >
-        <label className="sfo-toggle-row">
-          <input
-            type="checkbox"
-            checked={includeCredentials}
-            onChange={(event) => setIncludeCredentials(event.target.checked)}
-          />
-          <div className="sfo-toggle-row__body">
-            <div className="sfo-toggle-row__title">Incluir credenciais do Trello</div>
-            <div className="sfo-toggle-row__text">
-              A APP-KEY e o TOKEN vão junto no arquivo/cópia. Use apenas em local seguro.
-            </div>
-          </div>
-        </label>
-
-        <div className="sfo-actions">
-          <button type="button" className="sfo-btn" onClick={() => void exportSettings('clipboard')}>
-            <Icon name="list" size={14} />
-            Copiar configurações
-          </button>
-          <button type="button" className="sfo-btn" onClick={() => void exportSettings('file')}>
-            <Icon name="external" size={14} />
-            Baixar arquivo .json
-          </button>
-        </div>
-
-        <div className="sfo-field">
-          <label htmlFor="sfo-backup-import">Importar backup</label>
-          <input
-            id="sfo-backup-file"
-            type="file"
-            accept="application/json,.json"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (!file) return;
-              void file.text().then((text) => setImportText(text));
-            }}
-          />
-          <textarea
-            id="sfo-backup-import"
-            className="sfo-input"
-            style={{ minHeight: 96, fontFamily: 'ui-monospace, monospace', fontSize: 11.5 }}
-            value={importText}
-            onChange={(event) => setImportText(event.target.value)}
-            placeholder="Cole aqui o conteúdo do backup ou selecione o arquivo acima."
-          />
-        </div>
-
-        <div className="sfo-actions">
-          <button
-            type="button"
-            className="sfo-btn sfo-btn--primary"
-            onClick={prepareImport}
-            disabled={!importText.trim()}
-          >
-            <Icon name="check" size={14} />
-            Importar configurações
-          </button>
-          <span className="sfo-hint">
-            Substitui regras, destino, preferências e sites. As permissões de site precisam ser
-            concedidas novamente no navegador.
-          </span>
-        </div>
-      </CollapsibleCard>
-
-      <CollapsibleCard
         title="Vincular cartões desvinculados"
         subtitle="Encontre cartões sem vínculo que citam um número de processo no comentário e confirme a vinculação."
         icon="unlink"
@@ -387,9 +248,9 @@ export function DiagnosticsSection({
             <div className="sfo-actions">
               <span className="sfo-hint">
                 {candidates.length} candidato(s) em{' '}
-                {new Set(candidates.map((candidate) => candidate.cardId)).size} cartão(ões).
-                Cartões com mais de um número aparecem agrupados com a contagem de processos. O
-                comentário não é alterado; o bloco de vínculo é incluído no fim da descrição.
+                {new Set(candidates.map((candidate) => candidate.cardId)).size} cartão(ões). Cartões com mais
+                de um número aparecem agrupados com a contagem de processos. O comentário não é alterado; o
+                bloco de vínculo é incluído no fim da descrição.
               </span>
               <button
                 type="button"
@@ -398,11 +259,7 @@ export function DiagnosticsSection({
               >
                 Selecionar todos
               </button>
-              <button
-                type="button"
-                className="sfo-btn sfo-btn--sm"
-                onClick={() => setSelected(new Set())}
-              >
+              <button type="button" className="sfo-btn sfo-btn--sm" onClick={() => setSelected(new Set())}>
                 Limpar seleção
               </button>
             </div>
@@ -422,9 +279,7 @@ export function DiagnosticsSection({
                       />
                       <strong>{group.cardName}</strong>
                       {group.items.length > 1 && (
-                        <span className="sfo-candidate-group__badge">
-                          {group.items.length} processos
-                        </span>
+                        <span className="sfo-candidate-group__badge">{group.items.length} processos</span>
                       )}
                     </div>
                     <div className="sfo-candidate-group__items">
@@ -467,16 +322,6 @@ export function DiagnosticsSection({
         )}
       </CollapsibleCard>
 
-      {pendingImport && (
-        <ConfirmDialog
-          title="Importar configurações"
-          message={`Serão substituídas as configurações atuais e ${pendingImport.rules} regra(s) serão importadas. Deseja continuar?`}
-          confirmLabel="Importar"
-          busy={importing}
-          onConfirm={() => void confirmImport()}
-          onClose={() => setPendingImport(null)}
-        />
-      )}
       {confirmLink && (
         <ConfirmDialog
           title="Vincular cartões"

@@ -6,6 +6,7 @@ import {
   RULE_COMMENT_PLACEHOLDERS,
   RULE_TRIGGER_LABELS,
   createRule,
+  newRuleId,
   ruleIssue,
   ruleRunCardCount,
   ruleRunChangeCount,
@@ -331,6 +332,34 @@ export function RulesSection({
     );
   };
 
+  const moveRule = (ruleId: string, direction: -1 | 1) => {
+    const index = rules.findIndex((rule) => rule.id === ruleId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= rules.length) return;
+    const moved = rules[index];
+    if (!moved) return;
+    const next = [...rules];
+    next.splice(index, 1);
+    next.splice(target, 0, moved);
+    persist(next, 'Ordem das regras atualizada.');
+  };
+
+  const duplicateRule = (rule: Rule) => {
+    const index = rules.findIndex((item) => item.id === rule.id);
+    if (index < 0) return;
+    const copy: Rule = {
+      ...rule,
+      id: newRuleId(),
+      name: `${rule.name} (cópia)`,
+      enabled: false,
+      trigger: { ...rule.trigger },
+      actions: rule.actions.map((action) => ({ ...action })),
+    };
+    const next = [...rules];
+    next.splice(index + 1, 0, copy);
+    persist(next, 'Regra duplicada. Ajuste e ative quando quiser.');
+  };
+
   const addRule = () => {
     persist([...rules, createRule({ name: 'Nova regra', enabled: false })], 'Regra criada.');
   };
@@ -436,7 +465,7 @@ export function RulesSection({
     <>
       <SectionCard
         title="Regras automáticas"
-        subtitle="Cada regra pertence a um quadro e só altera cartões vinculados ao SEI. Cadeia limitada a 5 níveis."
+        subtitle="Cada regra pertence a um quadro. Por padrão, só altera cartões vinculados ao SEI; cada regra pode liberar cartões sem vínculo. Use as setas para mudar a ordem; cadeia limitada a 5 níveis."
         icon="refresh"
         footer={
           <div className="sfo-actions">
@@ -461,6 +490,7 @@ export function RulesSection({
               <Icon name="link" size={14} />
               Importar regras
             </button>
+            <span className="sfo-hint">Backup completo (configurações + regras) em Opções → Backup.</span>
             <span className={`sfo-rules-save${saveState === 'error' ? ' sfo-rules-save--error' : ''}`}>
               {saveState === 'saving' ? (
                 <Spinner />
@@ -505,7 +535,7 @@ export function RulesSection({
           <p className="sfo-hint">Nenhuma regra configurada. Crie a primeira em “Nova regra”.</p>
         ) : (
           <div className="sfo-rules">
-            {rules.map((rule) => {
+            {rules.map((rule, index) => {
               const issue = ruleIssue(rule);
               const stat = stats[rule.id];
               return (
@@ -543,6 +573,37 @@ export function RulesSection({
                     )}
                     <button
                       type="button"
+                      className="sfo-icon-btn"
+                      onClick={() => duplicateRule(rule)}
+                      title="Duplicar regra"
+                      aria-label="Duplicar regra"
+                    >
+                      <Icon name="copy" size={13} />
+                    </button>
+                    <div className="sfo-rule__order">
+                      <button
+                        type="button"
+                        className="sfo-icon-btn"
+                        onClick={() => moveRule(rule.id, -1)}
+                        disabled={index === 0}
+                        title="Mover regra para cima"
+                        aria-label="Mover regra para cima"
+                      >
+                        <Icon name="chevronUp" size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        className="sfo-icon-btn"
+                        onClick={() => moveRule(rule.id, 1)}
+                        disabled={index === rules.length - 1}
+                        title="Mover regra para baixo"
+                        aria-label="Mover regra para baixo"
+                      >
+                        <Icon name="chevronDown" size={13} />
+                      </button>
+                    </div>
+                    <button
+                      type="button"
                       className="sfo-icon-btn sfo-icon-btn--danger"
                       onClick={() => removeRule(rule.id)}
                       title="Remover regra"
@@ -567,6 +628,18 @@ export function RulesSection({
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  <div className="sfo-rule__row">
+                    <span className="sfo-rule__label">Vínculo</span>
+                    <label className="sfo-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={rule.requiresSeiLink !== false}
+                        onChange={(event) => updateRule(rule.id, { requiresSeiLink: event.target.checked })}
+                      />
+                      Aplicar somente a cartões vinculados ao SEI
+                    </label>
                   </div>
 
                   <div className="sfo-rule__row">
@@ -632,6 +705,11 @@ export function RulesSection({
                       cartões criados fora da extensão.
                     </p>
                   )}
+
+                  <p className="sfo-hint" style={{ margin: 0 }}>
+                    As regras são avaliadas quando o painel, o quadro ou a lista do SEI é atualizado. Mudanças
+                    feitas no site/app do Trello são detectadas na próxima atualização.
+                  </p>
 
                   <div className="sfo-rule__actions">
                     <span className="sfo-rule__label">Então</span>

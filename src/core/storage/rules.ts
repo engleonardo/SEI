@@ -95,6 +95,7 @@ function sanitizeRule(value: unknown): Rule | null {
       listId: typeof trigger.listId === 'string' ? trigger.listId : undefined,
     },
     actions,
+    requiresSeiLink: rule.requiresSeiLink !== false,
   };
 }
 
