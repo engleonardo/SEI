@@ -149,8 +149,11 @@ export class TrelloRepository {
     if (fresh) {
       try {
         const cards = await load();
-        await cacheSet(`boardcards:${boardId}`, cards);
-        return cards;
+        // O painel abre o quadro por este caminho (filtro "Sem vínculo").
+        // Reconciliar aqui faz as regras reagirem a mudanças feitas no Trello.
+        const synced = await this.reconcile(cards, false);
+        await cacheSet(`boardcards:${boardId}`, synced);
+        return synced;
       } catch (error) {
         const cached = await cacheGet<TrelloCard[]>(`boardcards:${boardId}`, Number.POSITIVE_INFINITY);
         if (cached) return cached;
@@ -349,8 +352,10 @@ export class TrelloRepository {
       try {
         const cards = await load();
         await this.refreshBoardLabels(cards);
-        const synced = await this.reconcile(cards);
+        const synced = await this.reconcile(cards, false);
         await cacheSet('all-linked', synced);
+        // Regras que aceitam cartões sem vínculo precisam ver o quadro inteiro.
+        await this.syncUnlinkedRuleBoards();
         return synced;
       } catch (error) {
         const cached = await cacheGet<TrelloCard[]>('all-linked', Number.POSITIVE_INFINITY);
@@ -415,14 +420,12 @@ export class TrelloRepository {
     await mergeSyncSnapshot([created]);
 
     // Criar um cartão em uma lista conta como "criar" e "entrar na lista" para as regras.
-    if (created.links.length > 0) {
-      created = await this.runRules(created, {
-        kind: 'created',
-        fromListId: null,
-        toListId: created.idList,
-      });
-      await mergeSyncSnapshot([created]);
-    }
+    created = await this.runRules(created, {
+      kind: 'created',
+      fromListId: null,
+      toListId: created.idList,
+    });
+    await mergeSyncSnapshot([created]);
 
     return created;
   }
@@ -465,7 +468,6 @@ export class TrelloRepository {
     await this.invalidateCardCaches();
 
     let updated = await this.getCard(cardId, true);
-    if (updated.links.length === 0) return updated;
 
     let event: RuleEvent | null = null;
     if (patch.idList && patch.idList !== current.idList) {
@@ -485,12 +487,25 @@ export class TrelloRepository {
    */
   private async reconcile(cards: TrelloCard[], replace = true): Promise<TrelloCard[]> {
     const snapshot = await getSyncSnapshot();
+    const syncedBoards = new Set(
+      Object.values(snapshot)
+        .map((entry) => entry.idBoard)
+        .filter(Boolean),
+    );
     const result: TrelloCard[] = [];
 
     for (const card of cards) {
       const previous = snapshot[card.id];
       if (!previous) {
-        result.push(card);
+        // Cartão novo para o histórico (criado ou vinculado fora da extensão):
+        // se o quadro já era acompanhado, conta como entrada na lista atual.
+        if (syncedBoards.has(card.idBoard)) {
+          result.push(
+            await this.applyRuleEvents(card, [{ kind: 'moved', fromListId: null, toListId: card.idList }]),
+          );
+        } else {
+          result.push(card);
+        }
         continue;
       }
       result.push(await this.applyRemoteEvents(card, previous));
@@ -502,8 +517,6 @@ export class TrelloRepository {
   }
 
   private async applyRemoteEvents(card: TrelloCard, previous: CardSnapshot): Promise<TrelloCard> {
-    if (card.links.length === 0) return card;
-
     const events: RuleEvent[] = [];
     if (previous.idList !== card.idList) {
       events.push({ kind: 'moved', fromListId: previous.idList, toListId: card.idList });
@@ -513,7 +526,10 @@ export class TrelloRepository {
     }
 
     if (events.length === 0) return card;
+    return this.applyRuleEvents(card, events);
+  }
 
+  private async applyRuleEvents(card: TrelloCard, events: RuleEvent[]): Promise<TrelloCard> {
     let current = card;
     const applied = new Set<string>();
     const counts = new Map<string, number>();
@@ -528,9 +544,33 @@ export class TrelloRepository {
   }
 
   /**
-   * Aplica as regras em cadeia a um cartão vinculado ao SEI.
-   * Nunca roda em cartões sem vínculo. Proteção contra loop: no máximo 5
-   * níveis e cada regra roda uma única vez na mesma cadeia.
+   * Regras com `requiresSeiLink: false` precisam do quadro inteiro, inclusive
+   * cartões sem vínculo. Sincroniza esses quadros para que as regras também
+   * reajam a cartões criados/movidos fora da extensão.
+   */
+  private async syncUnlinkedRuleBoards(): Promise<void> {
+    const rules = await getRules();
+    const boardIds = Array.from(
+      new Set(
+        rules
+          .filter((rule) => rule.enabled && rule.requiresSeiLink === false && rule.boardId)
+          .map((rule) => rule.boardId),
+      ),
+    );
+    if (boardIds.length === 0) return;
+    await mapLimit(boardIds, 2, async (boardId) => {
+      try {
+        await this.getBoardCards(boardId, true);
+      } catch {
+        // um quadro indisponível não interrompe a atualização dos demais
+      }
+    });
+  }
+
+  /**
+   * Aplica as regras em cadeia a um cartão. Cada regra decide se exige vínculo
+   * com o SEI (`requiresSeiLink`). Proteção contra loop: no máximo 5 níveis e
+   * cada regra roda uma única vez na mesma cadeia.
    */
   private async runRules(card: TrelloCard, event: RuleEvent): Promise<TrelloCard> {
     const counts = new Map<string, number>();
@@ -564,7 +604,6 @@ export class TrelloRepository {
     comments?: RuleRunComment[],
   ): Promise<{ card: TrelloCard; touched: boolean }> {
     if (depth >= 5) return { card, touched: false };
-    if (card.links.length === 0) return { card, touched: false };
 
     const rules = await getRules();
     let current = card;
@@ -573,6 +612,7 @@ export class TrelloRepository {
     for (const rule of rules) {
       if (applied.has(rule.id)) continue;
       if (!rule.boardId || card.idBoard !== rule.boardId) continue;
+      if (rule.requiresSeiLink !== false && card.links.length === 0) continue;
       if (only && rule.id !== only) continue;
       if (!force && !ruleMatches(rule, event, current)) continue;
       if (force && rule.actions.length === 0) continue;
@@ -783,10 +823,15 @@ export class TrelloRepository {
       throw new TrelloError('validation', ruleIssue(rule) ?? 'Regra incompleta.');
     }
 
-    const cards = await this.getAllLinkedCards();
+    const allowsUnlinked = rule.requiresSeiLink === false;
+    const cards = allowsUnlinked
+      ? await this.getBoardCards(rule.boardId, true)
+      : await this.getAllLinkedCards();
     const catalog = await getProcessCatalog();
     // Só entram cartões do quadro da regra e que ainda mudariam algo.
-    const scoped = cards.filter((card) => card.links.length > 0 && card.idBoard === rule.boardId);
+    const scoped = cards.filter(
+      (card) => card.idBoard === rule.boardId && (allowsUnlinked || card.links.length > 0),
+    );
     const matching = scoped.filter(
       (card) =>
         ruleAppliesNow(rule, card, {

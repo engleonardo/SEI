@@ -47,16 +47,15 @@ const handlers = {
     return { cleared: true as const };
   },
 
-  'settings:export': ({ includeCredentials }) => exportBackup(includeCredentials),
+  'settings:export': ({ includeCredentials, includeRules }) => exportBackup(includeCredentials, includeRules),
 
-  'settings:import': async ({ data }) => {
-    const before = await getSettings();
-    const result = await importBackup(data);
-    if (before.appKey !== result.settings.appKey || before.appToken !== result.settings.appToken) {
-      await cacheClear();
-      await clearSyncSnapshot();
-    }
-    return { rules: result.rules };
+  'settings:import': async ({ data, importRules }) => {
+    const result = await importBackup(data, { importRules });
+    // Destino, sites e credenciais podem ter mudado: o cache e o snapshot
+    // antigos não valem mais para o novo conjunto de configurações.
+    await cacheClear();
+    await clearSyncSnapshot();
+    return result;
   },
 
   'options:open': async () => {
@@ -134,9 +133,7 @@ const handlers = {
     const settings = await getSettings();
     const next = removeActivatedOrigin(settings, normalized);
     if (!settings.allSites) {
-      await browser.permissions
-        .remove({ origins: [originPermissionPattern(normalized)] })
-        .catch(() => false);
+      await browser.permissions.remove({ origins: [originPermissionPattern(normalized)] }).catch(() => false);
     }
     return saveSettings({ activatedOrigins: next.activatedOrigins });
   },
@@ -206,7 +203,8 @@ const handlers = {
       }
     }
     return { updated: result.updated, total: result.total, rulesApplied };
-  },} satisfies HandlerMap;
+  },
+} satisfies HandlerMap;
 
 export interface DueSummary {
   total: number;
@@ -240,9 +238,9 @@ export async function getDueSummary(): Promise<DueSummary> {
   return { total: cards.length, overdue, dueToday, dueSoon };
 }
 
-export async function handleRpc(request: RpcRequest): Promise<RpcResponse<unknown>> {  const handler = (handlers as Record<string, unknown>)[request.rpc] as
-    | ((payload: unknown) => Promise<unknown>)
-    | undefined;
+export async function handleRpc(request: RpcRequest): Promise<RpcResponse<unknown>> {
+  const handler = (handlers as Record<string, unknown>)[request.rpc] as
+    ((payload: unknown) => Promise<unknown>) | undefined;
 
   if (!handler) {
     return {

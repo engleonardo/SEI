@@ -76,4 +76,33 @@ describe('backup das configurações', () => {
     await expect(importBackup({ app: 'outro' })).rejects.toThrow();
     await expect(importBackup(null)).rejects.toThrow();
   });
+
+  it('preserva o tema automático na importação', async () => {
+    const backup = await exportBackup(false);
+    await saveSettings({ theme: 'light' });
+    await importBackup({ ...backup, settings: { ...backup.settings, theme: 'auto' } });
+    expect((await getSettings()).theme).toBe('auto');
+  });
+
+  it('rejeita versão de backup não suportada', async () => {
+    const backup = await exportBackup(false);
+    await expect(importBackup({ ...backup, version: 2 })).rejects.toThrow(/Versão/);
+  });
+
+  it('exporta sem regras quando solicitado', async () => {
+    await saveRules([rule]);
+    const backup = await exportBackup(false, false);
+    expect(backup.rules).toBeUndefined();
+  });
+
+  it('mantém as regras atuais quando a importação não inclui regras', async () => {
+    await saveRules([rule]);
+    const backup = await exportBackup(false);
+    await saveRules([{ ...rule, id: 'rule-current', name: 'Regra atual' }]);
+
+    const result = await importBackup(backup, { importRules: false });
+
+    expect(result.rules).toBe(0);
+    expect((await getRules()).map((item) => item.id)).toEqual(['rule-current']);
+  });
 });

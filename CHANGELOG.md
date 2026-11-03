@@ -3,6 +3,29 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.5.1] - 2026-11-03
+
+### Corrigido
+
+- As regras são reconciliadas também ao abrir o quadro (filtro **Sem vínculo**), e não apenas ao carregar a lista de cartões vinculados.
+- Cartões criados ou movidos fora da extensão, em um quadro já sincronizado, passam a ser tratados como **entrada na lista atual** na próxima atualização.
+- Cartões sem vínculo agora podem ser alvo de regras quando a opção **Aplicar somente a cartões vinculados ao SEI** é desmarcada.
+- Cartões criados pela extensão sem vínculo e alterações feitas pela extensão em cartões sem vínculo também passam pelas regras.
+- O tema **automático** é preservado ao importar um backup (antes era convertido em claro).
+- O cache e o snapshot de sincronização são limpos após importar configurações, evitando estado antigo de outro quadro/conta.
+
+### Adicionado
+
+- Opção por regra para incluir cartões sem vínculo com o SEI.
+- Setas para cima/baixo no cabeçalho de cada regra para reordenar; a ordem define a sequência de execução.
+- Nova aba **Backup** nas opções para exportar e importar configurações gerais, regras e preferências, com resumo antes da importação, opção de incluir/importar regras e de incluir credenciais do Trello.
+- Botão para **duplicar regra** (a cópia nasce desativada).
+- Aviso na tela de que as regras são avaliadas na próxima atualização do painel, do quadro ou da lista do SEI.
+
+### Notas
+
+- Na primeira atualização após esta versão, o estado do quadro é apenas registrado. Para aplicar uma regra aos cartões que já existem, use **Aplicar agora**.
+
 ## [1.5.0] - 2026-11-03
 
 ### Adicionado

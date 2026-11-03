@@ -10,12 +10,18 @@ export interface SettingsBackup {
   version: 1;
   exportedAt: number;
   settings: Partial<Settings>;
-  rules: Rule[];
+  /** Ausente quando o backup foi gerado sem regras. */
+  rules?: Rule[];
 }
 
 export interface ImportResult {
   rules: number;
   settings: Settings;
+}
+
+export interface ImportOptions {
+  /** Quando `false`, as regras atuais são mantidas mesmo que o backup tenha regras. */
+  importRules?: boolean;
 }
 
 function pickSettings(settings: Settings): Partial<Settings> {
@@ -34,22 +40,25 @@ function pickSettings(settings: Settings): Partial<Settings> {
   };
 }
 
-export async function exportBackup(includeCredentials: boolean): Promise<SettingsBackup> {
+export async function exportBackup(
+  includeCredentials: boolean,
+  includeRules = true,
+): Promise<SettingsBackup> {
   const settings = await getSettings();
-  const rules = await getRules();
   const payload = pickSettings(settings);
   if (includeCredentials) {
     payload.appKey = settings.appKey;
     payload.appToken = settings.appToken;
   }
-  return {
+  const backup: SettingsBackup = {
     app: 'sei-flow',
     kind: 'settings-backup',
     version: 1,
     exportedAt: Date.now(),
     settings: payload,
-    rules,
   };
+  if (includeRules) backup.rules = await getRules();
+  return backup;
 }
 
 function asString(value: unknown, fallback: string): string {
@@ -90,10 +99,13 @@ async function reconcileOrigins(origins: string[]): Promise<string[]> {
   return Array.from(new Set(granted));
 }
 
-export async function importBackup(value: unknown): Promise<ImportResult> {
+export async function importBackup(value: unknown, options: ImportOptions = {}): Promise<ImportResult> {
   const data = value as Partial<SettingsBackup> | null;
   if (!data || data.app !== 'sei-flow' || !data.settings || typeof data.settings !== 'object') {
     throw new Error('Backup inválido. Use um arquivo gerado pelo SEI Flow.');
+  }
+  if (data.version !== undefined && data.version !== 1) {
+    throw new Error('Versão de backup não suportada. Atualize o SEI Flow.');
   }
 
   const current = await getSettings();
@@ -115,12 +127,9 @@ export async function importBackup(value: unknown): Promise<ImportResult> {
     activatedOrigins: origins,
     allSites,
     autoSeiHosts,
-    theme: incoming.theme === 'dark' ? 'dark' : 'light',
+    theme: incoming.theme === 'dark' || incoming.theme === 'auto' ? incoming.theme : 'light',
     compact: asBoolean(incoming.compact, current.compact),
-    notificationsEnabled: asBoolean(
-      incoming.notificationsEnabled,
-      current.notificationsEnabled,
-    ),
+    notificationsEnabled: asBoolean(incoming.notificationsEnabled, current.notificationsEnabled),
     autoRefreshMinutes:
       typeof incoming.autoRefreshMinutes === 'number' && incoming.autoRefreshMinutes >= 0
         ? incoming.autoRefreshMinutes
@@ -136,7 +145,7 @@ export async function importBackup(value: unknown): Promise<ImportResult> {
 
   const settings = await saveSettings(patch);
   let rules = 0;
-  if (Array.isArray(data.rules)) {
+  if (Array.isArray(data.rules) && options.importRules !== false) {
     rules = (await saveRules(data.rules)).length;
   }
   return { rules, settings };

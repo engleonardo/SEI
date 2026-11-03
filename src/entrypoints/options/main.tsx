@@ -8,6 +8,7 @@ import { watchSettings } from '../../core/storage/settings';
 import { BrandMark } from '../../ui/BrandMark';
 import { Icon, type IconName } from '../../ui/icons';
 import { ConnectionSection } from './sections/ConnectionSection';
+import { BackupSection } from './sections/BackupSection';
 import { DestinationSection } from './sections/DestinationSection';
 import { DiagnosticsSection } from './sections/DiagnosticsSection';
 import { PreferencesSection } from './sections/PreferencesSection';
@@ -17,7 +18,7 @@ import { Spinner, type Notice } from './sections/shared';
 import { setThemePreference } from '../../ui/theme';
 import './style.css';
 
-type Tab = 'connection' | 'destination' | 'rules' | 'sites' | 'preferences' | 'diagnostics';
+type Tab = 'connection' | 'destination' | 'rules' | 'sites' | 'preferences' | 'backup' | 'diagnostics';
 
 const TABS: Array<{ id: Tab; label: string; icon: IconName }> = [
   { id: 'connection', label: 'Conexão', icon: 'settings' },
@@ -25,6 +26,7 @@ const TABS: Array<{ id: Tab; label: string; icon: IconName }> = [
   { id: 'rules', label: 'Regras', icon: 'refresh' },
   { id: 'sites', label: 'Sites do SEI', icon: 'link' },
   { id: 'preferences', label: 'Preferências', icon: 'tag' },
+  { id: 'backup', label: 'Backup', icon: 'download' },
   { id: 'diagnostics', label: 'Diagnóstico', icon: 'info' },
 ];
 
@@ -39,7 +41,7 @@ const PAGE_TITLES: Record<Tab, { title: string; subtitle: string }> = {
   },
   rules: {
     title: 'Regras automáticas',
-    subtitle: 'Ações instantâneas aplicadas só a cartões vinculados ao SEI.',
+    subtitle: 'Ações instantâneas por quadro, com opção de incluir cartões sem vínculo.',
   },
   sites: {
     title: 'Sites do SEI',
@@ -49,9 +51,13 @@ const PAGE_TITLES: Record<Tab, { title: string; subtitle: string }> = {
     title: 'Preferências',
     subtitle: 'Aparência e comportamento da interface dentro do SEI.',
   },
+  backup: {
+    title: 'Backup',
+    subtitle: 'Exporte e importe configurações, regras e preferências entre navegadores.',
+  },
   diagnostics: {
     title: 'Diagnóstico',
-    subtitle: 'Ferramentas de manutenção, backup e suporte.',
+    subtitle: 'Ferramentas de manutenção e suporte.',
   },
 };
 
@@ -223,27 +229,18 @@ function App() {
             <div className="sfo-onboarding__body">
               <p className="sfo-onboarding__title">Comece conectando o Trello</p>
               <p className="sfo-onboarding__text">
-                Informe sua APP-KEY e gere um TOKEN. Depois escolha o quadro e a lista padrão e
-                ative o site do seu órgão.
+                Informe sua APP-KEY e gere um TOKEN. Depois escolha o quadro e a lista padrão e ative o site
+                do seu órgão.
               </p>
             </div>
-            <button
-              type="button"
-              className="sfo-btn sfo-btn--primary"
-              onClick={() => setTab('connection')}
-            >
+            <button type="button" className="sfo-btn sfo-btn--primary" onClick={() => setTab('connection')}>
               Conectar Trello
             </button>
           </div>
         )}
 
         {tab === 'connection' && (
-          <ConnectionSection
-            settings={settings}
-            save={save}
-            notify={notify}
-            reloadBoards={reloadBoards}
-          />
+          <ConnectionSection settings={settings} save={save} notify={notify} reloadBoards={reloadBoards} />
         )}
 
         {tab === 'destination' && (
@@ -259,29 +256,22 @@ function App() {
         {tab === 'rules' && <RulesSection boards={boards} notify={notify} />}
 
         {tab === 'sites' && (
-          <SitesSection
-            settings={settings}
-            applySettings={applySettings}
-            save={save}
-            notify={notify}
-          />
+          <SitesSection settings={settings} applySettings={applySettings} save={save} notify={notify} />
         )}
 
-        {tab === 'preferences' && (
-          <PreferencesSection settings={settings} save={save} notify={notify} />
-        )}
+        {tab === 'preferences' && <PreferencesSection settings={settings} save={save} notify={notify} />}
 
-        {tab === 'diagnostics' && (
-          <DiagnosticsSection settings={settings} boards={boards} notify={notify} />
-        )}
+        {tab === 'backup' && <BackupSection settings={settings} notify={notify} />}
+
+        {tab === 'diagnostics' && <DiagnosticsSection settings={settings} boards={boards} notify={notify} />}
 
         <div className="sfo-alert sfo-alert--warning">
           <Icon name="alert" size={16} />
           <div>
-            <strong>Privacidade e responsabilidade:</strong> o SEI Flow não mantém servidor próprio
-            e não salva dados de usuários fora do seu navegador. Os dados de processos e cartões
-            pertencem ao SEI e ao Trello. O uso é de responsabilidade exclusiva do usuário; o
-            criador não tem ingerência sobre as informações desses sistemas.
+            <strong>Privacidade e responsabilidade:</strong> o SEI Flow não mantém servidor próprio e não
+            salva dados de usuários fora do seu navegador. Os dados de processos e cartões pertencem ao SEI e
+            ao Trello. O uso é de responsabilidade exclusiva do usuário; o criador não tem ingerência sobre as
+            informações desses sistemas.
           </div>
         </div>
 
@@ -316,9 +306,7 @@ function App() {
         </nav>
 
         <footer className="sfo-footer">
-          <span>
-            SEI Flow · projeto independente · licença MIT · não afiliado ao Trello ou ao SEI
-          </span>
+          <span>SEI Flow · projeto independente · licença MIT · não afiliado ao Trello ou ao SEI</span>
           <span>Desenvolvido por Engenheiro Leonardo Almeida de Oliveira</span>
         </footer>
       </main>

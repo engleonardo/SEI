@@ -22,11 +22,15 @@ function sanitize(value: Partial<Settings> | null | undefined): Settings {
   return {
     ...DEFAULT_SETTINGS,
     ...(value ?? {}),
-    theme: value?.theme === 'dark' ? 'dark' : 'light',
+    theme: value?.theme === 'dark' || value?.theme === 'auto' ? value.theme : 'light',
     notificationsEnabled:
       typeof value?.notificationsEnabled === 'boolean' ? value.notificationsEnabled : true,
     activatedOrigins: Array.isArray(value?.activatedOrigins)
-      ? [...new Set(value.activatedOrigins.filter((origin) => typeof origin === 'string' && origin.length > 0))]
+      ? [
+          ...new Set(
+            value.activatedOrigins.filter((origin) => typeof origin === 'string' && origin.length > 0),
+          ),
+        ]
       : [],
     autoSeiHosts: value?.autoSeiHosts === true,
     autoRefreshMinutes:
@@ -127,10 +131,7 @@ export function removeActivatedOrigin(settings: Settings, origin: string): Setti
 export function watchSettings(listener: (settings: Settings) => void): () => void {
   const onChanged = browser.storage?.onChanged;
   if (!onChanged?.addListener) return () => undefined;
-  const handler = (
-    changes: Record<string, { newValue?: unknown }>,
-    area: string,
-  ): void => {
+  const handler = (changes: Record<string, { newValue?: unknown }>, area: string): void => {
     if (area !== 'local') return;
     const next = changes[SETTINGS_KEY]?.newValue;
     if (!next) return;

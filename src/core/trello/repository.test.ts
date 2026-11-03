@@ -92,6 +92,7 @@ const syncState = vi.hoisted(() => ({
 
 interface SnapshotCard {
   id: string;
+  idBoard: string;
   idList: string;
   dueComplete: boolean;
   name: string;
@@ -102,6 +103,7 @@ interface SnapshotCard {
 
 function snapshotEntry(card: SnapshotCard) {
   return {
+    idBoard: card.idBoard,
     idList: card.idList,
     dueComplete: card.dueComplete,
     name: card.name,
@@ -432,6 +434,116 @@ describe('TrelloRepository', () => {
     const calls = vi.mocked(client.put).mock.calls.length;
     await repo.getAllLinkedCards(true);
     expect(vi.mocked(client.put).mock.calls.length).toBe(calls);
+  });
+
+  it('trata cartão novo em quadro já acompanhado como entrada na lista', async () => {
+    mocks.settings = { ...mocks.settings, defaultBoardId: '' };
+    mocks.rules = [
+      {
+        id: 'rule-enter',
+        name: 'Entrou na lista recebe etiqueta',
+        enabled: true,
+        boardId: 'board-1',
+        trigger: { type: 'enterList', listId: 'list-1' },
+        actions: [{ type: 'addLabel', labelId: 'label-new', labelName: 'Novo' }],
+      },
+    ];
+
+    storeSnapshot([
+      {
+        id: 'old-card',
+        idBoard: 'board-1',
+        idList: 'list-2',
+        dueComplete: false,
+        name: 'Antigo',
+        description: '',
+        due: null,
+        labels: [],
+      },
+    ]);
+
+    let hasLabel = false;
+    const client = fakeClient();
+    vi.mocked(client.get).mockImplementation(async (path: string) => {
+      if (path === '/search') {
+        return {
+          cards: [rawCard({ id: 'card-new', desc: `SEI ${PROCESS}`, idList: 'list-1' })],
+        };
+      }
+      if (path.startsWith('/boards/')) return [];
+      return rawCard({
+        id: 'card-new',
+        desc: `SEI ${PROCESS}`,
+        idList: 'list-1',
+        labels: hasLabel ? [{ id: 'label-new', name: 'Novo', color: 'blue' }] : [],
+      });
+    });
+    vi.mocked(client.post).mockImplementation(async () => {
+      hasLabel = true;
+      return {};
+    });
+
+    const repo = repository(client);
+    await repo.getAllLinkedCards(true);
+
+    expect(client.post).toHaveBeenCalledWith('/cards/card-new/idLabels', {
+      value: 'label-new',
+    });
+  });
+
+  it('aplica regra em cartão sem vínculo quando a regra permite', async () => {
+    mocks.settings = { ...mocks.settings, defaultBoardId: '' };
+    mocks.rules = [
+      {
+        id: 'rule-unlinked',
+        name: 'Entrou na lista recebe etiqueta',
+        enabled: true,
+        boardId: 'board-1',
+        requiresSeiLink: false,
+        trigger: { type: 'enterList', listId: 'list-1' },
+        actions: [{ type: 'addLabel', labelId: 'label-new', labelName: 'Novo' }],
+      },
+    ];
+
+    storeSnapshot([
+      {
+        id: 'old-card',
+        idBoard: 'board-1',
+        idList: 'list-2',
+        dueComplete: false,
+        name: 'Antigo',
+        description: '',
+        due: null,
+        labels: [],
+      },
+    ]);
+
+    let hasLabel = false;
+    const client = fakeClient();
+    vi.mocked(client.get).mockImplementation(async (path: string) => {
+      if (path === '/members/me/boards') return [{ id: 'board-1', name: 'Quadro' }];
+      if (path === '/boards/board-1/lists') return [{ id: 'list-1', name: 'Lista', pos: 1 }];
+      if (path === '/boards/board-1/cards') {
+        return [rawCard({ id: 'card-new', desc: 'Sem vínculo', idList: 'list-1' })];
+      }
+      return rawCard({
+        id: 'card-new',
+        desc: 'Sem vínculo',
+        idList: 'list-1',
+        labels: hasLabel ? [{ id: 'label-new', name: 'Novo', color: 'blue' }] : [],
+      });
+    });
+    vi.mocked(client.post).mockImplementation(async () => {
+      hasLabel = true;
+      return {};
+    });
+
+    const repo = repository(client);
+    await repo.getBoardCards('board-1', true);
+
+    expect(client.post).toHaveBeenCalledWith('/cards/card-new/idLabels', {
+      value: 'label-new',
+    });
   });
 
   it('aplicar agora respeita a condição do gatilho', async () => {

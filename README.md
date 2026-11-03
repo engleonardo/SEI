@@ -12,8 +12,8 @@ O **Painel SEI Flow** é a página inicial da extensão: reúne prazos, etiqueta
 
 ## Baixar e instalar
 
-- **Chrome / Edge:** [sei-flow-1.5.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.0/sei-flow-1.5.0-chrome.zip)
-- **Firefox:** [sei-flow-1.5.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.0/sei-flow-1.5.0-firefox.zip)
+- **Chrome / Edge:** [sei-flow-1.5.1-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.1/sei-flow-1.5.1-chrome.zip)
+- **Firefox:** [sei-flow-1.5.1-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.1/sei-flow-1.5.1-firefox.zip)
 - **Todas as versões:** [Releases](https://github.com/engleonardo/SEI/releases)
 
 Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` -> **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.
@@ -87,6 +87,7 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 | Data/hora da conclusão gravada no prazo do Trello                                    | Sim      |
 | Listas na ordem do Trello e ordenação padrão por lista                               | Sim      |
 | Importar e exportar regras em JSON                                                   | Sim      |
+| Backup de configurações, regras e preferências entre navegadores                     | Sim      |
 | Tema claro/escuro no painel, opções e painéis do SEI                                 | Sim      |
 | Cache e retry/backoff em 429/5xx                                                     | Sim      |
 | Painel SEI Flow como página inicial da extensão                                      | Sim      |
@@ -180,10 +181,12 @@ O painel abre pelo ícone da extensão e pelo menu **Dashboard** das opções.
 
 Em **Opções -> Regras** você monta regras instantâneas, sem depender de automações do Trello.
 
-- Valem **somente para cartões vinculados** a processos do SEI.
+- Por padrão, valem **somente para cartões vinculados** a processos do SEI. Cada regra tem a opção **Aplicar somente a cartões vinculados ao SEI**; desmarque para atingir qualquer cartão do quadro.
 - Gatilhos: **ao criar o cartão**, cartão concluído, entrada em uma lista, entrada em qualquer lista e **processo SEI atualizado (novidade)**.
 - O gatilho de criação vale para cartões criados pela extensão (pelo SEI ou pelo painel). O gatilho de processo atualizado dispara quando a extensão lê a lista do SEI e o processo passa de sem novidade para com novidade (link vermelho). Roda uma vez por novidade, em todos os cartões vinculados ao processo que estejam no quadro da regra (e na lista escolhida, se houver).
-- Funcionam nos dois sentidos: quando a extensão grava no Trello e também quando a mudança é feita no Trello e você atualiza (botão **Atualizar**, ao abrir o painel ou pela atualização automática das preferências).
+- Cartões criados ou movidos fora da extensão são detectados como **entrada na lista atual** na próxima atualização, desde que o quadro já tenha sido sincronizado antes. A primeira leitura de um quadro apenas registra o estado, sem aplicar regras em massa.
+- Funcionam nos dois sentidos: quando a extensão grava no Trello e também quando a mudança é feita no Trello e você atualiza (botão **Atualizar**, ao abrir o painel, ao abrir a lista do SEI ou pela atualização automática das preferências).
+- Use as setas **↑/↓** no cabeçalho de cada regra para mudar a ordem. A ordem é a sequência em que as regras são avaliadas e executadas. O botão de copiar duplica a regra (a cópia nasce desativada).
 - Cada regra mostra um contador de quantas vezes já foi aplicada (com data e se foi automática ou manual). O botão **Zerar contadores** limpa esse histórico.
 - Várias ações por regra: mover para uma lista, mover para o topo, adicionar ou remover etiquetas, **definir data de início/término (hoje, em N dias ou há N dias)**, **limpar as datas**, **adicionar comentário** e **marcar como concluído/reabrir**.
 - Comentários aceitam os marcadores `{processo}`, `{cartao}`, `{data}`, `{hora}`, `{lista}`, `{quadro}` e `{regra}`.
@@ -194,6 +197,22 @@ Em **Opções -> Regras** você monta regras instantâneas, sem depender de auto
 - As 6 regras iniciais vêm desativadas até você escolher as listas e etiquetas.
 
 > Abra a lista de processos do SEI uma vez para o painel aprender tipo, especificação, URL e usuário atribuído de cada processo. Depois disso, os filtros por tipo e os links ficam completos.
+
+## Backup e transferência
+
+<p align="center">
+  <img src="docs/screenshots/backup.png" width="100%" alt="Aba Backup com exportação e importação de configurações" />
+</p>
+
+Em **Opções -> Backup** você exporta e importa as configurações gerais:
+
+- quadro e lista padrão;
+- sites do SEI autorizados (a permissão do navegador precisa ser concedida de novo no destino);
+- tema, modo compacto, notificações e intervalo de atualização automática;
+- **todas as regras**, na ordem atual (opcional, marcado por padrão);
+- opcionalmente, a APP-KEY e o TOKEN do Trello.
+
+O arquivo pode ser copiado como JSON ou baixado em `.json`. A importação mostra um resumo do que será aplicado, permite manter as regras atuais e pede confirmação antes de substituir as configurações. Credenciais ausentes no backup são mantidas; o cache e o estado de sincronização são limpos para evitar dados antigos.
 
 ## Privacidade, uso e responsabilidade
 

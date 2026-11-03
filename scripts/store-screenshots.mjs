@@ -485,6 +485,10 @@ await shootPage({
   await page.locator('.sfo-theme-toggle').click();
   await page.waitForTimeout(500);
 
+  await page.getByRole('button', { name: 'Backup' }).click();
+  await page.waitForTimeout(900);
+  await page.screenshot({ path: join(OUT, 'backup-1280x800.png') });
+
   await page.getByRole('button', { name: 'Diagnóstico' }).click();
   await page.waitForTimeout(600);
   await page.screenshot({ path: join(OUT, 'options-1280x800.png') });

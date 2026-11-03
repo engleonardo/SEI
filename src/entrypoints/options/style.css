@@ -752,6 +752,32 @@ a {
   flex-wrap: wrap;
 }
 
+.sfo-rule__order {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+.sfo-rule__order .sfo-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.sfo-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-soft);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.sfo-checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
 .sfo-rule__name {
   flex: 1;
   min-width: 180px;
@@ -1120,6 +1146,40 @@ a {
 .sfo-diagnostics dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.sfo-backup-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--text-soft);
+  font-size: 12.5px;
+}
+
+.sfo-backup-summary strong {
+  color: var(--text);
+}
+
+.sfo-backup-preview {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--text-soft);
+  font-size: 12.5px;
+}
+
+.sfo-backup-preview ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.sfo-backup-preview li + li {
+  margin-top: 2px;
 }
 
 .sfo-global-links {

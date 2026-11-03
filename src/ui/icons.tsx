@@ -14,6 +14,10 @@ export type IconName =
   | 'close'
   | 'search'
   | 'chevronDown'
+  | 'chevronUp'
+  | 'download'
+  | 'upload'
+  | 'copy'
   | 'board'
   | 'list'
   | 'check'
@@ -100,6 +104,27 @@ const paths: Record<IconName, ReactNode> = {
     </>
   ),
   chevronDown: <path d="M6 9l6 6 6-6" />,
+  chevronUp: <path d="M6 15l6-6 6 6" />,
+  download: (
+    <>
+      <path d="M12 3v12" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M5 21h14" />
+    </>
+  ),
+  upload: (
+    <>
+      <path d="M12 21V9" />
+      <path d="M7 14l5-5 5 5" />
+      <path d="M5 3h14" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </>
+  ),
   board: (
     <>
       <rect x="3" y="4" width="18" height="16" rx="2" />

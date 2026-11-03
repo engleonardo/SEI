@@ -24,12 +24,12 @@ export interface RpcMap {
   'settings:test-connection': { payload: undefined; result: ConnectionInfo };
   'settings:clear-cache': { payload: undefined; result: { cleared: true } };
   'settings:export': {
-    payload: { includeCredentials: boolean };
+    payload: { includeCredentials: boolean; includeRules?: boolean };
     result: SettingsBackup;
   };
   'settings:import': {
-    payload: { data: unknown };
-    result: { rules: number };
+    payload: { data: unknown; importRules?: boolean };
+    result: { rules: number; settings: Settings };
   };
   'options:open': { payload: undefined; result: undefined };
   'dashboard:open': { payload: undefined; result: undefined };
@@ -143,8 +143,8 @@ export type RpcResponse<T> = RpcSuccess<T> | RpcFailure;
 export function isRpcRequest(value: unknown): value is RpcRequest {
   return Boolean(
     value &&
-      typeof value === 'object' &&
-      'rpc' in value &&
-      typeof (value as { rpc?: unknown }).rpc === 'string',
+    typeof value === 'object' &&
+    'rpc' in value &&
+    typeof (value as { rpc?: unknown }).rpc === 'string',
   );
 }
