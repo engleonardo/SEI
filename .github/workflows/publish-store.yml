@@ -9,6 +9,15 @@ on:
       tag:
         description: 'Tag já publicada (ex.: v1.0.0). Deixe vazio para usar a branch atual.'
         required: false
+      store:
+        description: 'Loja de destino'
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - chrome
+          - firefox
 
 permissions:
   contents: read
@@ -68,7 +77,7 @@ jobs:
           fi
 
       - name: Upload and publish on Chrome Web Store
-        if: steps.credentials.outputs.chrome == 'true'
+        if: ${{ steps.credentials.outputs.chrome == 'true' && (github.event_name != 'workflow_dispatch' || inputs.store == 'both' || inputs.store == 'chrome') }}
         env:
           EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
           PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
@@ -82,7 +91,7 @@ jobs:
           echo "::notice::Pacote enviado e publicado na Chrome Web Store. A revisão da loja é assíncrona."
 
       - name: Sign and submit on Firefox Add-ons (AMO)
-        if: steps.credentials.outputs.firefox == 'true'
+        if: ${{ steps.credentials.outputs.firefox == 'true' && (github.event_name != 'workflow_dispatch' || inputs.store == 'both' || inputs.store == 'firefox') }}
         env:
           AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
           AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}

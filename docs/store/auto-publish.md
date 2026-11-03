@@ -139,4 +139,5 @@ O Edge usa um portal e uma API próprios (Azure AD). O envio continua manual:
 - A extensão carregada por “Carregar sem compactação” **não** se atualiza
   sozinha; isso só acontece quando instalada pela loja.
 - Se você quiser apenas testar, use `workflow_dispatch` no workflow
-  **Publish to stores** e informe a tag.
+  **Publish to stores** e informe a tag. O campo **Loja de destino** permite
+  enviar só para o Chrome, só para a AMO ou para as duas.
