@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "SEI Flow",
+    "description": "Nome da extensão exibido no navegador e na loja."
+  },
+  "extensionDescription": {
+    "message": "Vincule cartões do Trello a processos do SEI, crie cartões e edite etiquetas, prazos e checklists sem sair do SEI.",
+    "description": "Descrição curta exibida na loja e na página de extensões."
+  }
+}
