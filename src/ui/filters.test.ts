@@ -10,6 +10,7 @@ function card(overrides: Partial<TrelloCard> = {}): TrelloCard {
     desc: '',
     description: '',
     shortUrl: 'https://trello.com/c/1',
+    start: null,
     due: null,
     dueComplete: false,
     idBoard: 'board-1',
@@ -18,7 +19,7 @@ function card(overrides: Partial<TrelloCard> = {}): TrelloCard {
     labels: [],
     board: { id: 'board-1', name: 'Quadro' },
     list: { id: 'list-1', name: 'Lista' },
-    links: ['11111.111111/2024-60'],
+    links: ['11111.111111/2024-11'],
     hasChecklist: false,
     lastActivity: null,
     ...overrides,
@@ -27,7 +28,7 @@ function card(overrides: Partial<TrelloCard> = {}): TrelloCard {
 
 describe('list filters', () => {
   it('filtra por busca no processo, especificação ou cartão', () => {
-    const base = { processNumber: '11111.111111/2024-60', specification: 'Compras', cards: [card()] };
+    const base = { processNumber: '11111.111111/2024-11', specification: 'Compras', cards: [card()] };
     expect(matchesProcess(base, { ...EMPTY_FILTERS, search: '11111' })).toBe(true);
     expect(matchesProcess(base, { ...EMPTY_FILTERS, search: 'compras' })).toBe(true);
     expect(matchesProcess(base, { ...EMPTY_FILTERS, search: 'teste' })).toBe(true);

@@ -144,7 +144,7 @@ vi.mock('./cache', () => ({
   cacheDeleteByPrefix: vi.fn(async () => undefined),
 }));
 
-const PROCESS = '11111.111111/2024-60';
+const PROCESS = '11111.111111/2024-11';
 const OTHER = '22222.222222/2025-12';
 const WARN = 'Não altere as informações abaixo.';
 
@@ -276,9 +276,7 @@ describe('TrelloRepository', () => {
     const third = '33333.333333/2026-01';
     vi.mocked(client.get)
       .mockResolvedValueOnce(rawCard({ desc: 'Descrição' }))
-      .mockResolvedValueOnce(
-        rawCard({ desc: `Descrição\nSEI ${PROCESS}\nSEI ${OTHER}\nSEI ${third}` }),
-      );
+      .mockResolvedValueOnce(rawCard({ desc: `Descrição\nSEI ${PROCESS}\nSEI ${OTHER}\nSEI ${third}` }));
     vi.mocked(client.put).mockResolvedValue({});
 
     const repo = repository(client);
@@ -562,6 +560,146 @@ describe('TrelloRepository', () => {
     expect(undone.cards).toBe(1);
     expect(currentList).toBe('list-1');
     expect(runState.runs).toHaveLength(0);
+  });
+
+  it('ao criar o cartão, aplica datas, comentário e conclusão', async () => {
+    mocks.rules = [
+      {
+        id: 'rule-created',
+        name: 'Ao criar, organiza o cartão',
+        enabled: true,
+        boardId: 'board-1',
+        trigger: { type: 'created' },
+        actions: [
+          { type: 'setStartDate', days: 0 },
+          { type: 'setDueDate', days: 7 },
+          { type: 'addComment', text: 'Processo {processo} criado em {data}.' },
+          { type: 'markComplete' },
+        ],
+      },
+    ];
+
+    const client = fakeClient();
+    const state = {
+      start: null as string | null,
+      due: null as string | null,
+      dueComplete: false,
+    };
+    vi.mocked(client.get).mockImplementation(async () =>
+      rawCard({
+        id: 'card-new',
+        desc: `SEI ${PROCESS}`,
+        start: state.start,
+        due: state.due,
+        dueComplete: state.dueComplete,
+      }),
+    );
+    vi.mocked(client.post).mockImplementation(async (path: string) => {
+      if (path === '/cards') return rawCard({ id: 'card-new', desc: `SEI ${PROCESS}` });
+      if (path.endsWith('/actions/comments')) return { id: 'action-1' };
+      return {};
+    });
+    vi.mocked(client.put).mockImplementation(async (_path: string, body?: unknown) => {
+      const patch = body as Record<string, string | boolean> | undefined;
+      if (typeof patch?.start === 'string') state.start = patch.start;
+      if (typeof patch?.due === 'string') state.due = patch.due;
+      if (typeof patch?.dueComplete === 'boolean') state.dueComplete = patch.dueComplete;
+      return {};
+    });
+
+    const repo = repository(client);
+    const card = await repo.createCard({
+      name: 'Cartão novo',
+      processNumber: PROCESS,
+      listId: 'list-1',
+    });
+
+    expect(card.start).toBeTruthy();
+    expect(card.due).toBeTruthy();
+    expect(card.dueComplete).toBe(true);
+    expect(client.put).toHaveBeenCalledWith(
+      '/cards/card-new',
+      expect.objectContaining({ dueComplete: true }),
+    );
+
+    const comment = vi
+      .mocked(client.post)
+      .mock.calls.find(([path]) => path === '/cards/card-new/actions/comments');
+    expect(comment?.[1]).toBeTruthy();
+    expect((comment?.[1] as { text: string }).text).toContain(PROCESS);
+    expect(logState.entries[0]).toMatchObject({
+      ruleId: 'rule-created',
+      cardId: 'card-new',
+      actions: expect.arrayContaining(['Adicionar comentário']),
+    });
+  });
+
+  it('desfaz datas, conclusão e comentário da última aplicação', async () => {
+    mocks.settings = { ...mocks.settings, defaultBoardId: '' };
+    mocks.rules = [
+      {
+        id: 'rule-date',
+        name: 'Concluído recebe prazo e comentário',
+        enabled: true,
+        boardId: 'board-1',
+        trigger: { type: 'completed' },
+        actions: [
+          { type: 'setDueDate', days: 0 },
+          { type: 'addComment', text: 'Concluído em {data}.' },
+        ],
+      },
+    ];
+
+    const state = {
+      due: null as string | null,
+      dueComplete: true,
+    };
+    const client = fakeClient();
+    vi.mocked(client.get).mockImplementation(async (path: string) => {
+      if (path === '/search') {
+        return {
+          cards: [
+            rawCard({
+              id: 'card-1',
+              desc: `SEI ${PROCESS}`,
+              due: state.due,
+              dueComplete: state.dueComplete,
+            }),
+          ],
+        };
+      }
+      if (path.startsWith('/boards/')) return [];
+      return rawCard({
+        id: 'card-1',
+        desc: `SEI ${PROCESS}`,
+        due: state.due,
+        dueComplete: state.dueComplete,
+      });
+    });
+    vi.mocked(client.post).mockResolvedValue({ id: 'action-9' });
+    vi.mocked(client.put).mockImplementation(async (_path: string, body?: unknown) => {
+      const patch = body as Record<string, string | boolean> | undefined;
+      if (patch?.due === 'null') state.due = null;
+      else if (typeof patch?.due === 'string') state.due = patch.due;
+      if (typeof patch?.dueComplete === 'boolean') state.dueComplete = patch.dueComplete;
+      return {};
+    });
+
+    const repo = repository(client);
+    const applied = await repo.applyRuleNow('rule-date');
+
+    expect(applied.applied).toBe(1);
+    expect(state.due).toBeTruthy();
+    expect(runState.runs[0]).toMatchObject({
+      ruleId: 'rule-date',
+      dates: [{ cardId: 'card-1', previousDue: null }],
+      comments: [{ cardId: 'card-1', actionId: 'action-9' }],
+    });
+
+    const undone = await repo.undoLastRuleRun();
+    expect(undone.reverted).toBe(2);
+    expect(state.due).toBeNull();
+    expect(client.delete).toHaveBeenCalledWith('/actions/action-9');
   });
 
   it('aplica regra de novidade do SEI só nos cartões do quadro da regra', async () => {

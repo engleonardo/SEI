@@ -48,6 +48,7 @@ export interface TrelloCardApi {
   name: string;
   desc: string;
   shortUrl?: string;
+  start?: string | null;
   due?: string | null;
   dueComplete?: boolean;
   idBoard?: string;
@@ -66,6 +67,7 @@ export interface TrelloCard {
   desc: string;
   description: string;
   shortUrl: string;
+  start: string | null;
   due: string | null;
   dueComplete: boolean;
   idBoard: string;
@@ -82,6 +84,7 @@ export interface TrelloCard {
 export interface CardPatch {
   name?: string;
   description?: string;
+  start?: string | null;
   due?: string | null;
   dueComplete?: boolean;
   idBoard?: string;

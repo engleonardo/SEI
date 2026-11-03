@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { findProcessNumbers, snippetFor } from './scan';
 
 const PROCESS = '44444.444444/2026-04';
-const OTHER = '11111.111111/2024-60';
+const OTHER = '11111.111111/2024-11';
 
 describe('busca de número SEI no comentário', () => {
   it('encontra números no formato do SEI', () => {

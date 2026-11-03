@@ -20,7 +20,9 @@ npm run build        # Chrome
 npm run build:firefox
 npm run build:edge
 npm run zip / zip:firefox / zip:edge
-npm run verify       # compile + lint + test + build
+npm run check:package   # falha se houver nomes reservados (_metadata)
+npm run unpacked        # build Chrome limpo para carregar sem compactação
+npm run verify          # compile + lint + test + build + check:package
 ```
 
 Antes de concluir qualquer mudança, rode `npm run verify`. Para mudanças de UI/injeção, rode também `npm run test:e2e`.

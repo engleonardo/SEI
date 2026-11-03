@@ -13,7 +13,7 @@ function fixture(name: string): Document {
 describe('SEI content pages', () => {
   it('encontra o número pelo script infraArvoreNo (SEI 4.x)', () => {
     const doc = fixture('sei-content-v4.html');
-    expect(findProcessNumber(doc)).toBe('11111.111111/2024-60');
+    expect(findProcessNumber(doc)).toBe('11111.111111/2024-11');
     expect(findProcessSpecification(doc)).toBe('Aquisição de material de escritório');
   });
 
@@ -55,7 +55,7 @@ describe('SEI process list', () => {
 
     const first = rows[0];
     expect(first).toBeDefined();
-    expect(first?.querySelector('a')?.textContent?.trim()).toBe('11111.111111/2024-60');
+    expect(first?.querySelector('a')?.textContent?.trim()).toBe('11111.111111/2024-11');
     expect(first?.querySelector('a')?.getAttribute('class')).toContain('processoNaoVisualizado');
   });
 

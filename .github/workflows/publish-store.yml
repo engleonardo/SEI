@@ -40,6 +40,8 @@ jobs:
 
       - run: npm run build && npm run zip
       - run: npm run build:firefox && npm run zip:firefox
+      - name: Check package names
+        run: npm run check:package
 
       - name: Check store credentials
         id: credentials

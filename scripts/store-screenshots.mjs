@@ -5,7 +5,7 @@
  *   npm run build
  *   node scripts/store-screenshots.mjs
  */
-import { readFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { readFile, readdir } from 'node:fs/promises';
 import { extname, join } from 'node:path';
@@ -15,7 +15,7 @@ const ROOT = process.cwd();
 const OUT = join(ROOT, 'docs', 'store', 'screenshots-1280x800');
 const VERSION = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
 const VIEWPORT = { width: 1280, height: 800 };
-const PROCESS = '11111.111111/2024-60';
+const PROCESS = '11111.111111/2024-11';
 const OTHER = '22222.222222/2025-12';
 const THIRD = '33333.333333/2026-01';
 const now = Date.now();
@@ -181,15 +181,24 @@ const labels = [
 ];
 const rules = [
   {
+    id: 'rule-created',
+    name: 'Ao criar, define prazo em 7 dias e comenta',
+    enabled: true,
+    boardId: 'board-1',
+    trigger: { type: 'created' },
+    actions: [
+      { type: 'setStartDate', days: 0 },
+      { type: 'setDueDate', days: 7 },
+      { type: 'addComment', text: 'Processo {processo} criado em {data} às {hora}.' },
+    ],
+  },
+  {
     id: 'rule-done',
     name: 'Concluído vai para a lista de concluídos',
     enabled: true,
     boardId: 'board-1',
     trigger: { type: 'completed' },
-    actions: [
-      { type: 'moveToList', listId: 'list-3' },
-      { type: 'moveToTop' },
-    ],
+    actions: [{ type: 'moveToList', listId: 'list-3' }, { type: 'moveToTop' }],
   },
   {
     id: 'rule-sei',
@@ -219,9 +228,24 @@ const lastRun = {
   ruleName: 'Processo SEI atualizado, volta para Em andamento',
   moves: [{ cardId: 'card-3', cardName: 'Camila Nunes', fromListId: 'list-2', toListId: 'list-1' }],
   labels: [],
+  dates: [],
+  comments: [],
+  completes: [],
 };
 
-function pageStub({ settingsData, boardsData, listsData, labelsData, rulesData, statsData, runData, cardsData, catalogData, iconUrl, version }) {
+function pageStub({
+  settingsData,
+  boardsData,
+  listsData,
+  labelsData,
+  rulesData,
+  statsData,
+  runData,
+  cardsData,
+  catalogData,
+  iconUrl,
+  version,
+}) {
   const ok = (data) => Promise.resolve({ ok: true, data });
   const withCallback = (value, callback) => {
     if (typeof callback === 'function') {
@@ -265,9 +289,7 @@ function pageStub({ settingsData, boardsData, listsData, labelsData, rulesData, 
             break;
           case 'trello:cards-for-process':
             response = ok(
-              cardsData.filter((card) =>
-                card.links.includes(message.payload?.processNumber ?? ''),
-              ),
+              cardsData.filter((card) => card.links.includes(message.payload?.processNumber ?? '')),
             );
             break;
           case 'trello:all-linked-cards':
@@ -471,4 +493,13 @@ await shootPage({
 
 outputServer.close();
 
+// Mantém as capturas do README com os mesmos dados fictícios da loja.
+const README_OUT = join(ROOT, 'docs', 'screenshots');
+mkdirSync(README_OUT, { recursive: true });
+for (const file of readdirSync(OUT)) {
+  if (!file.endsWith('-1280x800.png')) continue;
+  copyFileSync(join(OUT, file), join(README_OUT, file.replace('-1280x800', '')));
+}
+
 console.log('Capturas geradas em', OUT);
+console.log('Cópias do README em', README_OUT);

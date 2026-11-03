@@ -297,7 +297,7 @@ export function BulkLinkDialog({ onClose, onDone }: BulkLinkDialogProps) {
             className="sf-textarea"
             value={processInput}
             onChange={(event) => setProcessInput(event.target.value)}
-            placeholder={'Um por linha ou separados por vírgula. Ex.:\n11111.111111/2024-60\n22222.222222/2025-12'}
+            placeholder={'Um por linha ou separados por vírgula. Ex.:\n11111.111111/2024-11\n22222.222222/2025-12'}
             disabled={busy}
           />
           <span className="sf-hint">

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LINK_WARNING, addLink, hasLink, parseLinks, removeLink, renderLinks, stripLinks } from './marker';
 
-const PROCESS = '11111.111111/2024-60';
+const PROCESS = '11111.111111/2024-11';
 const OTHER = '22222.222222/2025-12';
 const BLOCK = `---\n${LINK_WARNING}`;
 
@@ -12,7 +12,7 @@ describe('link marker', () => {
   });
 
   it('ignora SEI no meio de uma frase', () => {
-    expect(parseLinks('Falar sobre o SEI 11111.111111/2024-60 no texto')).toEqual([]);
+    expect(parseLinks('Falar sobre o SEI 11111.111111/2024-11 no texto')).toEqual([]);
   });
 
   it('adiciona o vínculo no fim com separador e aviso', () => {

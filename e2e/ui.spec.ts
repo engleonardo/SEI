@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
-const PROCESS = '11111.111111/2024-60';
+const PROCESS = '11111.111111/2024-11';
 const OTHER = '22222.222222/2025-12';
 
 const card = {
@@ -57,7 +57,7 @@ async function stubExtension(page: Page, theme: 'light' | 'dark' = 'light') {
   await page.addInitScript(
     ({ cardData, freeCardData, settingsData, iconUrl }) => {
       const ok = (data: unknown) => Promise.resolve({ ok: true, data });
-      const withCallback = <T,>(value: T | Promise<T>, callback?: (result: T) => void) => {
+      const withCallback = <T>(value: T | Promise<T>, callback?: (result: T) => void) => {
         if (typeof callback === 'function') {
           void Promise.resolve(value).then(callback);
           return undefined;
@@ -106,7 +106,7 @@ async function stubExtension(page: Page, theme: 'light' | 'dark' = 'light') {
               case 'trello:board-labels':
                 response = ok([
                   { id: 'label-red', name: 'Urgente', color: 'red' },
-                  { id: 'label-light', name: 'Leonardo', color: 'green_light' },
+                  { id: 'label-light', name: 'Equipe', color: 'green_light' },
                 ]);
                 break;
               case 'trello:create-label':
@@ -179,7 +179,11 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('lista de processos mostra o cartão vinculado e o botão de ações', async ({ page }) => {
-  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
+  await openFixture(
+    page,
+    'sei-list-v4.html',
+    'http://sei.test/sei/controlador.php?acao=procedimento_controlar',
+  );
 
   await expect(page.getByText('Cartão vinculado')).toBeVisible();
   await expect(page.getByRole('button', { name: /Abrir ações do processo/ }).first()).toBeVisible();
@@ -189,12 +193,15 @@ test('lista de processos mostra o cartão vinculado e o botão de ações', asyn
   await expect(page.locator('.sf-toolbar__meta')).toHaveCount(0);
   await expect(page.getByText('(usuario.exemplo)')).toBeVisible();
   await expect(page.locator('.sf-detail-strip')).toHaveCount(1);
-  const centered = await page.locator('.sf-card--compact').first().evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    const strip = element.closest('.sf-detail-strip')?.getBoundingClientRect();
-    if (!strip) return false;
-    return Math.abs(rect.left + rect.width / 2 - (strip.left + strip.width / 2)) < 2;
-  });
+  const centered = await page
+    .locator('.sf-card--compact')
+    .first()
+    .evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const strip = element.closest('.sf-detail-strip')?.getBoundingClientRect();
+      if (!strip) return false;
+      return Math.abs(rect.left + rect.width / 2 - (strip.left + strip.width / 2)) < 2;
+    });
   expect(centered).toBe(true);
 
   // Etiqueta do cartão é clicável e filtra a lista, como no painel.
@@ -207,7 +214,11 @@ test('lista de processos mostra o cartão vinculado e o botão de ações', asyn
 });
 
 test('quadro/lista abre seletor inline, sem popup', async ({ page }) => {
-  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
+  await openFixture(
+    page,
+    'sei-list-v4.html',
+    'http://sei.test/sei/controlador.php?acao=procedimento_controlar',
+  );
 
   await page.getByTitle('Mover cartão').first().click();
   await expect(page.getByText('Mover cartão').first()).toBeVisible();
@@ -218,7 +229,11 @@ test('quadro/lista abre seletor inline, sem popup', async ({ page }) => {
 });
 
 test('edição de descrição abre uma área ampla', async ({ page }) => {
-  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
+  await openFixture(
+    page,
+    'sei-list-v4.html',
+    'http://sei.test/sei/controlador.php?acao=procedimento_controlar',
+  );
 
   await page.getByText('Descrição do cartão').click();
   const textarea = page.getByLabel('Descrição do cartão');
@@ -229,7 +244,11 @@ test('edição de descrição abre uma área ampla', async ({ page }) => {
 });
 
 test('processo aberto mostra o painel completo', async ({ page }) => {
-  await openFixture(page, 'sei-content-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_trabalhar');
+  await openFixture(
+    page,
+    'sei-content-v4.html',
+    'http://sei.test/sei/controlador.php?acao=procedimento_trabalhar',
+  );
 
   await expect(page.getByText('SEI Flow')).toHaveCount(0);
   await expect(page.getByText('1 cartão')).toHaveCount(0);
@@ -246,7 +265,11 @@ test('processo aberto mostra o painel completo', async ({ page }) => {
 });
 
 test('diálogo de novo cartão abre com o destino padrão', async ({ page }) => {
-  await openFixture(page, 'sei-content-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_visualizar');
+  await openFixture(
+    page,
+    'sei-content-v4.html',
+    'http://sei.test/sei/controlador.php?acao=procedimento_visualizar',
+  );
   await page.getByRole('button', { name: 'Novo cartão' }).click();
 
   await expect(page.getByText('Novo cartão no Trello')).toBeVisible();
@@ -260,7 +283,11 @@ test('diálogo de novo cartão abre com o destino padrão', async ({ page }) => 
 });
 
 test('diálogo de vínculo lista cartões do quadro e permite seleção múltipla', async ({ page }) => {
-  await openFixture(page, 'sei-content-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_visualizar');
+  await openFixture(
+    page,
+    'sei-content-v4.html',
+    'http://sei.test/sei/controlador.php?acao=procedimento_visualizar',
+  );
   await page.getByRole('button', { name: 'Vincular cartões' }).click();
 
   await expect(page.getByText('Vincular cartões existentes')).toBeVisible();
@@ -277,7 +304,11 @@ test('diálogo de vínculo lista cartões do quadro e permite seleção múltipl
 });
 
 test('filtros: busca com foco estável, cores do Trello e quadro/lista separados', async ({ page }) => {
-  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
+  await openFixture(
+    page,
+    'sei-list-v4.html',
+    'http://sei.test/sei/controlador.php?acao=procedimento_controlar',
+  );
 
   await page.getByRole('button', { name: 'Abrir filtros' }).click();
   const dialog = page.getByRole('dialog');
@@ -290,9 +321,9 @@ test('filtros: busca com foco estável, cores do Trello e quadro/lista separados
 
   const labelChip = dialog.locator('.sf-label-chip').filter({ hasText: 'Urgente' });
   await expect(labelChip).toBeVisible();
-  expect(
-    await labelChip.evaluate((element) => getComputedStyle(element).backgroundColor),
-  ).toBe('rgb(248, 113, 104)');
+  expect(await labelChip.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
+    'rgb(248, 113, 104)',
+  );
 
   await dialog.getByRole('button', { name: 'Contratos' }).click();
   await expect(dialog.getByRole('button', { name: 'Em análise' })).toBeVisible();
@@ -304,7 +335,11 @@ test('filtros: busca com foco estável, cores do Trello e quadro/lista separados
 });
 
 test('filtro sem cartão esconde processos que já têm cartão', async ({ page }) => {
-  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
+  await openFixture(
+    page,
+    'sei-list-v4.html',
+    'http://sei.test/sei/controlador.php?acao=procedimento_controlar',
+  );
 
   await page.getByRole('button', { name: 'Abrir filtros' }).click();
   await page.getByRole('button', { name: 'Sem cartão' }).click();
@@ -315,7 +350,11 @@ test('filtro sem cartão esconde processos que já têm cartão', async ({ page 
 });
 
 test('atalho / foca a busca da barra', async ({ page }) => {
-  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
+  await openFixture(
+    page,
+    'sei-list-v4.html',
+    'http://sei.test/sei/controlador.php?acao=procedimento_controlar',
+  );
 
   await page.keyboard.press('/');
   const search = page.getByLabel('Buscar processo ou cartão');
@@ -327,23 +366,27 @@ test('atalho / foca a busca da barra', async ({ page }) => {
 });
 
 test('lote reconhece processos e lista cartões do quadro', async ({ page }) => {
-  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
+  await openFixture(
+    page,
+    'sei-list-v4.html',
+    'http://sei.test/sei/controlador.php?acao=procedimento_controlar',
+  );
 
-  await page
-    .getByRole('button', { name: 'Vincular cartões a vários processos' })
-    .click();
+  await page.getByRole('button', { name: 'Vincular cartões a vários processos' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText('Vincular cartões a vários processos')).toBeVisible();
-  await dialog.getByLabel('Processos de destino').fill(
-    `${PROCESS}\n${OTHER}\n33333.333333/2026-01`,
-  );
+  await dialog.getByLabel('Processos de destino').fill(`${PROCESS}\n${OTHER}\n33333.333333/2026-01`);
   await expect(dialog.getByText('3 processo(s) válido(s) reconhecido(s).')).toBeVisible();
   await expect(dialog.getByText('Cartão livre')).toBeVisible();
 });
 
 test('modo escuro escurece só os cartões e mantém o SEI claro', async ({ page }) => {
   await stubExtension(page, 'dark');
-  await openFixture(page, 'sei-list-v4.html', 'http://sei.test/sei/controlador.php?acao=procedimento_controlar');
+  await openFixture(
+    page,
+    'sei-list-v4.html',
+    'http://sei.test/sei/controlador.php?acao=procedimento_controlar',
+  );
 
   await expect(page.getByText('Cartão vinculado')).toBeVisible();
   const row = page.locator('tr').filter({ hasText: PROCESS }).first();

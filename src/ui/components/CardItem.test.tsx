@@ -17,6 +17,7 @@ const card: TrelloCard = {
   desc: '',
   description: 'Conferir cláusulas e anexos.',
   shortUrl: 'https://trello.com/c/1',
+  start: null,
   due: null,
   dueComplete: false,
   idBoard: 'board-1',
@@ -28,7 +29,7 @@ const card: TrelloCard = {
   ],
   board: { id: 'board-1', name: 'Contratos' },
   list: { id: 'list-1', name: 'Em análise' },
-  links: ['11111.111111/2024-60'],
+  links: ['11111.111111/2024-11'],
   hasChecklist: false,
   lastActivity: null,
 };
@@ -38,7 +39,7 @@ describe('CardItem', () => {
     render(
       <CardItem
         card={card}
-        processNumber="11111.111111/2024-60"
+        processNumber="11111.111111/2024-11"
         onChanged={vi.fn()}
         onRemoved={vi.fn()}
       />,
@@ -55,7 +56,7 @@ describe('CardItem', () => {
     render(
       <CardItem
         card={card}
-        processNumber="11111.111111/2024-60"
+        processNumber="11111.111111/2024-11"
         onChanged={vi.fn()}
         onRemoved={vi.fn()}
       />,
@@ -75,7 +76,7 @@ describe('CardItem', () => {
     render(
       <CardItem
         card={card}
-        processNumber="11111.111111/2024-60"
+        processNumber="11111.111111/2024-11"
         onChanged={vi.fn()}
         onRemoved={vi.fn()}
       />,
@@ -89,7 +90,7 @@ describe('CardItem', () => {
     render(
       <CardItem
         card={{ ...card, description: '' }}
-        processNumber="11111.111111/2024-60"
+        processNumber="11111.111111/2024-11"
         onChanged={vi.fn()}
         onRemoved={vi.fn()}
       />,
@@ -102,7 +103,7 @@ describe('CardItem', () => {
     const { container } = render(
       <CardItem
         card={card}
-        processNumber="11111.111111/2024-60"
+        processNumber="11111.111111/2024-11"
         highlight
         onChanged={vi.fn()}
         onRemoved={vi.fn()}
@@ -124,7 +125,7 @@ describe('CardItem', () => {
     render(
       <CardItem
         card={card}
-        processNumber="11111.111111/2024-60"
+        processNumber="11111.111111/2024-11"
         onChanged={vi.fn()}
         onRemoved={vi.fn()}
       />,

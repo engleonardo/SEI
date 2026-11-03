@@ -21,7 +21,25 @@ import {
   replaceSyncSnapshot,
   type CardSnapshot,
 } from '../storage/sync';
-import { ruleAppliesNow, ruleMatches, ruleIssue, ruleRunCardCount, ruleWouldChange, type Rule, type RuleEvent, type RuleRunLabel, type RuleRunMove } from '../domain/rules';
+import {
+  renderRuleComment,
+  ruleAppliesNow,
+  ruleDate,
+  ruleDateLabel,
+  ruleDateMatches,
+  ruleIssue,
+  ruleMatches,
+  ruleRunCardCount,
+  ruleRunChangeCount,
+  ruleWouldChange,
+  type Rule,
+  type RuleEvent,
+  type RuleRunComment,
+  type RuleRunComplete,
+  type RuleRunDate,
+  type RuleRunLabel,
+  type RuleRunMove,
+} from '../domain/rules';
 import { dropLastRuleRun, getLastRuleRun, pushRuleRun } from '../storage/rule-runs';
 import { recordRuleApplications } from '../storage/rule-stats';
 import { pushRuleLog, type RuleLogEntry } from '../storage/rule-log';
@@ -33,7 +51,7 @@ import { TrelloClient, TrelloError, type TrelloCredentials } from './client';
 import { toCard, toCards } from './normalize';
 
 const CARD_FIELDS =
-  'id,name,desc,shortUrl,due,dueComplete,idBoard,idList,idChecklists,labels,dateLastActivity';
+  'id,name,desc,shortUrl,start,due,dueComplete,idBoard,idList,idChecklists,labels,dateLastActivity';
 const BOARD_FIELDS = 'id,name';
 const LIST_FIELDS = 'id,name,pos';
 const LABEL_FIELDS = 'id,name,color';
@@ -134,10 +152,7 @@ export class TrelloRepository {
         await cacheSet(`boardcards:${boardId}`, cards);
         return cards;
       } catch (error) {
-        const cached = await cacheGet<TrelloCard[]>(
-          `boardcards:${boardId}`,
-          Number.POSITIVE_INFINITY,
-        );
+        const cached = await cacheGet<TrelloCard[]>(`boardcards:${boardId}`, Number.POSITIVE_INFINITY);
         if (cached) return cached;
         throw error;
       }
@@ -176,9 +191,7 @@ export class TrelloRepository {
   private async applyBoardLabels(cards: TrelloCard[]): Promise<TrelloCard[]> {
     const boardIds = Array.from(
       new Set(
-        cards
-          .filter((card) => card.labels.length > 0 && Boolean(card.idBoard))
-          .map((card) => card.idBoard),
+        cards.filter((card) => card.labels.length > 0 && Boolean(card.idBoard)).map((card) => card.idBoard),
       ),
     ).slice(0, 25);
     if (boardIds.length === 0) return cards;
@@ -285,8 +298,8 @@ export class TrelloRepository {
       let fromDefaultBoard: TrelloCard[] = [];
       if (settings.defaultBoardId) {
         try {
-          fromDefaultBoard = (await this.getBoardCards(settings.defaultBoardId, fresh)).filter(
-            (card) => card.links.includes(process),
+          fromDefaultBoard = (await this.getBoardCards(settings.defaultBoardId, fresh)).filter((card) =>
+            card.links.includes(process),
           );
         } catch {
           fromDefaultBoard = [];
@@ -379,10 +392,7 @@ export class TrelloRepository {
     const settings = await this.settings();
     const listId = input.listId || settings.defaultListId;
     if (!listId) {
-      throw new TrelloError(
-        'not_configured',
-        'Escolha um quadro e uma lista antes de criar cartões.',
-      );
+      throw new TrelloError('not_configured', 'Escolha um quadro e uma lista antes de criar cartões.');
     }
 
     const description = input.processNumber
@@ -404,10 +414,10 @@ export class TrelloRepository {
     let created = await this.getCard(raw.id, true);
     await mergeSyncSnapshot([created]);
 
-    // Criar um cartão em uma lista conta como "entrar na lista" para as regras.
+    // Criar um cartão em uma lista conta como "criar" e "entrar na lista" para as regras.
     if (created.links.length > 0) {
       created = await this.runRules(created, {
-        kind: 'moved',
+        kind: 'created',
         fromListId: null,
         toListId: created.idList,
       });
@@ -422,6 +432,7 @@ export class TrelloRepository {
     patch: {
       name?: string;
       description?: string;
+      start?: string | null;
       due?: string | null;
       dueComplete?: boolean;
       idBoard?: string;
@@ -442,6 +453,7 @@ export class TrelloRepository {
       body.desc = renderLinks(patch.description, links);
     }
 
+    if (patch.start !== undefined) body.start = patch.start === null ? 'null' : patch.start;
     if (patch.due !== undefined) body.due = patch.due === null ? 'null' : patch.due;
     if (patch.dueComplete !== undefined) body.dueComplete = patch.dueComplete;
     if (patch.idBoard !== undefined) body.idBoard = patch.idBoard;
@@ -489,10 +501,7 @@ export class TrelloRepository {
     return result;
   }
 
-  private async applyRemoteEvents(
-    card: TrelloCard,
-    previous: CardSnapshot,
-  ): Promise<TrelloCard> {
+  private async applyRemoteEvents(card: TrelloCard, previous: CardSnapshot): Promise<TrelloCard> {
     if (card.links.length === 0) return card;
 
     const events: RuleEvent[] = [];
@@ -510,16 +519,7 @@ export class TrelloRepository {
     const counts = new Map<string, number>();
     const log: RuleLogEntry[] = [];
     for (const event of events) {
-      const state = await this.executeRules(
-        current,
-        event,
-        applied,
-        0,
-        false,
-        undefined,
-        counts,
-        log,
-      );
+      const state = await this.executeRules(current, event, applied, 0, false, undefined, counts, log);
       current = state.card;
     }
     await recordRuleApplications(counts, 'auto');
@@ -535,6 +535,7 @@ export class TrelloRepository {
   private async runRules(card: TrelloCard, event: RuleEvent): Promise<TrelloCard> {
     const counts = new Map<string, number>();
     const log: RuleLogEntry[] = [];
+    const comments: RuleRunComment[] = [];
     const { card: result } = await this.executeRules(
       card,
       event,
@@ -544,6 +545,7 @@ export class TrelloRepository {
       undefined,
       counts,
       log,
+      comments,
     );
     await recordRuleApplications(counts, 'auto');
     await pushRuleLog(log);
@@ -559,6 +561,7 @@ export class TrelloRepository {
     only?: string,
     counts?: Map<string, number>,
     log?: RuleLogEntry[],
+    comments?: RuleRunComment[],
   ): Promise<{ card: TrelloCard; touched: boolean }> {
     if (depth >= 5) return { card, touched: false };
     if (card.links.length === 0) return { card, touched: false };
@@ -592,6 +595,16 @@ export class TrelloRepository {
           actions: appliedRule.actions,
         });
       }
+      if (comments) {
+        for (const comment of appliedRule.comments) {
+          comments.push({
+            cardId: current.id,
+            cardName: current.name,
+            actionId: comment.actionId,
+            text: comment.text,
+          });
+        }
+      }
 
       if (appliedRule.moved) {
         const chained = await this.executeRules(
@@ -603,6 +616,7 @@ export class TrelloRepository {
           undefined,
           counts,
           log,
+          comments,
         );
         current = chained.card;
       }
@@ -620,30 +634,30 @@ export class TrelloRepository {
     moved: boolean;
     fromListId: string;
     actions: string[];
+    comments: Array<{ text: string; actionId?: string }>;
   }> {
     const fromListId = card.idList;
-    const moveCandidate = rule.actions.find(
-      (action) => action.type === 'moveToList' && action.listId,
-    );
+    const moveCandidate = rule.actions.find((action) => action.type === 'moveToList' && action.listId);
     let targetListId = moveCandidate?.listId;
     let boardLists: Array<{ id: string; name: string }> | null = null;
     if (targetListId) {
       // Nunca move para uma lista de outro quadro: a regra é presa ao quadro dela.
       boardLists = await this.getLists(rule.boardId).catch(() => null);
-      if (
-        !Array.isArray(boardLists) ||
-        !boardLists.some((list) => list.id === targetListId)
-      ) {
+      if (!Array.isArray(boardLists) || !boardLists.some((list) => list.id === targetListId)) {
         targetListId = undefined;
       }
     }
     const moveToTop = rule.actions.some((action) => action.type === 'moveToTop');
-    const adds = rule.actions.filter(
-      (action) => action.type === 'addLabel' && Boolean(action.labelId),
+    const adds = rule.actions.filter((action) => action.type === 'addLabel' && Boolean(action.labelId));
+    const removes = rule.actions.filter((action) => action.type === 'removeLabel' && Boolean(action.labelId));
+    const startAction = rule.actions.find((action) => action.type === 'setStartDate');
+    const dueAction = rule.actions.find((action) => action.type === 'setDueDate');
+    const clearDates = rule.actions.some((action) => action.type === 'clearDates');
+    const comments = rule.actions.filter(
+      (action) => action.type === 'addComment' && Boolean(action.text?.trim()),
     );
-    const removes = rule.actions.filter(
-      (action) => action.type === 'removeLabel' && Boolean(action.labelId),
-    );
+    const markComplete = rule.actions.some((action) => action.type === 'markComplete');
+    const reopen = rule.actions.some((action) => action.type === 'reopenCard');
 
     let touched = false;
     const actions: string[] = [];
@@ -662,23 +676,89 @@ export class TrelloRepository {
       actions.push(`Remover etiqueta${action.labelName ? ` "${action.labelName}"` : ''}`);
     }
 
+    const body: Record<string, string | boolean> = {};
     const shouldMoveList = Boolean(targetListId && targetListId !== card.idList);
     if (shouldMoveList || moveToTop) {
-      const body: Record<string, string> = { pos: shouldMoveList ? 'bottom' : 'top' };
+      body.pos = shouldMoveList ? 'bottom' : 'top';
       if (shouldMoveList && targetListId) body.idList = targetListId;
+    }
+
+    const now = new Date();
+    if (clearDates) {
+      if (card.start || card.due) {
+        body.start = 'null';
+        body.due = 'null';
+        touched = true;
+        actions.push('Limpar início e término');
+      }
+    } else {
+      const startChanged = Boolean(startAction && !ruleDateMatches(card.start, startAction.days, now));
+      const dueChanged = Boolean(dueAction && !ruleDateMatches(card.due, dueAction.days, now));
+      if (startChanged && startAction) {
+        body.start = ruleDate(startAction.days ?? 0, now);
+        touched = true;
+        actions.push(`Definir início (${ruleDateLabel(startAction.days ?? 0)})`);
+      }
+      if (dueChanged && dueAction) {
+        body.due = ruleDate(dueAction.days ?? 0, now);
+        touched = true;
+        actions.push(`Definir término (${ruleDateLabel(dueAction.days ?? 0)})`);
+      }
+    }
+
+    if (markComplete && !card.dueComplete) {
+      body.dueComplete = true;
+      touched = true;
+      actions.push('Marcar como concluído');
+    } else if (reopen && card.dueComplete) {
+      body.dueComplete = false;
+      touched = true;
+      actions.push('Reabrir cartão');
+    }
+
+    if (Object.keys(body).length > 0) {
       await this.client.put(`/cards/${card.id}`, body);
       touched = true;
       if (shouldMoveList) {
-        const listName =
-          boardLists?.find((list) => list.id === targetListId)?.name ?? 'lista';
+        const listName = boardLists?.find((list) => list.id === targetListId)?.name ?? 'lista';
         actions.push(`Mover para a lista "${listName}"`);
-      } else {
+      } else if (moveToTop) {
         actions.push('Mover para o topo');
       }
     }
 
+    const createdComments: Array<{ text: string; actionId?: string }> = [];
+    if (comments.length > 0) {
+      const finalListId = shouldMoveList && targetListId ? targetListId : card.idList;
+      const listName = boardLists?.find((list) => list.id === finalListId)?.name ?? card.list?.name ?? '';
+      for (const comment of comments) {
+        const text = renderRuleComment(comment.text ?? '', {
+          processNumber: card.links[0],
+          cardName: card.name,
+          boardName: card.board?.name ?? '',
+          listName,
+          ruleName: rule.name,
+          now,
+        });
+        if (!text) continue;
+        const response = await this.client.post<{ id?: string }>(`/cards/${card.id}/actions/comments`, {
+          text,
+        });
+        touched = true;
+        actions.push('Adicionar comentário');
+        createdComments.push({ text, actionId: response?.id });
+      }
+    }
+
     if (!touched) {
-      return { card, touched: false, moved: false, fromListId, actions: [] };
+      return {
+        card,
+        touched: false,
+        moved: false,
+        fromListId,
+        actions: [],
+        comments: [],
+      };
     }
 
     await this.invalidateCardCaches();
@@ -689,13 +769,11 @@ export class TrelloRepository {
       moved: updated.idList !== fromListId,
       fromListId,
       actions,
+      comments: createdComments,
     };
   }
 
-  async applyRuleNow(
-    ruleId: string,
-    dryRun = false,
-  ): Promise<{ applied: number; total: number }> {
+  async applyRuleNow(ruleId: string, dryRun = false): Promise<{ applied: number; total: number }> {
     const rules = await getRules();
     const rule = rules.find((item) => item.id === ruleId);
     if (!rule) {
@@ -708,9 +786,7 @@ export class TrelloRepository {
     const cards = await this.getAllLinkedCards();
     const catalog = await getProcessCatalog();
     // Só entram cartões do quadro da regra e que ainda mudariam algo.
-    const scoped = cards.filter(
-      (card) => card.links.length > 0 && card.idBoard === rule.boardId,
-    );
+    const scoped = cards.filter((card) => card.links.length > 0 && card.idBoard === rule.boardId);
     const matching = scoped.filter(
       (card) =>
         ruleAppliesNow(rule, card, {
@@ -725,12 +801,13 @@ export class TrelloRepository {
     const touched: TrelloCard[] = [];
     const moves: RuleRunMove[] = [];
     const labels: RuleRunLabel[] = [];
+    const dates: RuleRunDate[] = [];
+    const comments: RuleRunComment[] = [];
+    const completes: RuleRunComplete[] = [];
     const counts = new Map<string, number>();
     const log: RuleLogEntry[] = [];
 
     for (const card of matching) {
-      const beforeListId = card.idList;
-      const beforeLabels = new Set(card.labels.map((label) => label.id));
       try {
         const result = await this.executeRules(
           card,
@@ -741,12 +818,13 @@ export class TrelloRepository {
           rule.id,
           counts,
           log,
+          comments,
         );
         if (!result.touched) continue;
 
         applied += 1;
         touched.push(result.card);
-        this.collectRuleRunDiff(card.name, beforeListId, beforeLabels, result.card, moves, labels);
+        this.collectRuleRunDiff(card, result.card, moves, labels, dates, completes);
       } catch {
         // Uma falha isolada não interrompe a aplicação nas demais cartões.
       }
@@ -757,7 +835,13 @@ export class TrelloRepository {
     await recordRuleApplications(counts, 'manual');
     await pushRuleLog(log);
 
-    if (moves.length > 0 || labels.length > 0) {
+    if (
+      moves.length > 0 ||
+      labels.length > 0 ||
+      dates.length > 0 ||
+      comments.length > 0 ||
+      completes.length > 0
+    ) {
       await pushRuleRun({
         id: `run_${Date.now().toString(36)}`,
         at: Date.now(),
@@ -765,6 +849,9 @@ export class TrelloRepository {
         ruleName: rule.name,
         moves,
         labels,
+        dates,
+        comments,
+        completes,
       });
     }
 
@@ -785,9 +872,7 @@ export class TrelloRepository {
     if (processes.size === 0) return { applied: 0 };
 
     const cards = await this.getAllLinkedCards();
-    const relevant = cards.filter((card) =>
-      card.links.some((link) => processes.has(link)),
-    );
+    const relevant = cards.filter((card) => card.links.some((link) => processes.has(link)));
     if (relevant.length === 0) return { applied: 0 };
 
     let applied = 0;
@@ -824,39 +909,60 @@ export class TrelloRepository {
   }
 
   private collectRuleRunDiff(
-    cardName: string,
-    beforeListId: string,
-    beforeLabels: Set<string>,
+    before: TrelloCard,
     after: TrelloCard,
     moves: RuleRunMove[],
     labels: RuleRunLabel[],
+    dates: RuleRunDate[],
+    completes: RuleRunComplete[],
   ): void {
-    if (after.idList !== beforeListId) {
+    if (after.idList !== before.idList) {
       moves.push({
         cardId: after.id,
-        cardName,
-        fromListId: beforeListId,
+        cardName: before.name,
+        fromListId: before.idList,
         toListId: after.idList,
       });
     }
 
+    const beforeLabels = new Set(before.labels.map((label) => label.id));
     const afterLabels = new Set(after.labels.map((label) => label.id));
     for (const label of afterLabels) {
       if (!beforeLabels.has(label)) {
-        labels.push({ cardId: after.id, cardName, labelId: label, added: true });
+        labels.push({ cardId: after.id, cardName: before.name, labelId: label, added: true });
       }
     }
     for (const label of beforeLabels) {
       if (!afterLabels.has(label)) {
-        labels.push({ cardId: after.id, cardName, labelId: label, added: false });
+        labels.push({ cardId: after.id, cardName: before.name, labelId: label, added: false });
       }
+    }
+
+    if ((before.start ?? null) !== (after.start ?? null) || (before.due ?? null) !== (after.due ?? null)) {
+      dates.push({
+        cardId: after.id,
+        cardName: before.name,
+        previousStart: before.start,
+        previousDue: before.due,
+        start: after.start,
+        due: after.due,
+      });
+    }
+
+    if (before.dueComplete !== after.dueComplete) {
+      completes.push({
+        cardId: after.id,
+        cardName: before.name,
+        previous: before.dueComplete,
+        value: after.dueComplete,
+      });
     }
   }
 
   /**
    * Desfaz a última aplicação manual ("Aplicar agora"): devolve cada cartão à
-   * lista de origem e reverte as etiquetas adicionadas/removidas.
-   * Cartões que mudaram de lista depois da aplicação são preservados.
+   * lista de origem, reverte etiquetas, datas, conclusão e remove os
+   * comentários criados. Cartões alterados depois da aplicação são preservados.
    */
   async undoLastRuleRun(): Promise<{ reverted: number; total: number; cards: number }> {
     const run = await getLastRuleRun();
@@ -898,13 +1004,58 @@ export class TrelloRepository {
       }
     }
 
+    for (const change of run.dates) {
+      try {
+        const card = await this.getCard(change.cardId, true);
+        if (card.links.length === 0) continue;
+        if ((card.start ?? null) !== (change.start ?? null)) continue;
+        if ((card.due ?? null) !== (change.due ?? null)) continue;
+        const body: Record<string, string> = {};
+        if ((change.previousStart ?? null) !== (card.start ?? null)) {
+          body.start = change.previousStart ?? 'null';
+        }
+        if ((change.previousDue ?? null) !== (card.due ?? null)) {
+          body.due = change.previousDue ?? 'null';
+        }
+        if (Object.keys(body).length === 0) continue;
+        await this.client.put(`/cards/${card.id}`, body);
+        touched.push(await this.getCard(card.id, true));
+        reverted += 1;
+      } catch {
+        // cartão apagado ou data alterada depois: mantém como está
+      }
+    }
+
+    for (const change of run.completes) {
+      try {
+        const card = await this.getCard(change.cardId, true);
+        if (card.links.length === 0) continue;
+        if (card.dueComplete !== change.value) continue;
+        await this.client.put(`/cards/${card.id}`, { dueComplete: change.previous });
+        touched.push(await this.getCard(card.id, true));
+        reverted += 1;
+      } catch {
+        // cartão apagado ou conclusão alterada depois: mantém como está
+      }
+    }
+
+    for (const comment of run.comments) {
+      if (!comment.actionId) continue;
+      try {
+        await this.client.delete(`/actions/${comment.actionId}`);
+        reverted += 1;
+      } catch {
+        // comentário apagado manualmente: mantém como está
+      }
+    }
+
     await this.invalidateCardCaches();
     if (touched.length > 0) await mergeSyncSnapshot(touched);
     await dropLastRuleRun();
 
     return {
       reverted,
-      total: run.moves.length + run.labels.length,
+      total: ruleRunChangeCount(run),
       cards: ruleRunCardCount(run),
     };
   }
@@ -944,10 +1095,7 @@ export class TrelloRepository {
     return results;
   }
 
-  async linkCardsToProcesses(
-    cardIds: string[],
-    processNumbers: string[],
-  ): Promise<BulkLinkResult[]> {
+  async linkCardsToProcesses(cardIds: string[], processNumbers: string[]): Promise<BulkLinkResult[]> {
     const processes = Array.from(
       new Set(
         processNumbers

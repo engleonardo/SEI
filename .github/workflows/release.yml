@@ -23,6 +23,8 @@ jobs:
       - run: npm run build && npm run zip
       - run: npm run build:firefox && npm run zip:firefox
       - run: npm run build:edge && npm run zip:edge
+      - name: Check package names
+        run: npm run check:package
       - name: List packages
         run: ls -la .output/*.zip
       - name: Publish GitHub Release

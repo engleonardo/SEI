@@ -3,6 +3,28 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.5.0] - 2026-11-03
+
+### Adicionado
+
+- Novo gatilho de regra **Ao criar o cartão**, disparado quando o cartão é criado pela extensão (pelo SEI ou pelo painel).
+- Novas ações de regra: **definir data de início**, **definir data de término** (hoje, em N dias ou há N dias), **limpar início e término**, **adicionar comentário**, **marcar como concluído** e **reabrir cartão**.
+- Comentários de regra aceitam os marcadores `{processo}`, `{cartao}`, `{data}`, `{hora}`, `{lista}`, `{quadro}` e `{regra}`.
+- **Desfazer** a última aplicação agora reverte datas e conclusão e remove os comentários criados pela regra.
+- Seis modelos de regra iniciais para novas instalações, incluindo datas ao criar e comentário ao concluir.
+- Script `npm run check:package` e comando `npm run unpacked` para detectar e remover nomes reservados pelo Chrome (`_metadata`/`__MACOSX`).
+
+### Alterado
+
+- O **Aplicar agora** ignora cartões que já estão com as datas e a conclusão definidas pela regra.
+- Regras de criação não entram no **Aplicar agora**, porque não têm condição retroativa.
+- Documentação de instalação no Chrome com a explicação do erro `_metadata`.
+
+### Segurança
+
+- Números de processo reais e o usuário de exemplo do SEI foram substituídos por dados fictícios nos fixtures, testes, documentação e capturas de tela.
+- Capturas da loja regeneradas sem dados da organização.
+
 ## [1.4.0] - 2026-11-02
 
 ### Adicionado
@@ -55,4 +77,3 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - Cartões criados pela extensão disparam as regras de entrada em lista.
 
 Versões anteriores: consulte as releases em https://github.com/engleonardo/SEI/releases.
-

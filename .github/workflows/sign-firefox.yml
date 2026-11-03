@@ -40,6 +40,8 @@ jobs:
 
       - run: npm run build:firefox
       - run: npm run zip:firefox
+      - name: Check package names
+        run: npm run check:package
 
       - name: Check AMO credentials
         env:

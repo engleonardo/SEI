@@ -21,8 +21,10 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Edite nome, descrição, etiquetas, checklist, prazo, quadro e lista dentro do SEI.
 • Conclua ou reabra o cartão com um clique, sem exigir prazo.
 • Ao concluir, a data e hora do clique ficam gravadas no prazo do cartão no Trello.
-• Regras automáticas por quadro: ao concluir, ao entrar em uma lista, ao entrar em qualquer lista e quando o processo do SEI recebe novidade.
-• Várias ações por regra (mover, mover para o topo, adicionar ou remover etiqueta), execução em cadeia, contador de aplicações, "Aplicar agora" com confirmação e "Desfazer" a última aplicação.
+• Regras automáticas por quadro: ao criar, ao concluir, ao entrar em uma lista, ao entrar em qualquer lista e quando o processo do SEI recebe novidade.
+• Várias ações por regra (mover, mover para o topo, adicionar ou remover etiqueta, definir início/término, limpar datas, comentar, concluir ou reabrir), execução em cadeia, contador de aplicações, "Aplicar agora" com confirmação e "Desfazer" a última aplicação.
+• Datas nas regras: defina início e término como hoje, em N dias ou há N dias, sem calcular manualmente.
+• Comentários automáticos com marcadores como {processo}, {cartao}, {data}, {hora}, {lista}, {quadro} e {regra}.
 • Importe e exporte regras em JSON, copiando o conteúdo ou usando um arquivo.
 • Sincronização nos dois sentidos: ao atualizar, o Trello é relido e as regras reagem também às mudanças feitas fora da extensão.
 • Painel SEI Flow como página inicial, com métricas, total do quadro, busca e ordenação por lista, prazo, nome, etiqueta ou tipo de processo.

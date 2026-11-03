@@ -8,7 +8,7 @@ test.describe.configure({ mode: 'serial' });
 test.setTimeout(90_000);
 
 const EXTENSION_SOURCE = join(process.cwd(), '.output', 'chrome-mv3');
-const PROCESS = '11111.111111/2024-60';
+const PROCESS = '11111.111111/2024-11';
 const OTHER = '22222.222222/2025-12';
 
 const now = Date.now();
@@ -26,7 +26,7 @@ const cards = [
     idChecklists: [],
     labels: [
       { id: 'label-red', name: 'Urgente', color: 'red' },
-      { id: 'label-light', name: 'Leonardo', color: 'green_light' },
+      { id: 'label-light', name: 'Equipe', color: 'green_light' },
     ],
     board: { id: 'board-1', name: 'Contratos' },
     list: { id: 'list-1', name: 'Em análise' },
@@ -124,10 +124,7 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
 
   const context = await chromium.launchPersistentContext(profileDir, {
     headless: false,
-    args: [
-      `--disable-extensions-except=${extensionDir}`,
-      `--load-extension=${extensionDir}`,
-    ],
+    args: [`--disable-extensions-except=${extensionDir}`, `--load-extension=${extensionDir}`],
     viewport: { width: 1280, height: 900 },
   });
 
@@ -203,10 +200,10 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
     await dashboard.waitForTimeout(300);
 
     // Etiquetas usam as cores reais do Trello (incluindo as novas cores light/dark).
-    const lightLabel = dashboard.getByRole('button', { name: /Leonardo/ }).first();
-    expect(
-      await lightLabel.evaluate((element) => getComputedStyle(element).backgroundColor),
-    ).toBe('rgb(186, 243, 219)');
+    const lightLabel = dashboard.getByRole('button', { name: /Equipe/ }).first();
+    expect(await lightLabel.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
+      'rgb(186, 243, 219)',
+    );
     const redLabel = dashboard.getByRole('button', { name: /Urgente/ }).first();
     expect(await redLabel.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
       'rgb(248, 113, 104)',

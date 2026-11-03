@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { browser } from 'wxt/browser';
 import { getProcessCatalog, listProcessRecords, upsertProcessRecords } from './processes';
 
-const PROCESS = '11111.111111/2024-60';
+const PROCESS = '11111.111111/2024-11';
 const OTHER = '22222.222222/2025-12';
 
 beforeEach(async () => {

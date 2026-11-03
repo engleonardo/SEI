@@ -9,6 +9,7 @@ const card: TrelloCard = {
   desc: '',
   description: '',
   shortUrl: 'https://trello.com/c/1',
+  start: null,
   due: null,
   dueComplete: false,
   idBoard: 'board-1',
@@ -17,13 +18,13 @@ const card: TrelloCard = {
   labels: [],
   board: { id: 'board-1', name: 'Quadro' },
   list: { id: 'list-1', name: 'Lista' },
-  links: ['11111.111111/2024-60'],
+  links: ['11111.111111/2024-11'],
   hasChecklist: false,
   lastActivity: null,
 };
 
 const common = {
-  processNumber: '11111.111111/2024-60',
+  processNumber: '11111.111111/2024-11',
   onReload: vi.fn(),
   onChanged: vi.fn(),
   onRemoved: vi.fn(),

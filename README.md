@@ -12,8 +12,8 @@ O **Painel SEI Flow** é a página inicial da extensão: reúne prazos, etiqueta
 
 ## Baixar e instalar
 
-- **Chrome / Edge:** [sei-flow-1.4.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.4.0/sei-flow-1.4.0-chrome.zip)
-- **Firefox:** [sei-flow-1.4.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.4.0/sei-flow-1.4.0-firefox.zip)
+- **Chrome / Edge:** [sei-flow-1.5.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.0/sei-flow-1.5.0-chrome.zip)
+- **Firefox:** [sei-flow-1.5.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.0/sei-flow-1.5.0-firefox.zip)
 - **Todas as versões:** [Releases](https://github.com/engleonardo/SEI/releases)
 
 Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` -> **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.
@@ -25,7 +25,7 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 - **Vários cartões por processo**, todos visíveis e organizados.
 - **Edição completa no SEI:** nome, descrição, etiquetas, checklist, prazo, quadro e lista, com botão **Concluir** no cartão.
 - **Criação com contexto:** escolha etiquetas, quadro, lista, início e término na hora de criar o cartão.
-- **Regras automáticas:** mova, etiquete e reorganize cartões vinculados ao SEI, com várias ações por regra e aplicação em cadeia.
+- **Regras automáticas:** ao criar, concluir, entrar em uma lista ou quando o processo do SEI recebe novidade, o cartão pode ser movido, etiquetado, receber datas de início/término, comentário e conclusão, com várias ações por regra e execução em cadeia.
 - **Vinculação em lote:** selecione vários cartões do Trello e vincule a um ou vários processos.
 - **Painel inicial completo:** prazos, etiquetas, tipos de processo, atualizações e busca, com edição direto no cartão.
 - **Mover cartão sem popup:** o seletor de quadro/lista abre dentro do próprio cartão.
@@ -59,46 +59,47 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 
 ## Funcionalidades
 
-| Recurso | SEI Flow |
-| --- | --- |
-| Criar cartão a partir do processo | Sim |
-| Vincular cartão existente do Trello | Sim |
-| Vincular vários cartões de uma vez | Sim |
-| Vincular cartões a vários processos em lote | Sim |
-| Vários cartões por processo | Sim |
-| Editar nome e descrição | Sim |
-| Concluir e reabrir cartão sem exigir prazo | Sim |
-| Criar cartão com etiquetas, quadro/lista, início e término | Sim |
-| Regras automáticas com várias ações e execução em cadeia | Sim |
-| Aplicar regra agora nos cartões vinculados | Sim |
-| Criar, aplicar e remover etiquetas | Sim |
-| Editar checklist (itens, concluir, remover) | Sim |
-| Definir/remover prazo e conclusão | Sim |
-| Mover cartão entre quadro/lista com seletor inline | Sim |
-| Usuário atribuído do SEI no cabeçalho do processo | Sim |
-| Desvincular sem excluir do Trello | Sim |
-| Excluir cartão do Trello | Sim |
-| Filtros por quadro, lista, etiqueta, prazo e cartão | Sim |
-| Filtro **Sem vínculo** e vínculo por número no comentário | Sim |
-| Criar cartão direto pelo painel | Sim |
-| Atualização automática do painel sem clique | Sim |
-| Atalhos **SEI** e **Trello** no cabeçalho | Sim |
-| Data/hora da conclusão gravada no prazo do Trello | Sim |
-| Listas na ordem do Trello e ordenação padrão por lista | Sim |
-| Importar e exportar regras em JSON | Sim |
-| Tema claro/escuro no painel, opções e painéis do SEI | Sim |
-| Cache e retry/backoff em 429/5xx | Sim |
-| Painel SEI Flow como página inicial da extensão | Sim |
-| Painel moderno com métricas resumidas e filtros recolhíveis | Sim |
-| Botão Dashboard no menu de opções | Sim |
-| Filtros do painel por etiqueta, tipo de processo, prazo, quadro, lista e atualização | Sim |
-| Edição completa dos cartões pelo painel, sem modal | Sim |
-| Métricas do painel refletem os filtros aplicados | Sim |
-| Links dos processos abrem a página correspondente no SEI | Sim |
-| Atualizações do Trello (7/30 dias e desde a última visita) | Sim |
-| Notificações diárias de prazos | Sim |
-| Barra fixa, atalho de busca e filtros persistidos | Sim |
-| Exportação CSV dos cartões filtrados | Sim |
+| Recurso                                                                              | SEI Flow |
+| ------------------------------------------------------------------------------------ | -------- |
+| Criar cartão a partir do processo                                                    | Sim      |
+| Vincular cartão existente do Trello                                                  | Sim      |
+| Vincular vários cartões de uma vez                                                   | Sim      |
+| Vincular cartões a vários processos em lote                                          | Sim      |
+| Vários cartões por processo                                                          | Sim      |
+| Editar nome e descrição                                                              | Sim      |
+| Concluir e reabrir cartão sem exigir prazo                                           | Sim      |
+| Criar cartão com etiquetas, quadro/lista, início e término                           | Sim      |
+| Regras automáticas com várias ações e execução em cadeia                             | Sim      |
+| Regras com datas de início/término, comentário e conclusão                           | Sim      |
+| Aplicar regra agora nos cartões vinculados                                           | Sim      |
+| Criar, aplicar e remover etiquetas                                                   | Sim      |
+| Editar checklist (itens, concluir, remover)                                          | Sim      |
+| Definir/remover prazo e conclusão                                                    | Sim      |
+| Mover cartão entre quadro/lista com seletor inline                                   | Sim      |
+| Usuário atribuído do SEI no cabeçalho do processo                                    | Sim      |
+| Desvincular sem excluir do Trello                                                    | Sim      |
+| Excluir cartão do Trello                                                             | Sim      |
+| Filtros por quadro, lista, etiqueta, prazo e cartão                                  | Sim      |
+| Filtro **Sem vínculo** e vínculo por número no comentário                            | Sim      |
+| Criar cartão direto pelo painel                                                      | Sim      |
+| Atualização automática do painel sem clique                                          | Sim      |
+| Atalhos **SEI** e **Trello** no cabeçalho                                            | Sim      |
+| Data/hora da conclusão gravada no prazo do Trello                                    | Sim      |
+| Listas na ordem do Trello e ordenação padrão por lista                               | Sim      |
+| Importar e exportar regras em JSON                                                   | Sim      |
+| Tema claro/escuro no painel, opções e painéis do SEI                                 | Sim      |
+| Cache e retry/backoff em 429/5xx                                                     | Sim      |
+| Painel SEI Flow como página inicial da extensão                                      | Sim      |
+| Painel moderno com métricas resumidas e filtros recolhíveis                          | Sim      |
+| Botão Dashboard no menu de opções                                                    | Sim      |
+| Filtros do painel por etiqueta, tipo de processo, prazo, quadro, lista e atualização | Sim      |
+| Edição completa dos cartões pelo painel, sem modal                                   | Sim      |
+| Métricas do painel refletem os filtros aplicados                                     | Sim      |
+| Links dos processos abrem a página correspondente no SEI                             | Sim      |
+| Atualizações do Trello (7/30 dias e desde a última visita)                           | Sim      |
+| Notificações diárias de prazos                                                       | Sim      |
+| Barra fixa, atalho de busca e filtros persistidos                                    | Sim      |
+| Exportação CSV dos cartões filtrados                                                 | Sim      |
 
 ## Instalação para desenvolvimento
 
@@ -115,9 +116,17 @@ O WXT abre o navegador de desenvolvimento. Para carregar manualmente:
 npm run build
 ```
 
-- **Chrome/Edge:** `chrome://extensions` -> Modo desenvolvedor -> *Carregar sem compactação* -> selecione `.output/chrome-mv3`.
-- **Firefox:** `about:debugging#/runtime/this-firefox` -> *Carregar extensão temporária* -> selecione `.output/firefox-mv3/manifest.json`.
-- **Edge:** `edge://extensions` -> Modo desenvolvedor -> *Carregar sem compactação* -> `.output/edge-mv3`.
+- **Chrome/Edge:** `chrome://extensions` -> Modo desenvolvedor -> _Carregar sem compactação_ -> selecione `.output/chrome-mv3`.
+- **Firefox:** `about:debugging#/runtime/this-firefox` -> _Carregar extensão temporária_ -> selecione `.output/firefox-mv3/manifest.json`.
+- **Edge:** `edge://extensions` -> Modo desenvolvedor -> _Carregar sem compactação_ -> `.output/edge-mv3`.
+
+### Erro “Cannot load extension with file or directory name _metadata”
+
+Esse erro não vem do pacote oficial: ele aparece quando a pasta carregada contém um diretório `_metadata` (criado pelo Chrome em extensões instaladas pela loja) ou `__MACOSX` (criado ao descompactar no macOS). O Chrome reserva nomes que começam com `_`, exceto `_locales`.
+
+- Baixe o zip da release, **extraia em uma pasta nova** e carregue essa pasta.
+- Não carregue pastas de dentro do perfil do Chrome (`.../User Data/.../Extensions/...`) nem pastas extraídas de um `.crx`.
+- Rode `npm run check:package` para conferir o build; `npm run unpacked` recompila o Chrome e remove automaticamente sobras de `_metadata`/`__MACOSX` do `.output`.
 
 ### Primeiro uso
 
@@ -141,7 +150,7 @@ O vínculo é gravado no fim da descrição do cartão, em um bloco separado:
 
 ---
 Não altere as informações abaixo.
-SEI 11111.111111/2024-60
+SEI 11111.111111/2024-11
 ```
 
 - É pesquisável no próprio Trello.
@@ -172,16 +181,17 @@ O painel abre pelo ícone da extensão e pelo menu **Dashboard** das opções.
 Em **Opções -> Regras** você monta regras instantâneas, sem depender de automações do Trello.
 
 - Valem **somente para cartões vinculados** a processos do SEI.
-- Gatilhos: cartão concluído, entrada em uma lista, entrada em qualquer lista e **processo SEI atualizado (novidade)**.
-- O gatilho de processo atualizado dispara quando a extensão lê a lista do SEI e o processo passa de sem novidade para com novidade (link vermelho). Roda uma vez por novidade, em todos os cartões vinculados ao processo que estejam no quadro da regra (e na lista escolhida, se houver).
+- Gatilhos: **ao criar o cartão**, cartão concluído, entrada em uma lista, entrada em qualquer lista e **processo SEI atualizado (novidade)**.
+- O gatilho de criação vale para cartões criados pela extensão (pelo SEI ou pelo painel). O gatilho de processo atualizado dispara quando a extensão lê a lista do SEI e o processo passa de sem novidade para com novidade (link vermelho). Roda uma vez por novidade, em todos os cartões vinculados ao processo que estejam no quadro da regra (e na lista escolhida, se houver).
 - Funcionam nos dois sentidos: quando a extensão grava no Trello e também quando a mudança é feita no Trello e você atualiza (botão **Atualizar**, ao abrir o painel ou pela atualização automática das preferências).
 - Cada regra mostra um contador de quantas vezes já foi aplicada (com data e se foi automática ou manual). O botão **Zerar contadores** limpa esse histórico.
-- Várias ações por regra: mover para uma lista, mover para o topo, adicionar ou remover etiquetas.
+- Várias ações por regra: mover para uma lista, mover para o topo, adicionar ou remover etiquetas, **definir data de início/término (hoje, em N dias ou há N dias)**, **limpar as datas**, **adicionar comentário** e **marcar como concluído/reabrir**.
+- Comentários aceitam os marcadores `{processo}`, `{cartao}`, `{data}`, `{hora}`, `{lista}`, `{quadro}` e `{regra}`.
 - Regras em cadeia, com limite de 5 níveis e proteção contra loop.
-- Uma regra não pode mover para duas listas diferentes ao mesmo tempo.
-- **Aplicar agora** age só nos cartões que já estão na condição do gatilho, ignora os que já estão com a regra aplicada, mostra quantos serão alterados e pede confirmação antes de gravar.
-- **Desfazer** a última aplicação manual: devolve os cartões à lista de origem e reverte as etiquetas. Cartões que mudaram de lista depois são mantidos.
-- As 4 regras iniciais vêm desativadas até você escolher as listas e etiquetas.
+- Uma regra não pode mover para duas listas diferentes, nem definir início posterior ao término.
+- **Aplicar agora** age só nos cartões que já estão na condição do gatilho, ignora os que já estão com a regra aplicada, mostra quantos serão alterados e pede confirmação antes de gravar. Regras de criação não entram no "Aplicar agora".
+- **Desfazer** a última aplicação manual: devolve os cartões à lista de origem e reverte etiquetas, datas, conclusão e comentários criados. Cartões que mudaram de lista depois são mantidos.
+- As 6 regras iniciais vêm desativadas até você escolher as listas e etiquetas.
 
 > Abra a lista de processos do SEI uma vez para o painel aprender tipo, especificação, URL e usuário atribuído de cada processo. Depois disso, os filtros por tipo e os links ficam completos.
 
@@ -226,7 +236,9 @@ npm run zip            # pacote Chrome
 npm run zip:firefox    # pacote Firefox
 npm run zip:edge       # pacote Edge
 npm run icons          # regenera os ícones PNG
-npm run verify         # compile + lint + test + build
+npm run check:package  # confere nomes reservados (_metadata) no build
+npm run unpacked       # build Chrome + limpeza para carregar sem compactação
+npm run verify         # compile + lint + test + build + check:package
 ```
 
 ### Arquitetura

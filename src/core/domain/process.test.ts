@@ -9,7 +9,7 @@ import {
 
 describe('process number', () => {
   it('normaliza o formato padrão do SEI', () => {
-    expect(normalizeProcessNumber(' 11111.111111/2024-60 ')).toBe('11111.111111/2024-60');
+    expect(normalizeProcessNumber(' 11111.111111/2024-11 ')).toBe('11111.111111/2024-11');
   });
 
   it('normaliza formatos alternativos', () => {
@@ -25,8 +25,8 @@ describe('process number', () => {
   });
 
   it('extrai processo de textos com ruído', () => {
-    expect(extractProcessNumber('Processo nº 11111.111111/2024-60 - assunto')).toBe(
-      '11111.111111/2024-60',
+    expect(extractProcessNumber('Processo nº 11111.111111/2024-11 - assunto')).toBe(
+      '11111.111111/2024-11',
     );
     expect(extractProcessNumber('sem número aqui')).toBeNull();
   });
@@ -39,10 +39,10 @@ describe('process number', () => {
   it('extrai vários processos de um texto em lote', () => {
     expect(
       parseProcessNumbers(
-        '11111.111111/2024-60, 22222.222222/2025-12\n33333.333333/2026-01; inválido',
+        '11111.111111/2024-11, 22222.222222/2025-12\n33333.333333/2026-01; inválido',
       ),
     ).toEqual([
-      '11111.111111/2024-60',
+      '11111.111111/2024-11',
       '22222.222222/2025-12',
       '33333.333333/2026-01',
     ]);

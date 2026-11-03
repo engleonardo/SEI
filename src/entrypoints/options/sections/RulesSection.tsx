@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TrelloBoard, TrelloLabel, TrelloList } from '../../../core/domain/types';
 import {
+  MAX_DATE_OFFSET_DAYS,
   RULE_ACTION_LABELS,
+  RULE_COMMENT_PLACEHOLDERS,
   RULE_TRIGGER_LABELS,
   createRule,
   ruleIssue,
   ruleRunCardCount,
+  ruleRunChangeCount,
   type Rule,
   type RuleAction,
   type RuleActionType,
@@ -304,9 +307,7 @@ export function RulesSection({
             ...item,
             actions: [
               ...item.actions,
-              hasMove
-                ? ({ type: 'moveToTop' } as RuleAction)
-                : ({ type: 'moveToList' } as RuleAction),
+              hasMove ? ({ type: 'moveToTop' } as RuleAction) : ({ type: 'moveToList' } as RuleAction),
             ],
           }
         : item,
@@ -434,379 +435,411 @@ export function RulesSection({
   return (
     <>
       <SectionCard
-      title="Regras automáticas"
-      subtitle="Cada regra pertence a um quadro e só altera cartões vinculados ao SEI. Cadeia limitada a 5 níveis."
-      icon="refresh"
-      footer={
-        <div className="sfo-actions">
-          <button type="button" className="sfo-btn sfo-btn--primary" onClick={addRule}>
-            <Icon name="plus" size={14} />
-            Nova regra
-          </button>
-          <button
-            type="button"
-            className="sfo-btn"
-            onClick={saveNow}
-            disabled={saveState === 'saving'}
-          >
-            {saveState === 'saving' ? <Spinner /> : <Icon name="check" size={14} />}
-            Salvar regras
-          </button>
-          <button
-            type="button"
-            className="sfo-btn"
-            onClick={() => setExportOpen(true)}
-            disabled={rules.length === 0}
-          >
-            <Icon name="external" size={14} />
-            Exportar regras
-          </button>
-          <button type="button" className="sfo-btn" onClick={openImport}>
-            <Icon name="link" size={14} />
-            Importar regras
-          </button>
-          <span className={`sfo-rules-save${saveState === 'error' ? ' sfo-rules-save--error' : ''}`}>
-            {saveState === 'saving' ? (
-              <Spinner />
-            ) : (
-              <Icon name={saveState === 'error' ? 'alert' : 'check'} size={13} />
-            )}
-            {saveState === 'saving'
-              ? 'Salvando…'
-              : saveState === 'error'
-                ? 'Falha ao salvar'
-                : 'Salvo automaticamente'}
-          </span>
-          <span style={{ flex: 1 }} />
-          {Object.keys(stats).length > 0 && (
-            <button type="button" className="sfo-btn sfo-btn--sm" onClick={() => void clearStats()}>
-              Zerar contadores
+        title="Regras automáticas"
+        subtitle="Cada regra pertence a um quadro e só altera cartões vinculados ao SEI. Cadeia limitada a 5 níveis."
+        icon="refresh"
+        footer={
+          <div className="sfo-actions">
+            <button type="button" className="sfo-btn sfo-btn--primary" onClick={addRule}>
+              <Icon name="plus" size={14} />
+              Nova regra
             </button>
-          )}
-        </div>
-      }
-    >
-      {lastRun && (
-        <div className="sfo-rules-undo">
-          <span className="sfo-rules-undo__text">
-            <Icon name="clock" size={13} />
-            Última aplicação manual: <strong>{lastRun.ruleName}</strong> em{' '}
-            {ruleRunCardCount(lastRun)} cartões ·{' '}
-            {new Date(lastRun.at).toLocaleString('pt-BR')}
-          </span>
-          <button
-            type="button"
-            className="sfo-btn sfo-btn--sm"
-            onClick={() => setUndoOpen(true)}
-          >
-            <Icon name="refresh" size={13} />
-            Desfazer
-          </button>
-        </div>
-      )}
+            <button type="button" className="sfo-btn" onClick={saveNow} disabled={saveState === 'saving'}>
+              {saveState === 'saving' ? <Spinner /> : <Icon name="check" size={14} />}
+              Salvar regras
+            </button>
+            <button
+              type="button"
+              className="sfo-btn"
+              onClick={() => setExportOpen(true)}
+              disabled={rules.length === 0}
+            >
+              <Icon name="external" size={14} />
+              Exportar regras
+            </button>
+            <button type="button" className="sfo-btn" onClick={openImport}>
+              <Icon name="link" size={14} />
+              Importar regras
+            </button>
+            <span className={`sfo-rules-save${saveState === 'error' ? ' sfo-rules-save--error' : ''}`}>
+              {saveState === 'saving' ? (
+                <Spinner />
+              ) : (
+                <Icon name={saveState === 'error' ? 'alert' : 'check'} size={13} />
+              )}
+              {saveState === 'saving'
+                ? 'Salvando…'
+                : saveState === 'error'
+                  ? 'Falha ao salvar'
+                  : 'Salvo automaticamente'}
+            </span>
+            <span style={{ flex: 1 }} />
+            {Object.keys(stats).length > 0 && (
+              <button type="button" className="sfo-btn sfo-btn--sm" onClick={() => void clearStats()}>
+                Zerar contadores
+              </button>
+            )}
+          </div>
+        }
+      >
+        {lastRun && (
+          <div className="sfo-rules-undo">
+            <span className="sfo-rules-undo__text">
+              <Icon name="clock" size={13} />
+              Última aplicação manual: <strong>{lastRun.ruleName}</strong> em {ruleRunCardCount(lastRun)}{' '}
+              cartões · {new Date(lastRun.at).toLocaleString('pt-BR')}
+            </span>
+            <button type="button" className="sfo-btn sfo-btn--sm" onClick={() => setUndoOpen(true)}>
+              <Icon name="refresh" size={13} />
+              Desfazer
+            </button>
+          </div>
+        )}
 
-      {loading ? (
-        <div className="sfo-loading">
-          <Spinner />
-          <span>Carregando regras…</span>
-        </div>
-      ) : rules.length === 0 ? (
-        <p className="sfo-hint">Nenhuma regra configurada. Crie a primeira em “Nova regra”.</p>
-      ) : (
-        <div className="sfo-rules">
-          {rules.map((rule) => {
-            const issue = ruleIssue(rule);
-            const stat = stats[rule.id];
-            return (
-              <article key={rule.id} className={`sfo-rule${rule.enabled ? ' sfo-rule--on' : ''}`}>
-                <header className="sfo-rule__head">
-                  <button
-                    type="button"
-                    className={`sfo-switch${rule.enabled ? ' sfo-switch--on' : ''}`}
-                    onClick={() => toggleRule(rule)}
-                    aria-pressed={rule.enabled}
-                    aria-label={rule.enabled ? 'Desativar regra' : 'Ativar regra'}
-                    title={rule.enabled ? 'Desativar regra' : 'Ativar regra'}
-                  >
-                    <span />
-                  </button>
-                  <input
-                    className="sfo-input sfo-rule__name"
-                    value={rule.name}
-                    onChange={(event) => updateRule(rule.id, { name: event.target.value })}
-                    aria-label="Nome da regra"
-                  />
-                  {rule.enabled ? (
-                    <StatusPill tone="success">Ativa</StatusPill>
-                  ) : (
-                    <StatusPill tone="warning">Inativa</StatusPill>
-                  )}
-                  {stat && (
-                    <span
-                      className="sfo-rule__count"
-                      title={`Aplicada ${stat.applied} ${stat.applied === 1 ? 'vez' : 'vezes'} · última em ${new Date(stat.lastAt).toLocaleString('pt-BR')} (${stat.lastSource === 'manual' ? 'manual' : 'automática'})`}
+        {loading ? (
+          <div className="sfo-loading">
+            <Spinner />
+            <span>Carregando regras…</span>
+          </div>
+        ) : rules.length === 0 ? (
+          <p className="sfo-hint">Nenhuma regra configurada. Crie a primeira em “Nova regra”.</p>
+        ) : (
+          <div className="sfo-rules">
+            {rules.map((rule) => {
+              const issue = ruleIssue(rule);
+              const stat = stats[rule.id];
+              return (
+                <article key={rule.id} className={`sfo-rule${rule.enabled ? ' sfo-rule--on' : ''}`}>
+                  <header className="sfo-rule__head">
+                    <button
+                      type="button"
+                      className={`sfo-switch${rule.enabled ? ' sfo-switch--on' : ''}`}
+                      onClick={() => toggleRule(rule)}
+                      aria-pressed={rule.enabled}
+                      aria-label={rule.enabled ? 'Desativar regra' : 'Ativar regra'}
+                      title={rule.enabled ? 'Desativar regra' : 'Ativar regra'}
                     >
-                      <Icon name="refresh" size={11} />
-                      {stat.applied}x
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="sfo-icon-btn sfo-icon-btn--danger"
-                    onClick={() => removeRule(rule.id)}
-                    title="Remover regra"
-                    aria-label="Remover regra"
-                  >
-                    <Icon name="trash" size={14} />
-                  </button>
-                </header>
+                      <span />
+                    </button>
+                    <input
+                      className="sfo-input sfo-rule__name"
+                      value={rule.name}
+                      onChange={(event) => updateRule(rule.id, { name: event.target.value })}
+                      aria-label="Nome da regra"
+                    />
+                    {rule.enabled ? (
+                      <StatusPill tone="success">Ativa</StatusPill>
+                    ) : (
+                      <StatusPill tone="warning">Inativa</StatusPill>
+                    )}
+                    {stat && (
+                      <span
+                        className="sfo-rule__count"
+                        title={`Aplicada ${stat.applied} ${stat.applied === 1 ? 'vez' : 'vezes'} · última em ${new Date(stat.lastAt).toLocaleString('pt-BR')} (${stat.lastSource === 'manual' ? 'manual' : 'automática'})`}
+                      >
+                        <Icon name="refresh" size={11} />
+                        {stat.applied}x
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="sfo-icon-btn sfo-icon-btn--danger"
+                      onClick={() => removeRule(rule.id)}
+                      title="Remover regra"
+                      aria-label="Remover regra"
+                    >
+                      <Icon name="trash" size={14} />
+                    </button>
+                  </header>
 
-                <div className="sfo-rule__row">
-                  <span className="sfo-rule__label">Quadro</span>
-                  <select
-                    className="sfo-select"
-                    value={rule.boardId}
-                    onChange={(event) => changeBoard(rule, event.target.value)}
-                    aria-label="Quadro da regra"
-                  >
-                    <option value="">Escolha o quadro</option>
-                    {boards.map((board) => (
-                      <option key={board.id} value={board.id}>
-                        {board.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="sfo-rule__row">
-                  <span className="sfo-rule__label">Quando</span>
-                  <select
-                    className="sfo-select"
-                    value={rule.trigger.type}
-                    onChange={(event) =>
-                      updateRule(rule.id, {
-                        trigger: {
-                          ...rule.trigger,
-                          type: event.target.value as RuleTriggerType,
-                          listId: undefined,
-                        },
-                      })
-                    }
-                    aria-label="Condição da regra"
-                  >
-                    {(Object.keys(RULE_TRIGGER_LABELS) as RuleTriggerType[]).map((type) => (
-                      <option key={type} value={type}>
-                        {RULE_TRIGGER_LABELS[type]}
-                      </option>
-                    ))}
-                  </select>
-
-                  {(rule.trigger.type === 'enterList' || rule.trigger.type === 'seiUpdated') && (
+                  <div className="sfo-rule__row">
+                    <span className="sfo-rule__label">Quadro</span>
                     <select
                       className="sfo-select"
-                      value={rule.trigger.listId ?? ''}
+                      value={rule.boardId}
+                      onChange={(event) => changeBoard(rule, event.target.value)}
+                      aria-label="Quadro da regra"
+                    >
+                      <option value="">Escolha o quadro</option>
+                      {boards.map((board) => (
+                        <option key={board.id} value={board.id}>
+                          {board.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="sfo-rule__row">
+                    <span className="sfo-rule__label">Quando</span>
+                    <select
+                      className="sfo-select"
+                      value={rule.trigger.type}
                       onChange={(event) =>
                         updateRule(rule.id, {
                           trigger: {
                             ...rule.trigger,
-                            listId: event.target.value || undefined,
+                            type: event.target.value as RuleTriggerType,
+                            listId: undefined,
                           },
                         })
                       }
-                      disabled={!rule.boardId}
-                      aria-label="Lista da condição"
+                      aria-label="Condição da regra"
                     >
-                      <option value="">
-                        {rule.trigger.type === 'seiUpdated' ? 'Qualquer lista' : 'Escolha a lista'}
-                      </option>
-                      {boardLists(rule.boardId).map((list) => (
-                        <option key={list.id} value={list.id}>
-                          {list.name}
+                      {(Object.keys(RULE_TRIGGER_LABELS) as RuleTriggerType[]).map((type) => (
+                        <option key={type} value={type}>
+                          {RULE_TRIGGER_LABELS[type]}
                         </option>
                       ))}
                     </select>
+
+                    {(rule.trigger.type === 'enterList' || rule.trigger.type === 'seiUpdated') && (
+                      <select
+                        className="sfo-select"
+                        value={rule.trigger.listId ?? ''}
+                        onChange={(event) =>
+                          updateRule(rule.id, {
+                            trigger: {
+                              ...rule.trigger,
+                              listId: event.target.value || undefined,
+                            },
+                          })
+                        }
+                        disabled={!rule.boardId}
+                        aria-label="Lista da condição"
+                      >
+                        <option value="">
+                          {rule.trigger.type === 'seiUpdated' ? 'Qualquer lista' : 'Escolha a lista'}
+                        </option>
+                        {boardLists(rule.boardId).map((list) => (
+                          <option key={list.id} value={list.id}>
+                            {list.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {rule.trigger.type === 'seiUpdated' && (
+                    <p className="sfo-hint" style={{ margin: 0 }}>
+                      Dispara quando a lista do SEI indicar novidade no processo vinculado. Roda uma vez por
+                      novidade, em todos os cartões do processo que estejam neste quadro.
+                    </p>
                   )}
-                </div>
 
-                {rule.trigger.type === 'seiUpdated' && (
-                  <p className="sfo-hint" style={{ margin: 0 }}>
-                    Dispara quando a lista do SEI indicar novidade no processo vinculado. Roda uma
-                    vez por novidade, em todos os cartões do processo que estejam neste quadro.
-                  </p>
-                )}
+                  {rule.trigger.type === 'created' && (
+                    <p className="sfo-hint" style={{ margin: 0 }}>
+                      Dispara quando o cartão é criado pela extensão (pelo SEI ou pelo painel). Não vale para
+                      cartões criados fora da extensão.
+                    </p>
+                  )}
 
-                <div className="sfo-rule__actions">
-                  <span className="sfo-rule__label">Então</span>
-                  <div className="sfo-rule__action-list">
-                    {rule.actions.map((action, index) => (
-                      <div key={`${rule.id}-action-${index}`} className="sfo-rule__action">
-                        <select
-                          className="sfo-select"
-                          value={action.type}
-                          onChange={(event) =>
-                            updateAction(rule.id, index, {
-                              type: event.target.value as RuleActionType,
-                              listId: undefined,
-                              labelId: undefined,
-                              labelName: undefined,
-                            })
-                          }
-                          aria-label="Ação da regra"
-                        >
-                          {(Object.keys(RULE_ACTION_LABELS) as RuleActionType[]).map((type) => (
-                            <option key={type} value={type}>
-                              {RULE_ACTION_LABELS[type]}
-                            </option>
-                          ))}
-                        </select>
-
-                        {action.type === 'moveToList' && (
+                  <div className="sfo-rule__actions">
+                    <span className="sfo-rule__label">Então</span>
+                    <div className="sfo-rule__action-list">
+                      {rule.actions.map((action, index) => (
+                        <div key={`${rule.id}-action-${index}`} className="sfo-rule__action">
                           <select
                             className="sfo-select"
-                            value={action.listId ?? ''}
+                            value={action.type}
                             onChange={(event) =>
                               updateAction(rule.id, index, {
-                                listId: event.target.value || undefined,
+                                type: event.target.value as RuleActionType,
+                                listId: undefined,
+                                labelId: undefined,
+                                labelName: undefined,
+                                days: undefined,
+                                text: undefined,
                               })
                             }
-                            disabled={!rule.boardId}
-                            aria-label="Lista de destino"
+                            aria-label="Ação da regra"
                           >
-                            <option value="">Escolha a lista</option>
-                            {boardLists(rule.boardId).map((list) => (
-                              <option key={list.id} value={list.id}>
-                                {list.name}
+                            {(Object.keys(RULE_ACTION_LABELS) as RuleActionType[]).map((type) => (
+                              <option key={type} value={type}>
+                                {RULE_ACTION_LABELS[type]}
                               </option>
                             ))}
                           </select>
-                        )}
 
-                        {(action.type === 'addLabel' || action.type === 'removeLabel') && (
-                          <select
-                            className="sfo-select"
-                            value={action.labelId ?? ''}
-                            onChange={(event) => {
-                              const labelId = event.target.value;
-                              const label = boardLabels(rule.boardId).find(
-                                (item) => item.id === labelId,
-                              );
-                              updateAction(rule.id, index, {
-                                labelId: labelId || undefined,
-                                labelName: label?.name ?? '',
-                              });
-                            }}
-                            disabled={!rule.boardId}
-                            aria-label="Etiqueta"
+                          {action.type === 'moveToList' && (
+                            <select
+                              className="sfo-select"
+                              value={action.listId ?? ''}
+                              onChange={(event) =>
+                                updateAction(rule.id, index, {
+                                  listId: event.target.value || undefined,
+                                })
+                              }
+                              disabled={!rule.boardId}
+                              aria-label="Lista de destino"
+                            >
+                              <option value="">Escolha a lista</option>
+                              {boardLists(rule.boardId).map((list) => (
+                                <option key={list.id} value={list.id}>
+                                  {list.name}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+
+                          {(action.type === 'addLabel' || action.type === 'removeLabel') && (
+                            <select
+                              className="sfo-select"
+                              value={action.labelId ?? ''}
+                              onChange={(event) => {
+                                const labelId = event.target.value;
+                                const label = boardLabels(rule.boardId).find((item) => item.id === labelId);
+                                updateAction(rule.id, index, {
+                                  labelId: labelId || undefined,
+                                  labelName: label?.name ?? '',
+                                });
+                              }}
+                              disabled={!rule.boardId}
+                              aria-label="Etiqueta"
+                            >
+                              <option value="">Escolha a etiqueta</option>
+                              {boardLabels(rule.boardId).map((label) => (
+                                <option key={label.id} value={label.id}>
+                                  {label.name || label.color || 'Etiqueta'}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+
+                          {(action.type === 'setStartDate' || action.type === 'setDueDate') && (
+                            <label className="sfo-rule__days">
+                              <span>em</span>
+                              <input
+                                className="sfo-input"
+                                type="number"
+                                min={-MAX_DATE_OFFSET_DAYS}
+                                max={MAX_DATE_OFFSET_DAYS}
+                                step={1}
+                                value={action.days ?? 0}
+                                onChange={(event) =>
+                                  updateAction(rule.id, index, {
+                                    days: Number.isFinite(event.target.valueAsNumber)
+                                      ? Math.trunc(event.target.valueAsNumber)
+                                      : 0,
+                                  })
+                                }
+                                aria-label="Dias em relação ao disparo"
+                              />
+                              <span>{action.days === 1 || action.days === -1 ? 'dia' : 'dias'}</span>
+                              <span className="sfo-rule__days-hint">
+                                {action.days === 0 ? '(hoje)' : '(a partir do disparo)'}
+                              </span>
+                            </label>
+                          )}
+
+                          {action.type === 'addComment' && (
+                            <textarea
+                              className="sfo-input sfo-rule__comment"
+                              value={action.text ?? ''}
+                              onChange={(event) => updateAction(rule.id, index, { text: event.target.value })}
+                              rows={2}
+                              maxLength={4000}
+                              placeholder="Ex.: Cartão movido em {data}. Processo {processo}."
+                              aria-label="Texto do comentário"
+                            />
+                          )}
+
+                          <button
+                            type="button"
+                            className="sfo-icon-btn sfo-icon-btn--danger"
+                            onClick={() => removeAction(rule.id, index)}
+                            title="Remover ação"
+                            aria-label="Remover ação"
+                            disabled={rule.actions.length <= 1}
                           >
-                            <option value="">Escolha a etiqueta</option>
-                            {boardLabels(rule.boardId).map((label) => (
-                              <option key={label.id} value={label.id}>
-                                {label.name || label.color || 'Etiqueta'}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-
+                            <Icon name="close" size={13} />
+                          </button>
+                        </div>
+                      ))}
+                      <div className="sfo-rule__action-footer">
+                        <button type="button" className="sfo-btn sfo-btn--sm" onClick={() => addAction(rule)}>
+                          <Icon name="plus" size={13} />
+                          Adicionar ação
+                        </button>
                         <button
                           type="button"
-                          className="sfo-icon-btn sfo-icon-btn--danger"
-                          onClick={() => removeAction(rule.id, index)}
-                          title="Remover ação"
-                          aria-label="Remover ação"
-                          disabled={rule.actions.length <= 1}
+                          className="sfo-btn sfo-btn--sm"
+                          onClick={() => void applyNow(rule)}
+                          disabled={busyRule === rule.id || Boolean(issue)}
+                          title="Aplicar esta regra apenas nos cartões que já estão na condição do gatilho"
                         >
-                          <Icon name="close" size={13} />
+                          {busyRule === rule.id ? <Spinner /> : <Icon name="refresh" size={13} />}
+                          Aplicar agora
                         </button>
                       </div>
-                    ))}
-                    <div className="sfo-rule__action-footer">
-                      <button
-                        type="button"
-                        className="sfo-btn sfo-btn--sm"
-                        onClick={() => addAction(rule)}
-                      >
-                        <Icon name="plus" size={13} />
-                        Adicionar ação
-                      </button>
-                      <button
-                        type="button"
-                        className="sfo-btn sfo-btn--sm"
-                        onClick={() => void applyNow(rule)}
-                        disabled={busyRule === rule.id || Boolean(issue)}
-                        title="Aplicar esta regra apenas nos cartões que já estão na condição do gatilho"
-                      >
-                        {busyRule === rule.id ? <Spinner /> : <Icon name="refresh" size={13} />}
-                        Aplicar agora
-                      </button>
+                      <p className="sfo-hint" style={{ margin: 0 }}>
+                        Comentários aceitam {RULE_COMMENT_PLACEHOLDERS.join(', ')}.
+                      </p>
                     </div>
                   </div>
-                </div>
 
-                {issue && (
-                  <p className="sfo-rule__issue">
-                    <Icon name="alert" size={12} />
-                    {issue}
-                  </p>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      )}
-
-      <details className="sfo-rule-log">
-        <summary>
-          <span className="sfo-rule-log__title">
-            <Icon name="list" size={13} />
-            Últimas execuções ({log.length})
-          </span>
-          <span className="sfo-rule-log__tools">
-            <button
-              type="button"
-              className="sfo-btn sfo-btn--sm"
-              onClick={(event) => {
-                event.preventDefault();
-                void loadLog();
-              }}
-            >
-              Atualizar
-            </button>
-            <button
-              type="button"
-              className="sfo-btn sfo-btn--sm"
-              onClick={(event) => {
-                event.preventDefault();
-                void callRpc('rules:clear-log', undefined).then(setLog);
-              }}
-            >
-              Limpar
-            </button>
-          </span>
-        </summary>
-        {log.length === 0 ? (
-          <p className="sfo-hint">
-            Nenhuma regra foi aplicada ainda. Cada execução aparece aqui com o cartão e as ações.
-          </p>
-        ) : (
-          <ul className="sfo-rule-log__list">
-            {log.map((entry, index) => (
-              <li key={`${entry.at}-${entry.ruleId}-${index}`}>
-                <span className="sfo-rule-log__time">
-                  {new Date(entry.at).toLocaleString('pt-BR')}
-                </span>
-                <strong>{entry.ruleName}</strong>
-                <span>{entry.cardName || entry.cardId}</span>
-                <span className="sfo-rule-log__source">
-                  {entry.source === 'manual' ? 'manual' : 'automática'}
-                </span>
-                <span className="sfo-rule-log__actions">
-                  {entry.actions.join(' · ') || 'sem ações registradas'}
-                </span>
-              </li>
-            ))}
-          </ul>
+                  {issue && (
+                    <p className="sfo-rule__issue">
+                      <Icon name="alert" size={12} />
+                      {issue}
+                    </p>
+                  )}
+                </article>
+              );
+            })}
+          </div>
         )}
-      </details>
+
+        <details className="sfo-rule-log">
+          <summary>
+            <span className="sfo-rule-log__title">
+              <Icon name="list" size={13} />
+              Últimas execuções ({log.length})
+            </span>
+            <span className="sfo-rule-log__tools">
+              <button
+                type="button"
+                className="sfo-btn sfo-btn--sm"
+                onClick={(event) => {
+                  event.preventDefault();
+                  void loadLog();
+                }}
+              >
+                Atualizar
+              </button>
+              <button
+                type="button"
+                className="sfo-btn sfo-btn--sm"
+                onClick={(event) => {
+                  event.preventDefault();
+                  void callRpc('rules:clear-log', undefined).then(setLog);
+                }}
+              >
+                Limpar
+              </button>
+            </span>
+          </summary>
+          {log.length === 0 ? (
+            <p className="sfo-hint">
+              Nenhuma regra foi aplicada ainda. Cada execução aparece aqui com o cartão e as ações.
+            </p>
+          ) : (
+            <ul className="sfo-rule-log__list">
+              {log.map((entry, index) => (
+                <li key={`${entry.at}-${entry.ruleId}-${index}`}>
+                  <span className="sfo-rule-log__time">{new Date(entry.at).toLocaleString('pt-BR')}</span>
+                  <strong>{entry.ruleName}</strong>
+                  <span>{entry.cardName || entry.cardId}</span>
+                  <span className="sfo-rule-log__source">
+                    {entry.source === 'manual' ? 'manual' : 'automática'}
+                  </span>
+                  <span className="sfo-rule-log__actions">
+                    {entry.actions.join(' · ') || 'sem ações registradas'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </details>
       </SectionCard>
 
       {confirmApply && (
@@ -822,7 +855,7 @@ export function RulesSection({
       {undoOpen && lastRun && (
         <ConfirmDialog
           title="Desfazer aplicação"
-          message={`Serão revertidas ${lastRun.moves.length + lastRun.labels.length} alterações feitas em ${ruleRunCardCount(lastRun)} cartões pela regra "${lastRun.ruleName}". Cartões que mudaram de lista depois disso são mantidos como estão.`}
+          message={`Serão revertidas ${ruleRunChangeCount(lastRun)} alterações feitas em ${ruleRunCardCount(lastRun)} cartões pela regra "${lastRun.ruleName}". Cartões que mudaram de lista depois disso são mantidos como estão.`}
           confirmLabel="Desfazer"
           busy={undoing}
           onConfirm={() => void undoLastRun()}
@@ -840,11 +873,7 @@ export function RulesSection({
               <button type="button" className="sf-btn" onClick={() => setExportOpen(false)}>
                 Cancelar
               </button>
-              <button
-                type="button"
-                className="sf-btn"
-                onClick={() => void exportRules('clipboard')}
-              >
+              <button type="button" className="sf-btn" onClick={() => void exportRules('clipboard')}>
                 <Icon name="list" size={14} />
                 Copiar regras
               </button>
@@ -860,8 +889,8 @@ export function RulesSection({
           }
         >
           <p style={{ margin: 0, color: 'var(--sf-text-soft)', fontSize: 13 }}>
-            Copie o JSON para colar em outro computador ou baixe um arquivo. O conteúdo inclui
-            apenas as regras.
+            Copie o JSON para colar em outro computador ou baixe um arquivo. O conteúdo inclui apenas as
+            regras.
           </p>
         </Modal>
       )}

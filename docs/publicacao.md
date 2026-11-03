@@ -19,6 +19,7 @@ npm run verify
 npm run build && npm run zip
 npm run build:firefox && npm run zip:firefox
 npm run build:edge && npm run zip:edge
+npm run check:package
 ```
 
 Os arquivos ficam em `.output/`:
@@ -28,12 +29,18 @@ Os arquivos ficam em `.output/`:
 - `.output/sei-flow-<versao>-edge.zip`
 
 > O nome exato pode variar conforme a versão do WXT. Use o zip gerado em `.output/`.
+>
+> `npm run check:package` confere se o build tem nomes reservados pelo Chrome
+> (`_metadata`, `__MACOSX` ou qualquer coisa começando com `_`, exceto `_locales`).
+> Se o Chrome recusar a pasta com “Cannot load extension with file or directory
+> name _metadata”, extraia o zip em uma pasta nova e carregue essa pasta.
 
 ## Texto da listagem (pt-BR)
 
 **Nome:** SEI Flow
 
 **Resumo (até 132 caracteres):**
+
 > Crie, vincule e edite cartões do Trello direto no SEI. Vários cartões por processo, etiquetas, prazos e checklists.
 
 **Descrição:**

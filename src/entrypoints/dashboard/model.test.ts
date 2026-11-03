@@ -13,7 +13,7 @@ import {
   type DashboardFilters,
 } from './model';
 
-const PROCESS = '11111.111111/2024-60';
+const PROCESS = '11111.111111/2024-11';
 const OTHER = '22222.222222/2025-12';
 const now = Date.now();
 
@@ -24,6 +24,7 @@ function card(overrides: Partial<TrelloCard> = {}): TrelloCard {
     desc: `SEI ${PROCESS}`,
     description: 'Descrição',
     shortUrl: 'https://trello.com/c/1',
+    start: null,
     due: new Date(now + 86_400_000).toISOString(),
     dueComplete: false,
     idBoard: 'board-1',

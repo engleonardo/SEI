@@ -16,6 +16,7 @@ export function toCard(
     desc: raw.desc ?? '',
     description: stripLinks(raw.desc),
     shortUrl: raw.shortUrl ?? `https://trello.com/c/${raw.id}`,
+    start: raw.start ?? null,
     due: raw.due ?? null,
     dueComplete: Boolean(raw.dueComplete),
     idBoard: raw.idBoard ?? board?.id ?? '',
