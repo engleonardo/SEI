@@ -1,0 +1,171 @@
+name: Publish Edge (API)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag publicada (ex.: v1.5.2). Deixe vazio para usar a branch atual.'
+        required: false
+      notes:
+        description: 'Notas para certificação (opcional).'
+        required: false
+      upload_only:
+        description: 'Apenas enviar o pacote, sem publicar'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build and publish on Edge Add-ons
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build:edge && npm run zip:edge
+      - run: npm run check:package
+
+      - name: Read version
+        id: version
+        run: echo "value=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Check Edge credentials
+        env:
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+        run: |
+          missing=0
+          for name in EDGE_CLIENT_ID EDGE_API_KEY EDGE_PRODUCT_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name não está configurado nos secrets."
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          if ! [[ "$EDGE_PRODUCT_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+            echo "::error::EDGE_PRODUCT_ID não parece um GUID válido."
+            exit 1
+          fi
+          echo "Secrets presentes e EDGE_PRODUCT_ID com formato de GUID."
+
+      - name: Upload and publish on Edge Add-ons
+        env:
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+          VERSION: ${{ steps.version.outputs.value }}
+          NOTES: ${{ inputs.notes || 'Atualização automática da extensão. Consulte as notas da versão no GitHub.' }}
+          UPLOAD_ONLY: ${{ inputs.upload_only }}
+        run: |
+          set -euo pipefail
+
+          BASE="https://api.addons.microsoftedge.microsoft.com/v1.1/products/$EDGE_PRODUCT_ID"
+          ZIP=".output/sei-flow-$VERSION-edge.zip"
+          AUTH=(-H "Authorization: ApiKey $EDGE_API_KEY" -H "X-ClientID: $EDGE_CLIENT_ID")
+
+          extract_operation() {
+            grep -i '^location:' "$1" | tr -d '\r' | awk '{print $2}' | awk -F/ '{print $NF}'
+          }
+
+          wait_operation() {
+            local label="$1"
+            local url="$2"
+            local status=""
+            local response=""
+            for _ in $(seq 1 72); do
+              response=$(curl -sS "${AUTH[@]}" "$url")
+              status=$(echo "$response" | jq -r '.status // empty')
+              echo "$label: $status"
+              if [ "$status" = "Succeeded" ]; then
+                return 0
+              fi
+              if [ "$status" = "Failed" ]; then
+                echo "::error::$label falhou."
+                echo "$response"
+                if echo "$response" | grep -q 'InProgressSubmission'; then
+                  echo "::notice::A versão anterior ainda está em análise na Microsoft. Aguarde a aprovação ou cancele o envio."
+                fi
+                return 1
+              fi
+              sleep 5
+            done
+            echo "::error::Tempo esgotado aguardando $label."
+            return 1
+          }
+
+          if [ ! -f "$ZIP" ]; then
+            echo "::error::Pacote não encontrado: $ZIP"
+            exit 1
+          fi
+
+          echo "Enviando $ZIP..."
+          headers=$(mktemp)
+          body=$(mktemp)
+          code=$(curl -sS -D "$headers" -o "$body" -w "%{http_code}" \
+            -X POST "$BASE/submissions/draft/package" \
+            "${AUTH[@]}" \
+            -H "Content-Type: application/zip" \
+            --data-binary "@$ZIP")
+
+          if [ "$code" != "202" ]; then
+            echo "::error::Falha no upload (HTTP $code)."
+            cat "$body"
+            exit 1
+          fi
+
+          op=$(extract_operation "$headers")
+          if [ -z "$op" ]; then
+            echo "::error::A API não retornou o ID da operação de upload."
+            cat "$headers"
+            exit 1
+          fi
+
+          echo "Operação de upload: $op"
+          wait_operation "Upload" "$BASE/submissions/draft/package/operations/$op"
+
+          if [ "$UPLOAD_ONLY" = "true" ]; then
+            echo "::notice::Pacote enviado sem publicar (upload_only=true)."
+            exit 0
+          fi
+
+          echo "Publicando a submissão..."
+          jq -n --arg notes "$NOTES" '{notes:$notes}' > /tmp/edge-notes.json
+          headers=$(mktemp)
+          body=$(mktemp)
+          code=$(curl -sS -D "$headers" -o "$body" -w "%{http_code}" \
+            -X POST "$BASE/submissions" \
+            "${AUTH[@]}" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/edge-notes.json)
+
+          if [ "$code" != "202" ]; then
+            echo "::error::Falha ao publicar (HTTP $code)."
+            cat "$body"
+            exit 1
+          fi
+
+          op=$(extract_operation "$headers")
+          if [ -z "$op" ]; then
+            echo "::error::A API não retornou o ID da operação de publicação."
+            cat "$headers"
+            exit 1
+          fi
+
+          echo "Operação de publicação: $op"
+          wait_operation "Publicação" "$BASE/submissions/operations/$op"
+
+          echo "::notice::Pacote enviado e publicado no Edge Add-ons. A revisão da Microsoft é assíncrona."
