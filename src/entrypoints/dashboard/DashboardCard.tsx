@@ -4,23 +4,13 @@ import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import type { ProcessCatalog } from '../../core/storage/processes';
 import { Icon } from '../../ui/icons';
 import { showToast } from '../../ui/toast';
-import {
-  classNames,
-  formatDue,
-  labelColorHex,
-  labelTextColor,
-  locationLabel,
-} from '../../ui/utils';
+import { classNames, formatDue, labelColorHex, labelTextColor, locationLabel } from '../../ui/utils';
 import { InlineLocationPicker } from '../../ui/components/InlineLocationPicker';
+import { ConfirmDialog } from '../../ui/components/Modal';
 import { ChecklistDialog } from '../../ui/components/dialogs/ChecklistDialog';
 import { DueDialog } from '../../ui/components/dialogs/DueDialog';
 import { LabelsDialog } from '../../ui/components/dialogs/LabelsDialog';
-import {
-  cardHasUnreadProcess,
-  formatActivity,
-  processRecordsFor,
-  processTypesFor,
-} from './model';
+import { cardHasUnreadProcess, formatActivity, processRecordsFor, processTypesFor } from './model';
 
 export interface DashboardCardProps {
   card: TrelloCard;
@@ -32,13 +22,7 @@ export interface DashboardCardProps {
 
 type DialogKind = 'due' | 'labels' | 'checklist' | null;
 
-export function DashboardCard({
-  card,
-  catalog,
-  onChanged,
-  onRemoved,
-  onToggleLabel,
-}: DashboardCardProps) {
+export function DashboardCard({ card, catalog, onChanged, onRemoved, onToggleLabel }: DashboardCardProps) {
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [locationOpen, setLocationOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -46,6 +30,7 @@ export function DashboardCard({
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState(card.description);
   const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -73,6 +58,20 @@ export function DashboardCard({
     } catch (cause) {
       showToast(errorMessage(cause), 'error');
       return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async () => {
+    setBusy(true);
+    try {
+      await callRpc('trello:delete-card', { cardId: card.id });
+      setConfirmDelete(false);
+      onRemoved(card.id);
+      showToast('Cartão movido para a lixeira do Trello.', 'success');
+    } catch (cause) {
+      showToast(errorMessage(cause), 'error');
     } finally {
       setBusy(false);
     }
@@ -333,7 +332,11 @@ export function DashboardCard({
                   <Icon name="external" size={10} />
                 </a>
               ) : (
-                <span key={processNumber} className="sdo-process" title="Abra a lista do SEI para registrar o link">
+                <span
+                  key={processNumber}
+                  className="sdo-process"
+                  title="Abra a lista do SEI para registrar o link"
+                >
                   {label}
                 </span>
               );
@@ -353,11 +356,7 @@ export function DashboardCard({
           </div>
 
           {locationOpen && (
-            <InlineLocationPicker
-              card={card}
-              onClose={() => setLocationOpen(false)}
-              onChanged={onChanged}
-            />
+            <InlineLocationPicker card={card} onClose={() => setLocationOpen(false)} onChanged={onChanged} />
           )}
         </div>
 
@@ -461,17 +460,38 @@ export function DashboardCard({
               {card.dueComplete ? 'Reabrir' : 'Concluir'}
             </button>
           </div>
+          <div className="sdo-card__footer-danger">
+            <button
+              type="button"
+              className="sfo-icon-btn sfo-icon-btn--danger"
+              onClick={() => setConfirmDelete(true)}
+              disabled={busy}
+              title="Excluir cartão"
+              aria-label="Excluir cartão"
+            >
+              <Icon name="trash" size={14} />
+            </button>
+          </div>
         </div>
       </article>
 
-      {dialog === 'due' && (
-        <DueDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
-      )}
+      {dialog === 'due' && <DueDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />}
       {dialog === 'labels' && (
         <LabelsDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
       )}
       {dialog === 'checklist' && (
         <ChecklistDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
+      )}
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Excluir cartão"
+          message="O cartão será movido para a lixeira do Trello e removido deste painel."
+          confirmLabel="Excluir do Trello"
+          tone="danger"
+          busy={busy}
+          onConfirm={() => void remove()}
+          onClose={() => setConfirmDelete(false)}
+        />
       )}
     </>
   );

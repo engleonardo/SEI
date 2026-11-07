@@ -292,6 +292,13 @@ function pageStub({
               cardsData.filter((card) => card.links.includes(message.payload?.processNumber ?? '')),
             );
             break;
+          case 'trello:board-cards':
+            response = ok(
+              cardsData.filter(
+                (card) => !message.payload?.boardId || card.idBoard === message.payload?.boardId,
+              ),
+            );
+            break;
           case 'trello:all-linked-cards':
             response = ok(cardsData);
             break;

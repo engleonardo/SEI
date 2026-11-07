@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
-import type {
-  Settings,
-  TrelloBoard,
-  TrelloCard,
-  TrelloLabel,
-  TrelloList,
-} from '../../core/domain/types';
+import type { Settings, TrelloBoard, TrelloCard, TrelloLabel, TrelloList } from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
 import { openOptionsPage } from '../../core/messaging/actions';
 import type { LastActionTab } from '../../core/storage/last-tab';
@@ -106,64 +100,82 @@ function Dashboard() {
   const version = browser.runtime.getManifest().version;
   const connected = Boolean(settings?.appKey && settings?.appToken);
   const loadSeq = useRef(0);
+  const defaultBoardApplied = useRef(false);
 
-  const load = useCallback(async (silent = false, quiet = false) => {
-    const seq = ++loadSeq.current;
-    if (!silent) setLoading(true);
-    if (!quiet) setRefreshing(true);
-    setError(null);
-    try {
-      const nextSettings = await callRpc('settings:get', undefined);
-      if (seq !== loadSeq.current) return;
-      setSettings(nextSettings);
+  const load = useCallback(
+    async (silent = false, quiet = false) => {
+      const seq = ++loadSeq.current;
+      if (!silent) setLoading(true);
+      if (!quiet) setRefreshing(true);
+      setError(null);
+      try {
+        const nextSettings = await callRpc('settings:get', undefined);
+        if (seq !== loadSeq.current) return;
+        setSettings(nextSettings);
 
-      const [processRecords, nextLastTab, nextBoards] = await Promise.all([
-        callRpc('processes:list', undefined),
-        callRpc('activation:last-tab', undefined),
-        nextSettings.appKey && nextSettings.appToken
-          ? callRpc('trello:boards', { fresh: false }).catch(() => [] as TrelloBoard[])
-          : Promise.resolve([] as TrelloBoard[]),
-      ]);
-      if (seq !== loadSeq.current) return;
-      const nextCatalog: ProcessCatalog = {};
-      for (const record of processRecords as ProcessRecord[]) {
-        nextCatalog[record.number] = record;
-      }
-      setCatalog(nextCatalog);
-      setTrelloBoards(Array.isArray(nextBoards) ? nextBoards : []);
-      setLastTab(nextLastTab);
+        const [processRecords, nextLastTab, nextBoards] = await Promise.all([
+          callRpc('processes:list', undefined),
+          callRpc('activation:last-tab', undefined),
+          nextSettings.appKey && nextSettings.appToken
+            ? callRpc('trello:boards', { fresh: false }).catch(() => [] as TrelloBoard[])
+            : Promise.resolve([] as TrelloBoard[]),
+        ]);
+        if (seq !== loadSeq.current) return;
+        const nextCatalog: ProcessCatalog = {};
+        for (const record of processRecords as ProcessRecord[]) {
+          nextCatalog[record.number] = record;
+        }
+        setCatalog(nextCatalog);
+        setTrelloBoards(Array.isArray(nextBoards) ? nextBoards : []);
+        setLastTab(nextLastTab);
 
-      if (nextSettings.appKey && nextSettings.appToken) {
-        if (filters.link === 'unlinked') {
-          const boardId = filters.boardId || nextSettings.defaultBoardId;
-          if (!boardId) {
-            if (seq === loadSeq.current) setCards([]);
-          } else {
+        if (nextSettings.appKey && nextSettings.appToken) {
+          // Na primeira carga, usa o quadro padrão direto para evitar uma busca
+          // global por cartões vinculados antes de o filtro de quadro ser aplicado.
+          const firstLoadBoardId = defaultBoardApplied.current ? '' : nextSettings.defaultBoardId;
+          const effectiveBoardId = filters.boardId || firstLoadBoardId;
+
+          if (filters.link === 'unlinked') {
+            if (!effectiveBoardId) {
+              if (seq === loadSeq.current) setCards([]);
+            } else {
+              const boardCards = await callRpc('trello:board-cards', {
+                boardId: effectiveBoardId,
+                fresh: true,
+              });
+              if (seq === loadSeq.current) {
+                setCards(boardCards.filter((card) => card.links.length === 0));
+              }
+            }
+          } else if (effectiveBoardId) {
+            // Com um quadro selecionado, buscar só esse quadro é muito mais rápido
+            // do que procurar todos os cartões vinculados em todos os quadros.
             const boardCards = await callRpc('trello:board-cards', {
-              boardId,
+              boardId: effectiveBoardId,
               fresh: true,
             });
             if (seq === loadSeq.current) {
-              setCards(boardCards.filter((card) => card.links.length === 0));
+              setCards(boardCards.filter((card) => card.links.length > 0));
             }
+          } else {
+            const nextCards = await callRpc('trello:all-linked-cards', { fresh: true });
+            if (seq === loadSeq.current) setCards(nextCards);
           }
-        } else {
-          const nextCards = await callRpc('trello:all-linked-cards', { fresh: true });
-          if (seq === loadSeq.current) setCards(nextCards);
+        } else if (seq === loadSeq.current) {
+          setCards([]);
         }
-      } else if (seq === loadSeq.current) {
-        setCards([]);
+        if (seq === loadSeq.current) writeLastVisit();
+      } catch (cause) {
+        if (seq === loadSeq.current) setError(errorMessage(cause));
+      } finally {
+        if (seq === loadSeq.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
-      if (seq === loadSeq.current) writeLastVisit();
-    } catch (cause) {
-      if (seq === loadSeq.current) setError(errorMessage(cause));
-    } finally {
-      if (seq === loadSeq.current) {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    }
-  }, [filters.link, filters.boardId]);
+    },
+    [filters.link, filters.boardId],
+  );
 
   useEffect(() => {
     void load();
@@ -201,7 +213,6 @@ function Dashboard() {
     };
   }, [connected, load]);
 
-  const defaultBoardApplied = useRef(false);
   useEffect(() => {
     if (defaultBoardApplied.current) return;
     if (!settings?.defaultBoardId) return;
@@ -396,9 +407,7 @@ function Dashboard() {
 
   const listCounts = useMemo(() => {
     if (!filters.boardId) return [];
-    const base = cards.filter((card) =>
-      matchesFilters(card, { ...filters, listId: '' }, catalog, lastVisit),
-    );
+    const base = cards.filter((card) => matchesFilters(card, { ...filters, listId: '' }, catalog, lastVisit));
     const counts = new Map<string, number>();
     for (const card of base) counts.set(card.idList, (counts.get(card.idList) ?? 0) + 1);
     return lists
@@ -503,15 +512,11 @@ function Dashboard() {
   }, [catalog]);
   const seiUrl = seiTab?.url ?? catalogSeiUrl;
   const trelloBoardId = filters.boardId || settings?.defaultBoardId || '';
-  const trelloUrl = trelloBoardId
-    ? `https://trello.com/b/${trelloBoardId}`
-    : 'https://trello.com/';
+  const trelloUrl = trelloBoardId ? `https://trello.com/b/${trelloBoardId}` : 'https://trello.com/';
   const hasActivatedSite = Boolean(
     settings && (settings.allSites || settings.autoSeiHosts || settings.activatedOrigins.length > 0),
   );
-  const seiOriginActive = Boolean(
-    seiTab?.url && settings && isOriginActivated(seiTab.url, settings),
-  );
+  const seiOriginActive = Boolean(seiTab?.url && settings && isOriginActivated(seiTab.url, settings));
 
   const activeChips: Array<{ key: string; label: string; clear: Partial<Filters> }> = [];
   if (filters.search.trim()) {
@@ -543,7 +548,7 @@ function Dashboard() {
       label:
         filters.processType === '__none__'
           ? 'Sem tipo de processo'
-          : types.find((item) => item.value === filters.processType)?.label ?? filters.processType,
+          : (types.find((item) => item.value === filters.processType)?.label ?? filters.processType),
       clear: { processType: '' },
     });
   }
@@ -681,11 +686,7 @@ function Dashboard() {
             {refreshing ? <span className="sfo-spinner" /> : <Icon name="refresh" size={14} />}
             Atualizar
           </button>
-          <button
-            type="button"
-            className="sfo-btn sfo-btn--sm"
-            onClick={() => void openOptionsPage()}
-          >
+          <button type="button" className="sfo-btn sfo-btn--sm" onClick={() => void openOptionsPage()}>
             <Icon name="settings" size={14} />
             Opções
           </button>
@@ -751,9 +752,7 @@ function Dashboard() {
       <section className="sdo-metrics" aria-label="Resumo dos cartões">
         <button
           type="button"
-          className={`sdo-metric sdo-metric--danger${
-            filters.due === 'overdue' ? ' sdo-metric--active' : ''
-          }`}
+          className={`sdo-metric sdo-metric--danger${filters.due === 'overdue' ? ' sdo-metric--active' : ''}`}
           onClick={() => toggleDue('overdue')}
           aria-pressed={filters.due === 'overdue'}
           title={filters.due === 'overdue' ? 'Remover filtro de atrasados' : 'Filtrar atrasados'}
@@ -774,9 +773,7 @@ function Dashboard() {
         </button>
         <button
           type="button"
-          className={`sdo-metric sdo-metric--warning${
-            filters.due === 'today' ? ' sdo-metric--active' : ''
-          }`}
+          className={`sdo-metric sdo-metric--warning${filters.due === 'today' ? ' sdo-metric--active' : ''}`}
           onClick={() => toggleDue('today')}
           aria-pressed={filters.due === 'today'}
           title={filters.due === 'today' ? 'Remover filtro de vencendo hoje' : 'Filtrar vencendo hoje'}
@@ -797,9 +794,7 @@ function Dashboard() {
         </button>
         <button
           type="button"
-          className={`sdo-metric sdo-metric--accent${
-            filters.due === 'soon' ? ' sdo-metric--active' : ''
-          }`}
+          className={`sdo-metric sdo-metric--accent${filters.due === 'soon' ? ' sdo-metric--active' : ''}`}
           onClick={() => toggleDue('soon')}
           aria-pressed={filters.due === 'soon'}
           title={filters.due === 'soon' ? 'Remover filtro dos próximos 7 dias' : 'Filtrar próximos 7 dias'}
@@ -975,7 +970,13 @@ function Dashboard() {
             ))}
           </select>
         </label>
-        <button type="button" className="sdo-icon-action" onClick={exportCsv} title="Exportar CSV" aria-label="Exportar CSV">
+        <button
+          type="button"
+          className="sdo-icon-action"
+          onClick={exportCsv}
+          title="Exportar CSV"
+          aria-label="Exportar CSV"
+        >
           <Icon name="external" size={15} />
         </button>
       </section>

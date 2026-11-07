@@ -154,7 +154,7 @@ export function CardItem({
       await callRpc('trello:delete-card', { cardId: card.id });
       setConfirmDelete(false);
       onRemoved(card.id);
-      showToast('Cartão removido do Trello.', 'success');
+      showToast('Cartão movido para a lixeira do Trello.', 'success');
     } catch (cause) {
       showToast(errorMessage(cause), 'error');
     } finally {
@@ -183,239 +183,237 @@ export function CardItem({
 
         <div className="sf-card__body">
           <div className="sf-card__head">
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {editingName ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <input
-                  className="sf-input"
-                  value={nameDraft}
-                  onChange={(event) => setNameDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      void saveName();
-                    }
-                    if (event.key === 'Escape') {
-                      event.preventDefault();
-                      setNameDraft(card.name);
-                      setEditingName(false);
-                    }
-                  }}
-                  autoFocus
-                  disabled={busy}
-                  aria-label="Nome do cartão"
-                />
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button
-                    type="button"
-                    className="sf-btn sf-btn--primary sf-btn--sm"
-                    onClick={() => void saveName()}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {editingName ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <input
+                    className="sf-input"
+                    value={nameDraft}
+                    onChange={(event) => setNameDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        void saveName();
+                      }
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        setNameDraft(card.name);
+                        setEditingName(false);
+                      }
+                    }}
+                    autoFocus
                     disabled={busy}
-                  >
-                    Salvar
-                  </button>
+                    aria-label="Nome do cartão"
+                  />
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      type="button"
+                      className="sf-btn sf-btn--primary sf-btn--sm"
+                      onClick={() => void saveName()}
+                      disabled={busy}
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      type="button"
+                      className="sf-btn sf-btn--sm"
+                      onClick={() => {
+                        setNameDraft(card.name);
+                        setEditingName(false);
+                      }}
+                      disabled={busy}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="sf-card__title-row">
                   <button
                     type="button"
-                    className="sf-btn sf-btn--sm"
+                    className="sf-card__title-button"
                     onClick={() => {
                       setNameDraft(card.name);
-                      setEditingName(false);
+                      setEditingName(true);
                     }}
-                    disabled={busy}
+                    title="Editar nome"
+                    aria-label="Editar nome"
                   >
-                    Cancelar
+                    <h3 className="sf-card__title">{card.name}</h3>
                   </button>
+                  {highlight && <span className="sf-card__status">Atualizado</span>}
                 </div>
-              </div>
-            ) : (
-              <div className="sf-card__title-row">
+              )}
+            </div>
+
+            <div className="sf-card__actions">
+              <button
+                type="button"
+                className="sf-icon-btn"
+                onClick={() => void refresh()}
+                disabled={busy}
+                aria-label="Atualizar cartão"
+                title="Atualizar cartão"
+              >
+                <Icon name="refresh" size={15} />
+              </button>
+              <a
+                className="sf-icon-btn"
+                href={card.shortUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Abrir no Trello"
+                title="Abrir no Trello"
+              >
+                <Icon name="external" size={15} />
+              </a>
+            </div>
+          </div>
+
+          <div className="sf-card__labels">
+            {card.labels.map((label) => {
+              const name = label.name || label.color || 'Etiqueta';
+              const active = Boolean(activeLabels?.includes(label.id));
+              const chipStyle = {
+                backgroundColor: labelColorHex(label.color),
+                color: labelTextColor(label.color),
+              };
+
+              return onToggleLabel ? (
+                <button
+                  key={label.id}
+                  type="button"
+                  className={classNames(
+                    'sf-label-chip',
+                    'sf-label-chip--button',
+                    active && 'sf-label-chip--active',
+                  )}
+                  style={chipStyle}
+                  onClick={() => onToggleLabel(label.id)}
+                  aria-pressed={active}
+                  title={`Filtrar por ${name}`}
+                >
+                  {name}
+                </button>
+              ) : (
+                <span key={label.id} className="sf-label-chip" style={chipStyle} title={name}>
+                  {name}
+                </span>
+              );
+            })}
+            <button
+              type="button"
+              className="sf-label-chip sf-label-chip--add"
+              onClick={() => setDialog('labels')}
+              aria-label="Editar etiquetas"
+              title="Editar etiquetas"
+            >
+              <Icon name="tag" size={11} />
+            </button>
+          </div>
+
+          {editingDesc ? (
+            <div style={{ marginTop: 8 }}>
+              <textarea
+                ref={descriptionRef}
+                className="sf-textarea"
+                value={descDraft}
+                onChange={(event) => setDescDraft(event.target.value)}
+                autoFocus
+                disabled={busy}
+                aria-label="Descrição do cartão"
+              />
+              <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                 <button
                   type="button"
-                  className="sf-card__title-button"
-                  onClick={() => {
-                    setNameDraft(card.name);
-                    setEditingName(true);
-                  }}
-                  title="Editar nome"
-                  aria-label="Editar nome"
+                  className="sf-btn sf-btn--primary sf-btn--sm"
+                  onClick={() => void saveDescription()}
+                  disabled={busy}
                 >
-                  <h3 className="sf-card__title">{card.name}</h3>
+                  Salvar
                 </button>
-                {highlight && <span className="sf-card__status">Atualizado</span>}
+                <button
+                  type="button"
+                  className="sf-btn sf-btn--sm"
+                  onClick={() => {
+                    setDescDraft(card.description);
+                    setEditingDesc(false);
+                  }}
+                  disabled={busy}
+                >
+                  Cancelar
+                </button>
               </div>
+            </div>
+          ) : card.description ? (
+            <button
+              type="button"
+              className="sf-card__desc sf-card__desc-button"
+              onClick={() => {
+                setDescDraft(card.description);
+                setEditingDesc(true);
+              }}
+              title="Editar descrição"
+            >
+              {card.description}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="sf-card__empty-desc"
+              onClick={() => {
+                setDescDraft('');
+                setEditingDesc(true);
+              }}
+            >
+              <Icon name="edit" size={12} />
+              Adicionar descrição
+            </button>
+          )}
+
+          <div className="sf-card__meta">
+            {card.dueComplete && !card.due && <span className="sf-chip sf-chip--success">Concluído</span>}
+            {due && (
+              <button
+                type="button"
+                className={classNames('sf-chip', due.tone !== 'neutral' && `sf-chip--${due.tone}`)}
+                onClick={() => setDialog('due')}
+                title="Editar prazo"
+                style={{ cursor: 'pointer' }}
+              >
+                <Icon name="calendar" size={11} />
+                {due.label}
+              </button>
+            )}
+            {card.hasChecklist && (
+              <button
+                type="button"
+                className="sf-chip"
+                onClick={() => setDialog('checklist')}
+                title="Abrir checklist"
+                style={{ cursor: 'pointer' }}
+              >
+                <Icon name="checklist" size={11} />
+                Checklist
+              </button>
+            )}
+            {showProcessMeta && processNumber && (
+              <span className="sf-card__meta-item" title="Processo vinculado">
+                <Icon name="link" size={11} />
+                {processNumber}
+              </span>
+            )}
+            {card.links.length > 1 && (
+              <span className="sf-chip sf-chip--accent" title={card.links.join(', ')}>
+                <Icon name="link" size={11} />
+                {card.links.length} processos
+              </span>
             )}
           </div>
 
-          <div className="sf-card__actions">
-            <button
-              type="button"
-              className="sf-icon-btn"
-              onClick={() => void refresh()}
-              disabled={busy}
-              aria-label="Atualizar cartão"
-              title="Atualizar cartão"
-            >
-              <Icon name="refresh" size={15} />
-            </button>
-            <a
-              className="sf-icon-btn"
-              href={card.shortUrl}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Abrir no Trello"
-              title="Abrir no Trello"
-            >
-              <Icon name="external" size={15} />
-            </a>
-          </div>
-        </div>
-
-        <div className="sf-card__labels">
-          {card.labels.map((label) => {
-            const name = label.name || label.color || 'Etiqueta';
-            const active = Boolean(activeLabels?.includes(label.id));
-            const chipStyle = {
-              backgroundColor: labelColorHex(label.color),
-              color: labelTextColor(label.color),
-            };
-
-            return onToggleLabel ? (
-              <button
-                key={label.id}
-                type="button"
-                className={classNames('sf-label-chip', 'sf-label-chip--button', active && 'sf-label-chip--active')}
-                style={chipStyle}
-                onClick={() => onToggleLabel(label.id)}
-                aria-pressed={active}
-                title={`Filtrar por ${name}`}
-              >
-                {name}
-              </button>
-            ) : (
-              <span key={label.id} className="sf-label-chip" style={chipStyle} title={name}>
-                {name}
-              </span>
-            );
-          })}
-          <button
-            type="button"
-            className="sf-label-chip sf-label-chip--add"
-            onClick={() => setDialog('labels')}
-            aria-label="Editar etiquetas"
-            title="Editar etiquetas"
-          >
-            <Icon name="tag" size={11} />
-          </button>
-        </div>
-
-        {editingDesc ? (
-          <div style={{ marginTop: 8 }}>
-            <textarea
-              ref={descriptionRef}
-              className="sf-textarea"
-              value={descDraft}
-              onChange={(event) => setDescDraft(event.target.value)}
-              autoFocus
-              disabled={busy}
-              aria-label="Descrição do cartão"
-            />
-            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-              <button
-                type="button"
-                className="sf-btn sf-btn--primary sf-btn--sm"
-                onClick={() => void saveDescription()}
-                disabled={busy}
-              >
-                Salvar
-              </button>
-              <button
-                type="button"
-                className="sf-btn sf-btn--sm"
-                onClick={() => {
-                  setDescDraft(card.description);
-                  setEditingDesc(false);
-                }}
-                disabled={busy}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        ) : card.description ? (
-          <button
-            type="button"
-            className="sf-card__desc sf-card__desc-button"
-            onClick={() => {
-              setDescDraft(card.description);
-              setEditingDesc(true);
-            }}
-            title="Editar descrição"
-          >
-            {card.description}
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="sf-card__empty-desc"
-            onClick={() => {
-              setDescDraft('');
-              setEditingDesc(true);
-            }}
-          >
-            <Icon name="edit" size={12} />
-            Adicionar descrição
-          </button>
-        )}
-
-        <div className="sf-card__meta">
-          {card.dueComplete && !card.due && (
-            <span className="sf-chip sf-chip--success">Concluído</span>
+          {locationOpen && (
+            <InlineLocationPicker card={card} onClose={() => setLocationOpen(false)} onChanged={onChanged} />
           )}
-          {due && (
-            <button
-              type="button"
-              className={classNames('sf-chip', due.tone !== 'neutral' && `sf-chip--${due.tone}`)}
-              onClick={() => setDialog('due')}
-              title="Editar prazo"
-              style={{ cursor: 'pointer' }}
-            >
-              <Icon name="calendar" size={11} />
-              {due.label}
-            </button>
-          )}
-          {card.hasChecklist && (
-            <button
-              type="button"
-              className="sf-chip"
-              onClick={() => setDialog('checklist')}
-              title="Abrir checklist"
-              style={{ cursor: 'pointer' }}
-            >
-              <Icon name="checklist" size={11} />
-              Checklist
-            </button>
-          )}
-          {showProcessMeta && processNumber && (
-            <span className="sf-card__meta-item" title="Processo vinculado">
-              <Icon name="link" size={11} />
-              {processNumber}
-            </span>
-          )}
-          {card.links.length > 1 && (
-            <span className="sf-chip sf-chip--accent" title={card.links.join(', ')}>
-              <Icon name="link" size={11} />
-              {card.links.length} processos
-            </span>
-          )}
-        </div>
-
-        {locationOpen && (
-          <InlineLocationPicker
-            card={card}
-            onClose={() => setLocationOpen(false)}
-            onChanged={onChanged}
-          />
-        )}
         </div>
 
         {showLocation && (
@@ -519,9 +517,7 @@ export function CardItem({
         </div>
       </div>
 
-      {dialog === 'due' && (
-        <DueDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
-      )}
+      {dialog === 'due' && <DueDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />}
       {dialog === 'labels' && (
         <LabelsDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
       )}
@@ -543,7 +539,7 @@ export function CardItem({
       {confirmDelete && (
         <ConfirmDialog
           title="Excluir cartão"
-          message="O cartão será removido permanentemente do Trello, não apenas deste processo."
+          message="O cartão será movido para a lixeira do Trello e deixará de aparecer neste processo."
           confirmLabel="Excluir do Trello"
           tone="danger"
           busy={busy}

@@ -1345,6 +1345,12 @@
   gap: 2px;
 }
 
+.sdo-card__footer-danger {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
 .sdo-card__complete {
   color: var(--success);
 }
@@ -1544,7 +1550,11 @@
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   background:
     linear-gradient(150deg, color-mix(in srgb, var(--accent) 12%, white), rgba(255, 255, 255, 0.94)),
-    radial-gradient(200px 110px at 100% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 75%);
+    radial-gradient(
+      200px 110px at 100% 0%,
+      color-mix(in srgb, var(--accent) 16%, transparent),
+      transparent 75%
+    );
   box-shadow:
     0 14px 34px rgba(29, 78, 216, 0.14),
     0 0 0 3px color-mix(in srgb, var(--accent) 9%, transparent);
@@ -2236,7 +2246,11 @@
 :root[data-sf-theme='dark'] .sdo-list-card--on {
   background:
     linear-gradient(150deg, color-mix(in srgb, var(--accent) 22%, #1b1f26), rgba(30, 34, 41, 0.96)),
-    radial-gradient(200px 110px at 100% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 75%);
+    radial-gradient(
+      200px 110px at 100% 0%,
+      color-mix(in srgb, var(--accent) 20%, transparent),
+      transparent 75%
+    );
   box-shadow:
     0 14px 34px rgba(0, 0, 0, 0.4),
     0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
@@ -2264,4 +2278,3 @@
 :root[data-sf-theme='dark'] .sdo-page .sf-icon-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.1);
 }
-
