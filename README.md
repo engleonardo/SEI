@@ -78,7 +78,7 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 | Mover cartão entre quadro/lista com seletor inline                                   | Sim      |
 | Usuário atribuído do SEI no cabeçalho do processo                                    | Sim      |
 | Desvincular sem excluir do Trello                                                    | Sim      |
-| Excluir cartão do Trello                                                             | Sim      |
+| Excluir cartão do Trello (SEI e painel)                                              | Sim      |
 | Filtros por quadro, lista, etiqueta, prazo e cartão                                  | Sim      |
 | Filtro **Sem vínculo** e vínculo por número no comentário                            | Sim      |
 | Criar cartão direto pelo painel                                                      | Sim      |
@@ -173,6 +173,9 @@ O painel abre pelo ícone da extensão e pelo menu **Dashboard** das opções.
 - Ordenação sempre visível: prazo, atualização, nome (A-Z), lista, quadro e lista, etiqueta ou tipo de processo. A ordenação também define o agrupamento da tela.
 - Edição direto no cartão, sem modal: clique no título, na descrição, nas etiquetas, no prazo, no checklist ou no destino.
 - Botões **Concluir/Reabrir**, **Etiquetas**, **Checklist**, **Prazo** e **Mover** no rodapé do cartão, alinhados à esquerda.
+- Botão de **excluir cartão** no rodapé (com confirmação) envia o cartão para a lixeira do Trello.
+- O painel carrega somente o **quadro selecionado** ao abrir/atualizar, o que acelera a sincronização em quadros secundários.
+- Ao clicar em **Prazo**, é possível editar **início e vencimento** e marcar a entrega como concluída.
 - Links dos processos abrem a página correspondente no SEI.
 - Exportação CSV dos cartões filtrados.
 - Atalhos `/` e `Ctrl+K`/`Cmd+K` para focar a busca.

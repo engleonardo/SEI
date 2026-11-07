@@ -38,6 +38,8 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Clique no número do processo para abrir a página correspondente no SEI.
 • Notificações diárias de prazos.
 • Desvincule sem excluir o cartão do Trello.
+• Exclua o cartão do Trello pelo SEI ou pelo painel, com confirmação.
+• Edite as datas de início e de vencimento no mesmo diálogo de prazo.
 • Exporte os cartões filtrados em CSV.
 • Modo escuro no painel, nas opções e nos painéis dentro do SEI, com alternância a qualquer momento e sincronização entre abas.
 • Funciona em qualquer domínio e versão do SEI (3.x, 4.x e 5.x).

@@ -100,6 +100,7 @@ async function seed(context: BrowserContext): Promise<void> {
         'sei-flow:settings:v1': settingsData,
         'sei-flow:processes:v1': processData,
         'sei-flow:cache:v2:all-linked': { at: Date.now(), value: cardsData },
+        'sei-flow:cache:v2:boardcards:board-1': { at: Date.now(), value: cardsData },
       });
       await chrome.storage.session.set({ 'sei-flow:last-action-tab': lastTab });
     },
@@ -247,11 +248,20 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
     await expect(footer.getByRole('button', { name: 'Prazo' })).toBeVisible();
     await expect(footer.getByRole('button', { name: 'Mover' })).toBeVisible();
     await expect(footer.getByRole('button', { name: 'Concluir' })).toBeVisible();
+    await expect(footer.getByRole('button', { name: 'Excluir cartão' })).toBeVisible();
     await expect(dashboard.getByRole('button', { name: 'Detalhes' })).toHaveCount(0);
+
+    await footer.getByRole('button', { name: 'Excluir cartão' }).click();
+    const deleteDialog = dashboard.getByRole('dialog');
+    await expect(deleteDialog.getByText('Excluir cartão')).toBeVisible();
+    await deleteDialog.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(dashboard.getByRole('dialog')).toHaveCount(0);
 
     await footer.getByRole('button', { name: 'Prazo' }).click();
     const dialog = dashboard.getByRole('dialog');
-    await expect(dialog.getByText('Data de entrega')).toBeVisible();
+    await expect(dialog.getByText('Datas do cartão')).toBeVisible();
+    await expect(dialog.getByLabel('Início (opcional)')).toBeVisible();
+    await expect(dialog.getByLabel('Vencimento (opcional)')).toBeVisible();
     await dialog.getByRole('button', { name: 'Cancelar' }).click();
 
     // O ícone não mostra contador numérico.

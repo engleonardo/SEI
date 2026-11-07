@@ -16,22 +16,33 @@ export function DueDialog({
   onClose: () => void;
   onChanged: (card: TrelloCard) => void;
 }) {
-  const [date, setDate] = useState(toDateInputValue(card.due));
+  const [start, setStart] = useState(toDateInputValue(card.start));
+  const [due, setDue] = useState(toDateInputValue(card.due));
   const [complete, setComplete] = useState(card.dueComplete);
   const [busy, setBusy] = useState(false);
+  const hasDates = Boolean(card.start || card.due);
 
   const save = async (clear = false) => {
+    const startValue = clear ? null : fromDateInputValue(start);
+    const dueValue = clear ? null : fromDateInputValue(due);
+
+    if (startValue && dueValue && new Date(startValue).getTime() > new Date(dueValue).getTime()) {
+      showToast('A data de início não pode ser posterior ao vencimento.', 'error');
+      return;
+    }
+
     setBusy(true);
     try {
       const updated = await callRpc('trello:update-card', {
         cardId: card.id,
         patch: {
-          due: clear ? null : fromDateInputValue(date),
-          dueComplete: clear ? false : complete,
+          start: startValue,
+          due: dueValue,
+          dueComplete: dueValue ? complete : false,
         },
       });
       onChanged(updated);
-      showToast(clear ? 'Prazo removido.' : 'Prazo atualizado.', 'success');
+      showToast(clear ? 'Datas removidas.' : 'Datas atualizadas.', 'success');
       onClose();
     } catch (cause) {
       showToast(errorMessage(cause), 'error');
@@ -42,20 +53,21 @@ export function DueDialog({
 
   return (
     <Modal
-      title="Data de entrega"
+      title="Datas do cartão"
       subtitle={card.name}
       size="sm"
       onClose={onClose}
       footer={
         <>
-          {card.due && (
+          {hasDates && (
             <button
               type="button"
               className="sf-btn sf-btn--danger"
               onClick={() => void save(true)}
               disabled={busy}
             >
-              Remover prazo
+              <Icon name="trash" size={14} />
+              Limpar datas
             </button>
           )}
           <span style={{ flex: 1 }} />
@@ -66,7 +78,7 @@ export function DueDialog({
             type="button"
             className="sf-btn sf-btn--primary"
             onClick={() => void save(false)}
-            disabled={busy || !date}
+            disabled={busy || (!start && !due && !hasDates)}
           >
             {busy ? <Spinner /> : <Icon name="calendar" size={14} />}
             Salvar
@@ -75,28 +87,47 @@ export function DueDialog({
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div className="sf-field">
-          <label htmlFor="sf-due-date">Vencimento</label>
-          <input
-            id="sf-due-date"
-            type="date"
-            className="sf-input"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            disabled={busy}
-          />
+        <div className="sf-create__grid">
+          <div className="sf-field">
+            <label htmlFor="sf-start-date">Início (opcional)</label>
+            <input
+              id="sf-start-date"
+              type="date"
+              className="sf-input"
+              value={start}
+              onChange={(event) => setStart(event.target.value)}
+              disabled={busy}
+            />
+          </div>
+          <div className="sf-field">
+            <label htmlFor="sf-due-date">Vencimento (opcional)</label>
+            <input
+              id="sf-due-date"
+              type="date"
+              className="sf-input"
+              value={due}
+              onChange={(event) => {
+                const value = event.target.value;
+                setDue(value);
+                if (!value) setComplete(false);
+              }}
+              disabled={busy}
+            />
+          </div>
         </div>
+
         <label className="sf-checkbox">
           <input
             type="checkbox"
             checked={complete}
             onChange={(event) => setComplete(event.target.checked)}
-            disabled={busy || !date}
+            disabled={busy || !due}
           />
           Entrega concluída
         </label>
+
         <p className="sf-hint" style={{ margin: 0 }}>
-          O prazo é salvo no cartão do Trello e aparece na lista de processos.
+          Início e vencimento ficam gravados no cartão do Trello. Deixe um campo vazio para removê-lo.
         </p>
       </div>
     </Modal>

@@ -3,6 +3,18 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [Não lançado]
+
+### Adicionado
+
+- Botão **Excluir cartão** no painel, com confirmação antes de enviar o cartão para a lixeira do Trello.
+
+### Alterado
+
+- O painel agora carrega somente o **quadro selecionado** ao abrir/atualizar, em vez de buscar todos os cartões vinculados de todos os quadros. Isso reduz bastante o tempo de sincronização em quadros secundários.
+- Na primeira carga, o painel usa direto o quadro padrão, evitando uma busca global desnecessária antes de aplicar o filtro.
+- Os textos de exclusão no SEI e no painel agora informam que o cartão vai para a lixeira do Trello, em vez de dizer que é removido permanentemente.
+
 ## [1.5.1] - 2026-11-03
 
 ### Corrigido
