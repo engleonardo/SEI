@@ -3,11 +3,13 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
-## [Não lançado]
+## [1.5.2] - 2026-11-07
 
 ### Adicionado
 
 - Botão **Excluir cartão** no painel, com confirmação antes de enviar o cartão para a lixeira do Trello.
+- O diálogo **Prazo** agora edita **início e vencimento**, com validação e botão **Limpar datas**.
+- Pacote com locale **pt_BR** (`_locales/pt_BR/messages.json` e `default_locale: pt_BR`), com nome e descrição do manifest em português.
 
 ### Alterado
 
