@@ -84,4 +84,22 @@ describe('catálogo de processos do SEI', () => {
     expect(catalog[PROCESS]?.unread).toBe(true);
     expect(catalog[PROCESS]?.url).toBe('http://sei.test/processo');
   });
+
+  it('separa a ciência do usuário da novidade real do SEI', async () => {
+    await upsertProcessRecords([{ number: PROCESS, unread: true }]);
+
+    const ack = await upsertProcessRecords([{ number: PROCESS, acknowledged: true }]);
+    expect(ack.unread).toEqual([]);
+    let catalog = await getProcessCatalog();
+    expect(catalog[PROCESS]).toMatchObject({ unread: true, acknowledged: true });
+
+    await upsertProcessRecords([{ number: PROCESS, unread: false }]);
+    catalog = await getProcessCatalog();
+    expect(catalog[PROCESS]).toMatchObject({ unread: false, acknowledged: false });
+
+    const nextUpdate = await upsertProcessRecords([{ number: PROCESS, unread: true }]);
+    expect(nextUpdate.unread).toEqual([PROCESS]);
+    catalog = await getProcessCatalog();
+    expect(catalog[PROCESS]).toMatchObject({ unread: true, acknowledged: false });
+  });
 });

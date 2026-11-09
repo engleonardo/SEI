@@ -257,6 +257,11 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
     await deleteDialog.getByRole('button', { name: 'Cancelar' }).click();
     await expect(dashboard.getByRole('dialog')).toHaveCount(0);
 
+    const unreadBadge = firstCard.getByRole('button', { name: 'Marcar processo como lido' });
+    await expect(unreadBadge).toBeVisible();
+    await unreadBadge.click();
+    await expect(unreadBadge).toHaveCount(0);
+
     await footer.getByRole('button', { name: 'Prazo' }).click();
     const dialog = dashboard.getByRole('dialog');
     await expect(dialog.getByText('Datas do cartão')).toBeVisible();

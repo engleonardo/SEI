@@ -719,7 +719,7 @@ export class TrelloRepository {
     const body: Record<string, string | boolean> = {};
     const shouldMoveList = Boolean(targetListId && targetListId !== card.idList);
     if (shouldMoveList || moveToTop) {
-      body.pos = shouldMoveList ? 'bottom' : 'top';
+      body.pos = moveToTop ? 'top' : 'bottom';
       if (shouldMoveList && targetListId) body.idList = targetListId;
     }
 
@@ -761,7 +761,7 @@ export class TrelloRepository {
       touched = true;
       if (shouldMoveList) {
         const listName = boardLists?.find((list) => list.id === targetListId)?.name ?? 'lista';
-        actions.push(`Mover para a lista "${listName}"`);
+        actions.push(`Mover para a lista "${listName}"${moveToTop ? ' no topo' : ''}`);
       } else if (moveToTop) {
         actions.push('Mover para o topo');
       }
@@ -916,7 +916,7 @@ export class TrelloRepository {
     );
     if (processes.size === 0) return { applied: 0 };
 
-    const cards = await this.getAllLinkedCards();
+    const cards = await this.getAllLinkedCards(true);
     const relevant = cards.filter((card) => card.links.some((link) => processes.has(link)));
     if (relevant.length === 0) return { applied: 0 };
 

@@ -18,11 +18,19 @@ export interface DashboardCardProps {
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
   onToggleLabel: (labelId: string) => void;
+  onProcessesRead: (numbers: string[]) => void;
 }
 
 type DialogKind = 'due' | 'labels' | 'checklist' | null;
 
-export function DashboardCard({ card, catalog, onChanged, onRemoved, onToggleLabel }: DashboardCardProps) {
+export function DashboardCard({
+  card,
+  catalog,
+  onChanged,
+  onRemoved,
+  onToggleLabel,
+  onProcessesRead,
+}: DashboardCardProps) {
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [locationOpen, setLocationOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -104,6 +112,19 @@ export function DashboardCard({ card, catalog, onChanged, onRemoved, onToggleLab
     }
   };
 
+  const markProcessesRead = async (numbers: string[]) => {
+    const unique = Array.from(new Set(numbers.filter(Boolean)));
+    if (unique.length === 0) return;
+    try {
+      await callRpc('processes:upsert', {
+        processes: unique.map((number) => ({ number, acknowledged: true })),
+      });
+      onProcessesRead(unique);
+    } catch {
+      // O próximo scan da lista do SEI corrige o estado.
+    }
+  };
+
   const toggleComplete = async () => {
     const next = !card.dueComplete;
     // Ao concluir, grava o momento do clique no prazo do cartão.
@@ -111,6 +132,7 @@ export function DashboardCard({ card, catalog, onChanged, onRemoved, onToggleLab
       ? { dueComplete: true, due: new Date().toISOString() }
       : { dueComplete: false, due: null };
     if (await update(patch)) {
+      if (next) void markProcessesRead(card.links);
       showToast(next ? 'Cartão concluído.' : 'Cartão reaberto.', 'success');
     }
   };
@@ -196,10 +218,16 @@ export function DashboardCard({ card, catalog, onChanged, onRemoved, onToggleLab
             )}
 
             {unread && (
-              <span className="sdo-badge sdo-badge--danger" title="Processo atualizado no SEI">
+              <button
+                type="button"
+                className="sdo-badge sdo-badge--danger"
+                title="Marcar processo como lido"
+                aria-label="Marcar processo como lido"
+                onClick={() => void markProcessesRead(card.links)}
+              >
                 <Icon name="alert" size={11} />
                 Atualizado
-              </span>
+              </button>
             )}
             {card.hasChecklist && (
               <button
@@ -327,6 +355,7 @@ export function DashboardCard({ card, catalog, onChanged, onRemoved, onToggleLab
                   target="_blank"
                   rel="noreferrer"
                   title={record.specification || 'Abrir processo no SEI'}
+                  onClick={() => void markProcessesRead([processNumber])}
                 >
                   {label}
                   <Icon name="external" size={10} />

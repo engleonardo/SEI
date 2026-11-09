@@ -12,7 +12,11 @@ export default defineConfig({
     author: 'Engenheiro Leonardo Almeida de Oliveira',
     homepage_url: 'https://github.com/engleonardo/SEI',
     permissions: ['storage', 'scripting', 'activeTab', 'alarms', 'notifications'],
-    optional_host_permissions: ['*://*/*'],
+    // O Firefox 115 ainda usa optional_permissions para hosts opcionais;
+    // optional_host_permissions só passou a existir no Firefox 128.
+    ...(browser === 'firefox'
+      ? { optional_permissions: ['*://*/*'] }
+      : { optional_host_permissions: ['*://*/*'] }),
     host_permissions: ['https://api.trello.com/*'],
     web_accessible_resources: [
       {
@@ -34,7 +38,7 @@ export default defineConfig({
           browser_specific_settings: {
             gecko: {
               id: 'sei-flow@engleonardo',
-              strict_min_version: '140.0',
+              strict_min_version: '115.0',
               data_collection_permissions: {
                 required: ['none'],
                 optional: [],

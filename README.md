@@ -12,11 +12,13 @@ O **Painel SEI Flow** é a página inicial da extensão: reúne prazos, etiqueta
 
 ## Baixar e instalar
 
-- **Chrome / Edge:** [sei-flow-1.5.2-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.2/sei-flow-1.5.2-chrome.zip)
-- **Firefox:** [sei-flow-1.5.2-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.2/sei-flow-1.5.2-firefox.zip)
+- **Chrome / Edge:** [sei-flow-1.5.3-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.3/sei-flow-1.5.3-chrome.zip)
+- **Firefox:** [sei-flow-1.5.3-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.3/sei-flow-1.5.3-firefox.zip)
 - **Todas as versões:** [Releases](https://github.com/engleonardo/SEI/releases)
 
 Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` -> **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.
+
+> **Firefox:** requer **115 ou superior** no desktop (Android: 142+).
 
 ## O que você resolve com o SEI Flow
 
@@ -187,6 +189,8 @@ Em **Opções -> Regras** você monta regras instantâneas, sem depender de auto
 - Por padrão, valem **somente para cartões vinculados** a processos do SEI. Cada regra tem a opção **Aplicar somente a cartões vinculados ao SEI**; desmarque para atingir qualquer cartão do quadro.
 - Gatilhos: **ao criar o cartão**, cartão concluído, entrada em uma lista, entrada em qualquer lista e **processo SEI atualizado (novidade)**.
 - O gatilho de criação vale para cartões criados pela extensão (pelo SEI ou pelo painel). O gatilho de processo atualizado dispara quando a extensão lê a lista do SEI e o processo passa de sem novidade para com novidade (link vermelho). Roda uma vez por novidade, em todos os cartões vinculados ao processo que estejam no quadro da regra (e na lista escolhida, se houver).
+- O selo vermelho **Atualizado** é a novidade do processo no SEI. Ele limpa quando o processo é aberto, quando o cartão é concluído ou quando você clica no próprio selo. A linha com relógio “Atualizado há…” é a última atividade do cartão no Trello e continua sendo exibida por design.
+- Editar o cartão no Trello **não** dispara o gatilho de processo SEI atualizado; ele reage apenas à transição de novidade na lista do SEI.
 - Cartões criados ou movidos fora da extensão são detectados como **entrada na lista atual** na próxima atualização, desde que o quadro já tenha sido sincronizado antes. A primeira leitura de um quadro apenas registra o estado, sem aplicar regras em massa.
 - Funcionam nos dois sentidos: quando a extensão grava no Trello e também quando a mudança é feita no Trello e você atualiza (botão **Atualizar**, ao abrir o painel, ao abrir a lista do SEI ou pela atualização automática das preferências).
 - Use as setas **↑/↓** no cabeçalho de cada regra para mudar a ordem. A ordem é a sequência em que as regras são avaliadas e executadas. O botão de copiar duplica a regra (a cópia nasce desativada).
