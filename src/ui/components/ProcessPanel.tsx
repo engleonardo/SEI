@@ -23,23 +23,44 @@ export function ProcessPanel({
   const [needsSetup, setNeedsSetup] = useState(false);
   const [labelFilter, setLabelFilter] = useState<string[]>([]);
 
+  const refresh = useCallback(
+    async (showSpinner: boolean) => {
+      if (showSpinner) setLoading(true);
+      try {
+        const value = await callRpc('trello:cards-for-process', {
+          processNumber,
+          fresh: true,
+        });
+        setCards(value);
+        setError(null);
+        setNeedsSetup(false);
+      } catch (cause) {
+        setError(errorMessage(cause));
+        setNeedsSetup(errorCode(cause) === 'not_configured');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [processNumber],
+  );
+
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setNeedsSetup(false);
+    // Mostra o cache na hora e atualiza em segundo plano. Antes, o painel
+    // esperava a busca completa no Trello a cada abertura do processo.
+    let cached: TrelloCard[] | null = null;
     try {
-      const value = await callRpc('trello:cards-for-process', {
-        processNumber,
-        fresh: true,
-      });
-      setCards(value);
-    } catch (cause) {
-      setError(errorMessage(cause));
-      setNeedsSetup(errorCode(cause) === 'not_configured');
-    } finally {
+      cached = await callRpc('trello:cards-for-process-cache', { processNumber });
+    } catch {
+      cached = null;
+    }
+    if (cached) {
+      setCards(cached);
+      setError(null);
+      setNeedsSetup(false);
       setLoading(false);
     }
-  }, [processNumber]);
+    await refresh(!cached);
+  }, [processNumber, refresh]);
 
   useEffect(() => {
     void load();
@@ -146,7 +167,7 @@ export function ProcessPanel({
           ) : undefined
         }
         showHeader
-        onReload={() => void load()}
+        onReload={() => void refresh(true)}
         onChanged={onChanged}
         onRemoved={onRemoved}
         onAdded={onAdded}

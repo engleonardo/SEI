@@ -41,6 +41,10 @@ export interface RpcMap {
     payload: { processNumber: string; fresh?: boolean };
     result: TrelloCard[];
   };
+  'trello:cards-for-process-cache': {
+    payload: { processNumber: string };
+    result: TrelloCard[] | null;
+  };
   'trello:all-linked-cards': { payload: { fresh?: boolean } | undefined; result: TrelloCard[] };
   'trello:search-cards': { payload: { query: string }; result: TrelloCard[] };
   'trello:unlinked-candidates': {

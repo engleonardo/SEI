@@ -12,8 +12,8 @@ O **Painel SEI Flow** é a página inicial da extensão: reúne prazos, etiqueta
 
 ## Baixar e instalar
 
-- **Chrome / Edge:** [sei-flow-1.5.3-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.3/sei-flow-1.5.3-chrome.zip)
-- **Firefox:** [sei-flow-1.5.3-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.3/sei-flow-1.5.3-firefox.zip)
+- **Chrome / Edge:** [sei-flow-1.5.4-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.4/sei-flow-1.5.4-chrome.zip)
+- **Firefox:** [sei-flow-1.5.4-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.5.4/sei-flow-1.5.4-firefox.zip)
 - **Todas as versões:** [Releases](https://github.com/engleonardo/SEI/releases)
 
 Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` -> **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.

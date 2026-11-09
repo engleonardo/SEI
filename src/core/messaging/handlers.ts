@@ -78,6 +78,8 @@ const handlers = {
   'trello:card': ({ cardId }) => repository.getCard(cardId),
   'trello:cards-for-process': ({ processNumber, fresh }) =>
     repository.getCardsForProcess(processNumber, fresh),
+  'trello:cards-for-process-cache': ({ processNumber }) =>
+    repository.getCachedCardsForProcess(processNumber),
   'trello:all-linked-cards': (payload) => repository.getAllLinkedCards(payload?.fresh),
   'trello:search-cards': ({ query }) => repository.searchCardsByName(query),
   'trello:unlinked-candidates': ({ boardId }) => repository.findUnlinkedCandidates(boardId),

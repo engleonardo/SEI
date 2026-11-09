@@ -848,7 +848,8 @@
 }
 
 .sf-label-filter__label {
-  color: var(--sf-muted);
+  /* Também fica sobre o fundo claro do SEI, fora dos cartões. */
+  color: #486581;
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -911,14 +912,20 @@
   padding: 0;
 }
 
+/* Estes botões ficam diretamente sobre a página do SEI (fundo claro),
+   inclusive quando o tema escuro está ativo. Por isso usam cores fixas. */
 .sf-stack__actions .sf-icon-btn {
-  width: 24px;
-  height: 24px;
-  color: var(--sf-muted);
+  width: 26px;
+  height: 26px;
+  border-color: #dbe4ee;
+  background: #ffffff;
+  color: #3f5069;
 }
 
 .sf-stack__actions .sf-icon-btn:hover:not(:disabled) {
-  color: var(--sf-accent);
+  border-color: #bcccdc;
+  background: #e8efff;
+  color: #1d4ed8;
 }
 
 .sf-stack__head--actions {
@@ -1592,7 +1599,7 @@
 
 /* ---------------------------------------------------------------- row action */
 
-.sf-row-action {
+.sf-root .sf-row-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1604,14 +1611,16 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: var(--sf-muted);
+  /* A ação fica na célula da tabela do SEI (fundo claro), não no cartão.
+     Cores fixas garantem contraste mesmo com o tema escuro ativo. */
+  color: #3f5069;
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
   vertical-align: middle;
   white-space: nowrap;
-  opacity: 0.55;
+  opacity: 0.9;
   transition:
     opacity 0.15s ease,
     background 0.15s ease,
@@ -1619,29 +1628,29 @@
     border-color 0.15s ease;
 }
 
-.sf-row-action:hover {
+.sf-root .sf-row-action:hover {
   opacity: 1;
-  border-color: var(--sf-border);
-  color: var(--sf-accent);
-  background: var(--sf-bg-muted);
+  border-color: #c3d0de;
+  color: #1d4ed8;
+  background: #eef2f7;
 }
 
-.sf-row-action:focus-visible {
+.sf-root .sf-row-action:focus-visible {
   outline: 2px solid var(--sf-accent);
   outline-offset: 1px;
 }
 
-.sf-row-action--active {
-  opacity: 0.9;
-  color: var(--sf-accent);
-}
-
-.sf-row-action--highlight {
+.sf-root .sf-row-action--active {
   opacity: 1;
-  color: var(--sf-danger);
+  color: #1d4ed8;
 }
 
-.sf-row-action__count {
+.sf-root .sf-row-action--highlight {
+  opacity: 1;
+  color: #b42318;
+}
+
+.sf-root .sf-row-action__count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1649,7 +1658,7 @@
   height: 13px;
   padding: 0 3px;
   border-radius: 999px;
-  background: var(--sf-accent);
+  background: #1d4ed8;
   color: #ffffff;
   font-size: 9px;
 }
