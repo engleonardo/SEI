@@ -368,6 +368,64 @@ describe('TrelloRepository', () => {
     expect(statsState.stats['rule-1']).toMatchObject({ applied: 1, lastSource: 'auto' });
   });
 
+  it('move para a lista e para o topo quando as duas ações estão na regra', async () => {
+    mocks.rules = [
+      {
+        id: 'rule-top-list',
+        name: 'Concluído vai para concluídos no topo',
+        enabled: true,
+        boardId: 'board-1',
+        trigger: { type: 'completed' },
+        actions: [
+          { type: 'moveToList', listId: 'list-done' },
+          { type: 'moveToTop' },
+        ],
+      },
+    ];
+
+    let currentList = 'list-1';
+    let complete = false;
+    const client = fakeClient();
+    const stateCard = () =>
+      rawCard({
+        desc: `SEI ${PROCESS}`,
+        idList: currentList,
+        list: { id: currentList, name: currentList === 'list-done' ? 'Concluídos' : 'Lista' },
+        dueComplete: complete,
+      });
+
+    vi.mocked(client.get).mockImplementation(async (path: string) => {
+      if (path === '/boards/board-1/lists') {
+        return [
+          { id: 'list-1', name: 'Lista' },
+          { id: 'list-done', name: 'Concluídos' },
+        ];
+      }
+      if (path.startsWith('/boards/')) return [];
+      return stateCard();
+    });
+    vi.mocked(client.put).mockImplementation(async (path: string, body?: unknown) => {
+      if (path === '/cards/card-1') {
+        const patch = body as { idList?: string; dueComplete?: boolean } | undefined;
+        if (patch?.idList) currentList = patch.idList;
+        if (typeof patch?.dueComplete === 'boolean') complete = patch.dueComplete;
+      }
+      return {};
+    });
+
+    const repo = repository(client);
+    await repo.updateCard('card-1', { dueComplete: true });
+
+    expect(client.put).toHaveBeenCalledWith('/cards/card-1', {
+      pos: 'top',
+      idList: 'list-done',
+    });
+    expect(logState.entries[0]).toMatchObject({
+      ruleId: 'rule-top-list',
+      actions: ['Mover para a lista "Concluídos" no topo'],
+    });
+  });
+
   it('não aplica regras em cartão sem vínculo com o SEI', async () => {
     mocks.rules = [
       {

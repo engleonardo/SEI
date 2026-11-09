@@ -3,6 +3,19 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.5.3] - 2026-11-09
+
+### Corrigido
+
+- **Firefox 115 ESR**: o mínimo do desktop passou de 140 para **115.0** (Android continua 142+), removendo o aviso de incompatibilidade.
+- O selo vermelho **Atualizado** (novidade do processo no SEI) agora é limpo quando o processo é aberto, quando o cartão é concluído e também ao clicar no próprio selo.
+- A regra **Quando o processo SEI for atualizado** passou a ler o estado atual dos cartões, evitando usar cache antigo na condição de lista.
+- Quando uma regra move para uma lista **e** para o topo ao mesmo tempo, o cartão agora vai para o topo da lista de destino (antes ia para o fim).
+
+### Alterado
+
+- O selo **Atualizado** virou um botão **Marcar processo como lido**.
+
 ## [1.5.2] - 2026-11-07
 
 ### Adicionado

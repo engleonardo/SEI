@@ -45,6 +45,8 @@ function mountPanel(processNumber: string): void {
         number: processNumber,
         url: window.location.href.split('#')[0],
         origin: window.location.origin,
+        // Abrir o processo no SEI conta como leitura: limpa a novidade.
+        unread: false,
       },
     ],
   }).catch(() => undefined);

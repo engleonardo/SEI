@@ -448,6 +448,20 @@ function Dashboard() {
     setCards((previous) => previous.filter((card) => card.id !== cardId));
   };
 
+  const handleProcessesRead = (numbers: string[]) => {
+    setCatalog((previous) => {
+      let changed = false;
+      const next = { ...previous };
+      for (const number of numbers) {
+        const record = next[number];
+        if (!record?.unread) continue;
+        next[number] = { ...record, unread: false };
+        changed = true;
+      }
+      return changed ? next : previous;
+    });
+  };
+
   const handleToggleLabel = (labelId: string) => {
     updateFilters({
       labelIds: filters.labelIds.includes(labelId)
@@ -1135,6 +1149,7 @@ function Dashboard() {
                   onChanged={handleChanged}
                   onRemoved={handleRemoved}
                   onToggleLabel={handleToggleLabel}
+                  onProcessesRead={handleProcessesRead}
                 />
               ))}
             </div>
