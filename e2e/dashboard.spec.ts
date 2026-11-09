@@ -156,6 +156,19 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
     // Alternância de tema aplica na hora e persiste.
     await dashboard.locator('.sdo-theme-toggle').click();
     await expect(dashboard.locator('html')).toHaveAttribute('data-sf-theme', 'dark');
+
+    // No tema escuro, o campo de edição do nome precisa continuar legível.
+    await dashboard.locator('.sdo-card__title-button').first().click();
+    const nameInput = dashboard.locator('.sdo-inline-input').first();
+    await expect(nameInput).toBeVisible();
+    const inputStyle = await nameInput.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { background: style.backgroundColor, color: style.color };
+    });
+    expect(inputStyle.background).not.toBe('rgb(255, 255, 255)');
+    expect(inputStyle.color).not.toBe('rgb(20, 33, 61)');
+    await nameInput.press('Escape');
+
     await dashboard.locator('.sdo-theme-toggle').click();
     await expect(dashboard.locator('html')).toHaveAttribute('data-sf-theme', 'light');
     await expect(dashboard.getByText('Revisar contrato')).toBeVisible();

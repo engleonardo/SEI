@@ -3,6 +3,14 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.5.4] - 2026-11-09
+
+### Corrigido
+
+- **Contraste no tema escuro**: o botão **+** da lista do SEI, os botões de ação do painel do processo e o rótulo **Filtrando** agora usam cores fixas sobre o fundo claro do SEI, em vez de herdarem o texto claro do tema escuro.
+- No painel (dashboard), o campo de edição do **nome do cartão** ficava com fundo branco e texto claro no tema escuro; o fundo agora acompanha o tema. O anel de destaque das etiquetas ativas também foi ajustado.
+- **Abertura do processo mais rápida**: o painel mostra o cache local na hora e atualiza em segundo plano, em vez de esperar a busca completa no Trello a cada abertura. A busca do processo e os cartões do quadro agora rodam em paralelo, e as etiquetas usam o cache de 10 minutos.
+
 ## [1.5.3] - 2026-11-09
 
 ### Corrigido

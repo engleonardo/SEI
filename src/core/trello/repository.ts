@@ -296,20 +296,18 @@ export class TrelloRepository {
 
     const load = async () => {
       const settings = await this.settings();
-      const searched = await this.safeSearch(`description:"SEI ${process}" is:open`);
+      // Busca e cartões do quadro em paralelo: o painel do processo abre mais rápido.
+      const [searched, fromDefaultBoard] = await Promise.all([
+        this.safeSearch(`description:"SEI ${process}" is:open`),
+        settings.defaultBoardId
+          ? this.getBoardCards(settings.defaultBoardId, fresh).catch(() => [] as TrelloCard[])
+          : Promise.resolve([] as TrelloCard[]),
+      ]);
 
-      let fromDefaultBoard: TrelloCard[] = [];
-      if (settings.defaultBoardId) {
-        try {
-          fromDefaultBoard = (await this.getBoardCards(settings.defaultBoardId, fresh)).filter((card) =>
-            card.links.includes(process),
-          );
-        } catch {
-          fromDefaultBoard = [];
-        }
-      }
-
-      const merged = mergeById(fromDefaultBoard, toCards(asCardList(searched)));
+      const merged = mergeById(
+        fromDefaultBoard.filter((card) => card.links.includes(process)),
+        toCards(asCardList(searched)),
+      );
       return this.applyBoardLabels(merged.filter((card) => card.links.includes(process)));
     };
 
@@ -328,6 +326,13 @@ export class TrelloRepository {
     }
 
     return cacheGetOrSet(`process:${process}`, CACHE_TTL.processCards, load);
+  }
+
+  /** Leitura instantânea do cache, sem chamar o Trello. */
+  async getCachedCardsForProcess(processNumber: string): Promise<TrelloCard[] | null> {
+    const process = sanitizeProcessForQuery(processNumber);
+    if (!process) return null;
+    return cacheGet<TrelloCard[]>(`process:${process}`, Number.POSITIVE_INFINITY);
   }
 
   async getAllLinkedCards(fresh = false): Promise<TrelloCard[]> {
@@ -378,7 +383,9 @@ export class TrelloRepository {
     if (boardIds.length === 0) return;
     await mapLimit(boardIds, 3, async (boardId) => {
       try {
-        await this.getBoardLabels(boardId, true);
+        // Usa o cache (TTL de 10 min). Forçar a busca de etiquetas em todos os
+        // quadros a cada abertura do processo deixava o painel lento.
+        await this.getBoardLabels(boardId);
       } catch {
         // mantém o cache atual se o quadro falhar
       }

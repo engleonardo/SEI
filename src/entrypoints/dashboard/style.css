@@ -2206,8 +2206,15 @@
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38);
 }
 
+:root[data-sf-theme='dark'] .sdo-inline-input,
 :root[data-sf-theme='dark'] .sdo-inline-textarea {
   background: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-sf-theme='dark'] .sdo-tag--active {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--accent);
 }
 
 :root[data-sf-theme='dark'] .sdo-label--add {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TrelloCardApi } from '../domain/types';
 import type { TrelloClient } from './client';
+import { cacheGet } from './cache';
 import { TrelloRepository } from './repository';
 
 const mocks = vi.hoisted(() => ({
@@ -141,6 +142,7 @@ vi.mock('./cache', () => ({
     allLinkedCards: 1,
   },
   cacheGetOrSet: (_key: string, _ttl: number, factory: () => Promise<unknown>) => factory(),
+  cacheGet: vi.fn(async () => null),
   cacheSet: vi.fn(async () => undefined),
   cacheDelete: vi.fn(async () => undefined),
   cacheDeleteByPrefix: vi.fn(async () => undefined),
@@ -1120,5 +1122,18 @@ describe('TrelloRepository', () => {
       processNumber: SEI_IN_TEXT,
     });
     expect(candidates[0]?.snippet).toContain(SEI_IN_TEXT);
+  });
+
+  it('entrega o cache do processo sem consultar o Trello', async () => {
+    const client = fakeClient();
+    const cached = [{ id: 'card-1' }] as never;
+    vi.mocked(cacheGet).mockResolvedValueOnce(cached);
+
+    const repo = repository(client);
+    const result = await repo.getCachedCardsForProcess(PROCESS);
+
+    expect(result).toBe(cached);
+    expect(cacheGet).toHaveBeenCalledWith(`process:${PROCESS}`, Number.POSITIVE_INFINITY);
+    expect(client.get).not.toHaveBeenCalled();
   });
 });

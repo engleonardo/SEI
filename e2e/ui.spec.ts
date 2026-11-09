@@ -412,4 +412,30 @@ test('modo escuro escurece só os cartões e mantém o SEI claro', async ({ page
       return cell ? getComputedStyle(cell).backgroundColor : null;
     });
   expect(cardCellBackground).not.toBe('rgb(28, 31, 36)');
+
+  // As ações ficam sobre a tabela clara do SEI e não podem herdar o texto
+  // apagado do tema escuro.
+  const actionColors = await page.locator('.sf-row-action').evaluateAll((elements) =>
+    elements.map((element) => getComputedStyle(element).color),
+  );
+  expect(actionColors).toContain('rgb(180, 35, 24)');
+  expect(actionColors).toContain('rgb(63, 80, 105)');
+});
+
+test('ações sobre a página do SEI ficam legíveis no tema escuro', async ({ page }) => {
+  await stubExtension(page, 'dark');
+  await openFixture(
+    page,
+    'sei-content-v4.html',
+    'http://sei.test/sei/controlador.php?acao=procedimento_trabalhar',
+  );
+
+  await expect(page.getByText('Cartão vinculado')).toBeVisible();
+  const plus = page.getByRole('button', { name: 'Novo cartão' });
+  const style = await plus.evaluate((element) => {
+    const computed = getComputedStyle(element);
+    return { color: computed.color, background: computed.backgroundColor };
+  });
+  expect(style.color).toBe('rgb(63, 80, 105)');
+  expect(style.background).toBe('rgb(255, 255, 255)');
 });

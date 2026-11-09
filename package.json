@@ -1,6 +1,6 @@
 {
   "name": "sei-flow",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "SEI Flow - vincule cartões do Trello a processos do SEI sem sair do SEI.",
   "type": "module",
   "private": false,
