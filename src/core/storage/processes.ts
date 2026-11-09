@@ -12,6 +12,8 @@ export interface ProcessRecord {
   url: string;
   origin: string;
   unread: boolean;
+  /** Usuário já viu/dispensou a novidade sem que o SEI tenha marcado como lido. */
+  acknowledged?: boolean;
   updatedAt: number;
 }
 
@@ -37,6 +39,7 @@ function sanitizeRecord(value: unknown, fallbackNumber?: string): ProcessRecord 
     url,
     origin,
     unread: Boolean(raw.unread),
+    acknowledged: Boolean(raw.acknowledged),
     updatedAt:
       typeof raw.updatedAt === 'number' && Number.isFinite(raw.updatedAt)
         ? raw.updatedAt
@@ -77,11 +80,25 @@ export async function upsertProcessRecords(
     const sanitized = sanitizeRecord({ ...input, updatedAt: now }, input.number);
     if (!sanitized) continue;
     const previous = catalog[sanitized.number];
+    const sourceUnread =
+      input.unread === undefined ? (previous?.unread ?? false) : sanitized.unread;
+    // Uma novidade nova no SEI sempre volta a aparecer, mesmo que a anterior
+    // tenha sido dispensada pelo usuário.
+    const sourceTransition = Boolean(previous && !previous.unread && sourceUnread);
+    const acknowledged = sourceTransition
+      ? false
+      : input.acknowledged === true
+        ? true
+        : input.unread === false
+          ? false
+          : (previous?.acknowledged ?? false);
+
     const next: ProcessRecord = {
       ...previous,
       ...sanitized,
-      // Sem informação explícita de novidade, preserva o estado conhecido.
-      unread: input.unread === undefined ? (previous?.unread ?? false) : sanitized.unread,
+      // `unread` é o estado da fonte (SEI); `acknowledged` é só a ciência do usuário.
+      unread: sourceUnread,
+      acknowledged,
       specification: sanitized.specification || previous?.specification || '',
       processType: sanitized.processType || previous?.processType || '',
       url: sanitized.url || previous?.url || '',
@@ -93,12 +110,13 @@ export async function upsertProcessRecords(
       previous.processType === next.processType &&
       previous.url === next.url &&
       previous.origin === next.origin &&
-      previous.unread === next.unread
+      previous.unread === next.unread &&
+      Boolean(previous.acknowledged) === Boolean(next.acknowledged)
     ) {
       continue;
     }
     // Só conta como novidade quando o processo já era conhecido e passou a ter atualização.
-    if (previous && !previous.unread && next.unread) {
+    if (sourceTransition) {
       unread.push(next.number);
     }
     catalog[sanitized.number] = next;

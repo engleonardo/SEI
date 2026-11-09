@@ -163,7 +163,9 @@ export function processTypesFor(card: TrelloCard, catalog: ProcessCatalog): stri
 }
 
 export function cardHasUnreadProcess(card: TrelloCard, catalog: ProcessCatalog): boolean {
-  return processRecordsFor(card, catalog).some((record) => record.unread);
+  return processRecordsFor(card, catalog).some(
+    (record) => record.unread && !record.acknowledged,
+  );
 }
 
 function matchesDue(card: TrelloCard, due: DueFilter): boolean {

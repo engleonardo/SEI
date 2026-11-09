@@ -117,7 +117,7 @@ export function DashboardCard({
     if (unique.length === 0) return;
     try {
       await callRpc('processes:upsert', {
-        processes: unique.map((number) => ({ number, unread: false })),
+        processes: unique.map((number) => ({ number, acknowledged: true })),
       });
       onProcessesRead(unique);
     } catch {

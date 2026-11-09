@@ -61,7 +61,7 @@ function summarize(cards: TrelloCard[], catalog: ProcessCatalog) {
     else if (bucket === 'done') done += 1;
 
     if (card.lastActivity && new Date(card.lastActivity).getTime() >= sevenDays) updated7d += 1;
-    if (card.links.some((number) => catalog[number]?.unread)) unread += 1;
+    if (card.links.some((number) => catalog[number]?.unread && !catalog[number]?.acknowledged)) unread += 1;
     for (const process of card.links) processes.add(process);
     for (const label of card.labels) labels.add(label.id);
     if (card.idBoard) boards.add(card.idBoard);
@@ -454,8 +454,8 @@ function Dashboard() {
       const next = { ...previous };
       for (const number of numbers) {
         const record = next[number];
-        if (!record?.unread) continue;
-        next[number] = { ...record, unread: false };
+        if (!record?.unread || record.acknowledged) continue;
+        next[number] = { ...record, acknowledged: true };
         changed = true;
       }
       return changed ? next : previous;
