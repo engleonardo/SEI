@@ -46,6 +46,13 @@ jobs:
           EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
           EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
         run: |
+          trim() {
+            printf '%s' "$1" | tr -d ' \t\r\n'
+          }
+          EDGE_CLIENT_ID="$(trim "$EDGE_CLIENT_ID")"
+          EDGE_API_KEY="$(trim "$EDGE_API_KEY")"
+          EDGE_PRODUCT_ID="$(trim "$EDGE_PRODUCT_ID")"
+
           missing=0
           for name in EDGE_CLIENT_ID EDGE_API_KEY EDGE_PRODUCT_ID; do
             if [ -z "${!name}" ]; then
@@ -56,11 +63,26 @@ jobs:
           if [ "$missing" -ne 0 ]; then
             exit 1
           fi
-          if ! [[ "$EDGE_PRODUCT_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
-            echo "::error::EDGE_PRODUCT_ID não parece um GUID válido."
+
+          guid='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+          if ! [[ "$EDGE_CLIENT_ID" =~ $guid ]]; then
+            echo "::error::EDGE_CLIENT_ID não parece um GUID válido (Client ID do Publish API)."
             exit 1
           fi
-          echo "Secrets presentes e EDGE_PRODUCT_ID com formato de GUID."
+          if ! [[ "$EDGE_PRODUCT_ID" =~ $guid ]]; then
+            echo "::error::EDGE_PRODUCT_ID não parece um GUID válido (Product ID da Identidade da extensão)."
+            exit 1
+          fi
+          if [ "$EDGE_CLIENT_ID" = "$EDGE_PRODUCT_ID" ]; then
+            echo "::error::EDGE_CLIENT_ID e EDGE_PRODUCT_ID estão com o mesmo valor. O Product ID é o GUID da 'Identidade da extensão', não o Client ID."
+            exit 1
+          fi
+          if [ "${#EDGE_API_KEY}" -lt 20 ]; then
+            echo "::error::EDGE_API_KEY parece curta/incompleta (${#EDGE_API_KEY} caracteres). Gere uma nova API key e cole o valor completo."
+            exit 1
+          fi
+
+          echo "Secrets presentes. Client ID e Product ID com formato de GUID; API key com ${#EDGE_API_KEY} caracteres."
 
       - name: Upload and publish on Edge Add-ons
         env:
@@ -72,6 +94,13 @@ jobs:
           UPLOAD_ONLY: ${{ inputs.upload_only }}
         run: |
           set -euo pipefail
+
+          trim() {
+            printf '%s' "$1" | tr -d ' \t\r\n'
+          }
+          EDGE_CLIENT_ID="$(trim "$EDGE_CLIENT_ID")"
+          EDGE_API_KEY="$(trim "$EDGE_API_KEY")"
+          EDGE_PRODUCT_ID="$(trim "$EDGE_PRODUCT_ID")"
 
           BASE="https://api.addons.microsoftedge.microsoft.com/v1.1/products/$EDGE_PRODUCT_ID"
           ZIP=".output/sei-flow-$VERSION-edge.zip"
@@ -124,6 +153,9 @@ jobs:
           if [ "$code" != "202" ]; then
             echo "::error::Falha no upload (HTTP $code)."
             cat "$body"
+            if [ "$code" = "404" ]; then
+              echo "::notice::HTTP 404 no Edge geralmente significa Product ID ou Client ID de outra conta, ou API key inválida/incompleta. Confira EDGE_PRODUCT_ID (GUID da Identidade da extensão, não o Store ID), EDGE_CLIENT_ID e gere uma nova EDGE_API_KEY."
+            fi
             exit 1
           fi
 
