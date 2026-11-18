@@ -20,6 +20,7 @@ export interface CardStackProps {
   compact?: boolean;
   highlight?: boolean;
   activeLabels?: string[];
+  descriptionExpanded?: boolean;
   emptyMessage?: ReactNode;
   onToggleLabel?: (labelId: string) => void;
   onReload: () => void;
@@ -40,6 +41,7 @@ export function CardStack({
   compact = false,
   highlight = false,
   activeLabels,
+  descriptionExpanded = false,
   emptyMessage,
   onToggleLabel,
   onReload,
@@ -135,6 +137,7 @@ export function CardStack({
           activeLabels={activeLabels}
           pinned={pinned.has(card.id)}
           onTogglePin={togglePin}
+          descriptionExpanded={descriptionExpanded}
           onToggleLabel={onToggleLabel}
           onChanged={onChanged}
           onRemoved={onRemoved}

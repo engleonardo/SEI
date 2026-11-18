@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type DOMAttributes, type KeyboardEventHandler } from 'react';
+import { useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -77,21 +77,6 @@ function KanbanCard({
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
-  const pointerListeners = (listeners
-    ? { onPointerDown: listeners.onPointerDown, onTouchStart: listeners.onTouchStart }
-    : {}) as Pick<DOMAttributes<HTMLDivElement>, 'onPointerDown' | 'onTouchStart'>;
-  const dragged = useRef(false);
-
-  useEffect(() => {
-    if (isDragging) {
-      dragged.current = true;
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      dragged.current = false;
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [isDragging]);
 
   return (
     <div
@@ -99,25 +84,24 @@ function KanbanCard({
       style={style}
       className={classNames('sdo-kanban-card', isDragging && 'sdo-kanban-card--dragging')}
       data-board={group.subtitle ?? ''}
-      {...pointerListeners}
-      onClickCapture={(event) => {
-        if (!dragged.current) return;
-        event.preventDefault();
-        event.stopPropagation();
-      }}
     >
-      <button
-        type="button"
-        className="sdo-kanban-card__a11y"
-        {...attributes}
-        onKeyDown={listeners?.onKeyDown as KeyboardEventHandler<HTMLButtonElement> | undefined}
-        aria-label={`Mover cartão ${card.name}. Pressione Espaço, use as setas e confirme com Espaço.`}
-      />
       <DashboardCard
         card={card}
         catalog={catalog}
         pinned={pinned.has(card.id)}
         dense
+        dragHandle={
+          <button
+            type="button"
+            className="sdo-card__drag"
+            {...listeners}
+            {...attributes}
+            aria-label={`Arrastar cartão ${card.name}`}
+            title="Arrastar cartão"
+          >
+            <Icon name="grip" size={12} />
+          </button>
+        }
         onChanged={onChanged}
         onRemoved={onRemoved}
         onToggleLabel={onToggleLabel}

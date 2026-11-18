@@ -34,6 +34,8 @@ export type IconName =
   | 'moon'
   | 'pin'
   | 'undo'
+  | 'paperclip'
+  | 'grip'
   | 'info';
 
 const paths: Record<IconName, ReactNode> = {
@@ -110,6 +112,19 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <path d="M9 7L4 12l5 5" />
       <path d="M4 12h9a6 6 0 0 1 6 6v1" />
+    </>
+  ),
+  paperclip: (
+    <path d="M21 11.5l-8.5 8.5a5 5 0 0 1-7-7L14 4.5a3.5 3.5 0 0 1 5 5L10.5 18a2 2 0 0 1-3-3L15 7.5" />
+  ),
+  grip: (
+    <>
+      <circle cx="9" cy="6" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="6" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="12" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="12" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="18" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="18" r="1.2" fill="currentColor" stroke="none" />
     </>
   ),
   close: <path d="M6 6l12 12M18 6L6 18" />,

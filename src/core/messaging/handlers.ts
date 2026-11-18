@@ -95,6 +95,13 @@ const handlers = {
     repository.linkCardsToProcesses(cardIds, processNumbers),
   'trello:unlink-card': ({ cardId, processNumber }) => repository.unlinkCard(cardId, processNumber),
   'trello:board-labels': ({ boardId, fresh }) => repository.getBoardLabels(boardId, fresh),
+  'trello:attachments': ({ cardId }) => repository.getAttachments(cardId),
+  'trello:add-attachment-url': ({ cardId, url, name }) =>
+    repository.addAttachmentUrl(cardId, url, name),
+  'trello:delete-attachment': async ({ cardId, attachmentId }) => {
+    await repository.deleteAttachment(cardId, attachmentId);
+    return undefined;
+  },
   'trello:create-label': ({ boardId, name, color }) => repository.createLabel(boardId, name, color),
   'trello:add-label': ({ cardId, labelId }) => repository.addLabelToCard(cardId, labelId),
   'trello:remove-label': ({ cardId, labelId }) => repository.removeLabelFromCard(cardId, labelId),

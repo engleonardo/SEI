@@ -34,6 +34,7 @@ import {
   processTypesFor,
   readLastVisit,
   saveFilters,
+  sortCards,
   writeLastVisit,
   type DashboardFilters as Filters,
 } from './model';
@@ -496,7 +497,12 @@ function Dashboard() {
         key: `${filters.boardId}:${list.id}`,
         title: list.name,
         subtitle: boardName,
-        cards: visibleCards.filter((card) => card.idList === list.id).sort(sortPinned),
+        cards: sortCards(
+          visibleCards.filter((card) => card.idList === list.id),
+          filters.sort,
+          catalog,
+          listOrder,
+        ).sort(sortPinned),
       }));
     }
     const base = groupCards(visibleCards, 'list', filters.sort, catalog, listOrder);

@@ -279,6 +279,7 @@ test('processo aberto mostra o painel completo', async ({ page }) => {
   await expect(page.getByText('Cartão vinculado')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Novo cartão' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Vincular cartões' })).toBeVisible();
+  await expect(page.locator('.sf-process-panel .sf-markdown--roomy').first()).toBeVisible();
 
   // Etiqueta clicável aplica filtro dentro do painel do processo.
   const chip = page.locator('.sf-label-chip--button').first();

@@ -107,6 +107,57 @@ export class TrelloClient {
     return this.request<T>('POST', path, {}, body);
   }
 
+  /**
+   * Upload multipart (anexos). Não usa retry para não duplicar o arquivo no
+   * Trello caso a resposta se perca.
+   */
+  async postMultipart<T>(
+    path: string,
+    file: { bytes: Uint8Array; name: string; mimeType: string },
+  ): Promise<T> {
+    const credentials = await this.credentials();
+    if (!credentials.key || !credentials.token) {
+      throw new TrelloError(
+        'not_configured',
+        'Configure a APP-KEY e o TOKEN do Trello nas opções da extensão.',
+      );
+    }
+
+    const url = new URL(`${API_BASE}${path}`);
+    url.searchParams.set('key', credentials.key);
+    url.searchParams.set('token', credentials.token);
+
+    const form = new FormData();
+    form.append('file', new Blob([file.bytes as BlobPart], { type: file.mimeType }), file.name);
+    form.append('name', file.name);
+    form.append('mimeType', file.mimeType);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60_000);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: form,
+        signal: controller.signal,
+        credentials: 'omit',
+      });
+      if (response.ok) {
+        const text = await response.text();
+        return (text ? JSON.parse(text) : undefined) as T;
+      }
+      const text = await response.text().catch(() => '');
+      throw errorFromResponse(response.status, text, response);
+    } catch (error) {
+      if (error instanceof TrelloError) throw error;
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new TrelloError('network', 'Tempo esgotado ao enviar o arquivo.');
+      }
+      throw new TrelloError('network', 'Falha de rede ao enviar o arquivo.');
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   put<T>(path: string, body: QueryParams = {}): Promise<T> {
     return this.request<T>('PUT', path, {}, body);
   }

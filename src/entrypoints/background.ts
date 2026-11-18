@@ -14,6 +14,7 @@ import {
 import { saveLastActionTab } from '../core/storage/last-tab';
 import { markSyncChanged } from '../core/storage/sync-tick';
 import { looksLikeSeiUrl } from '../core/sei/detect';
+import { registerAttachmentUploadPort } from '../core/attachments/upload-port';
 
 async function maybeInject(tabId: number, url: string): Promise<void> {
   if (tabId < 0 || !url) return;
@@ -133,6 +134,8 @@ async function onPermissionsRemoved(details: { origins?: string[] }): Promise<vo
 }
 
 export default defineBackground(() => {
+  registerAttachmentUploadPort();
+
   browser.runtime.onInstalled.addListener((details) => {
     void onInstalled(details as { reason: string });
   });

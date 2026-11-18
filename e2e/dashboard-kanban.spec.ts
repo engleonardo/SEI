@@ -82,6 +82,7 @@ async function stubDashboard(page: Page) {
                 patch?: { idList?: string };
                 listId?: string;
                 pos?: number;
+                url?: string;
               };
             },
             callback?: (response: unknown) => void,
@@ -109,6 +110,30 @@ async function stubDashboard(page: Page) {
                 break;
               case 'trello:board-labels':
                 response = ok([]);
+                break;
+              case 'trello:attachments':
+                response = ok([
+                  {
+                    id: 'att-1',
+                    name: 'Contrato.pdf',
+                    url: 'https://trello.com/c/att-1',
+                    bytes: 12345,
+                    date: '2026-11-18T12:00:00.000Z',
+                    mimeType: 'application/pdf',
+                    isUpload: true,
+                  },
+                ]);
+                break;
+              case 'trello:add-attachment-url':
+                response = ok({
+                  id: 'att-2',
+                  name: 'Link',
+                  url: message.payload?.url ?? 'https://example.com',
+                  bytes: 0,
+                  date: '2026-11-18T12:00:00.000Z',
+                  mimeType: null,
+                  isUpload: false,
+                });
                 break;
               case 'trello:update-card':
                 cards = cards.map((item) => {
@@ -152,7 +177,21 @@ async function stubDashboard(page: Page) {
         tabs: { query: () => Promise.resolve([]), create: () => Promise.resolve({}) },
       };
     },
-    { board: BOARD, lists: LISTS, initialCards: [card('card-1', 'Cartão A', 'list-a', ['11111.111111/2024-11']), card('card-2', 'Cartão B', 'list-b', [])] },
+    {
+      board: BOARD,
+      lists: LISTS,
+      initialCards: [
+        {
+          ...card('card-1', 'Cartão A', 'list-a', ['11111.111111/2024-11']),
+          lastActivity: '2026-11-01T12:00:00.000Z',
+        },
+        {
+          ...card('card-3', 'Cartão Z', 'list-a', []),
+          lastActivity: '2026-11-18T12:00:00.000Z',
+        },
+        card('card-2', 'Cartão B', 'list-b', []),
+      ],
+    },
   );
 }
 
@@ -180,20 +219,45 @@ test('kanban move cartão entre colunas', async ({ page }) => {
   ]);
   await expect(page.getByRole('region', { name: 'Coluna Concluído' })).toBeVisible();
   await expect(page.getByText('Arrastar', { exact: true })).toHaveCount(0);
+  const columnHeight = await page
+    .locator('.sdo-kanban-column')
+    .first()
+    .evaluate((element) => element.getBoundingClientRect().height);
+  expect(columnHeight).toBeGreaterThan(600);
+  const firstCard = page.locator('.sdo-kanban-card').first();
+  await firstCard.hover();
+  await page.waitForTimeout(250);
+  const hoverBorder = await firstCard
+    .locator('.sdo-card')
+    .evaluate((element) => getComputedStyle(element).borderColor);
+  expect(hoverBorder).toBe('rgb(29, 78, 216)');
   const cardOverflow = await page
     .locator('.sdo-kanban-card')
     .first()
     .evaluate((element) => element.scrollWidth - element.clientWidth);
   expect(cardOverflow).toBeLessThanOrEqual(1);
+  const selectedProcess = await page
+    .locator('.sdo-process')
+    .first()
+    .evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      return selection?.toString() ?? '';
+    });
+  expect(selectedProcess).toContain('11111.111111/2024-11');
   const target = page.getByRole('region', { name: 'Coluna Demandas' });
   await expect(target).toBeVisible();
 
   const sourceCard = page.locator('.sdo-kanban-card').filter({ hasText: 'Cartão A' }).first();
-  const cardBox = await sourceCard.boundingBox();
+  const dragHandle = sourceCard.getByRole('button', { name: 'Arrastar cartão Cartão A' });
+  const cardBox = await dragHandle.boundingBox();
   const targetBox = await target.boundingBox();
   if (!cardBox || !targetBox) throw new Error('Sem geometria para o teste de arrastar.');
 
-  await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + 36);
+  await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
   await page.mouse.down();
   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + 60, { steps: 12 });
   await page.mouse.up();
@@ -226,6 +290,19 @@ test('kanban move cartão entre colunas', async ({ page }) => {
         .__rpcCalls ?? []).filter((call) => call.rpc === 'trello:update-card').at(-1),
   );
   expect(undoCall?.payload?.patch?.idList).toBe('list-a');
+});
+
+test('kanban respeita a ordenação escolhida', async ({ page }) => {
+  await stubDashboard(page);
+  await openDashboard(page);
+
+  await page.getByRole('button', { name: 'Visão em quadro (Kanban)' }).click();
+  const column = page.getByRole('region', { name: 'Coluna Aguardando' });
+  const titles = column.locator('.sdo-card__title-row h3');
+  await expect(titles).toHaveText(['Cartão A', 'Cartão Z']);
+
+  await page.getByLabel('Ordenar cartões').selectOption('activity');
+  await expect(titles).toHaveText(['Cartão Z', 'Cartão A']);
 });
 
 test('kanban reordena colunas', async ({ page }) => {
@@ -266,12 +343,26 @@ test('kanban abre novo cartão na coluna', async ({ page }) => {
   await expect(page.getByRole('dialog').getByLabel('Lista', { exact: true })).toHaveValue('list-a');
 });
 
+test('kanban abre anexos e adiciona link', async ({ page }) => {
+  await stubDashboard(page);
+  await openDashboard(page);
+
+  await page.getByRole('button', { name: 'Visão em quadro (Kanban)' }).click();
+  const card = page.locator('.sdo-kanban-card').filter({ hasText: 'Cartão A' }).first();
+  await card.getByRole('button', { name: 'Anexos' }).click();
+
+  await expect(page.getByRole('dialog').getByText('Contrato.pdf')).toBeVisible();
+  await page.getByLabel('URL do anexo').fill('https://example.com/arquivo');
+  await page.getByRole('button', { name: 'Anexar link' }).click();
+  await expect(page.getByRole('dialog').getByRole('link', { name: 'Link' })).toBeVisible();
+});
+
 test('kanban move cartão com o teclado', async ({ page }) => {  await stubDashboard(page);
   await openDashboard(page);
 
   await expect(page.getByText('Cartão A')).toBeVisible();
   await page.getByRole('button', { name: 'Visão em quadro (Kanban)' }).click();
-  const handle = page.getByRole('button', { name: /Mover cartão Cartão A/ });
+  const handle = page.getByRole('button', { name: 'Arrastar cartão Cartão A' });
   await handle.focus();
   await page.keyboard.press('Space');
   for (let index = 0; index < 14; index += 1) {

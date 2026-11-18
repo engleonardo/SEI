@@ -3,6 +3,7 @@ import type {
   CardPatch,
   ConnectionInfo,
   Settings,
+  TrelloAttachment,
   TrelloBoard,
   TrelloCard,
   TrelloChecklist,
@@ -79,6 +80,15 @@ export interface RpcMap {
     result: TrelloCard;
   };
   'trello:board-labels': { payload: { boardId: string; fresh?: boolean }; result: TrelloLabel[] };
+  'trello:attachments': { payload: { cardId: string }; result: TrelloAttachment[] };
+  'trello:add-attachment-url': {
+    payload: { cardId: string; url: string; name?: string };
+    result: TrelloAttachment;
+  };
+  'trello:delete-attachment': {
+    payload: { cardId: string; attachmentId: string };
+    result: undefined;
+  };
   'trello:create-label': {
     payload: { boardId: string; name: string; color: string };
     result: TrelloLabel;

@@ -2,6 +2,7 @@ import type {
   BulkLinkResult,
   ConnectionInfo,
   Settings,
+  TrelloAttachment,
   TrelloBoard,
   TrelloCard,
   TrelloCardApi,
@@ -55,6 +56,7 @@ const CARD_FIELDS =
 const BOARD_FIELDS = 'id,name';
 const LIST_FIELDS = 'id,name,pos';
 const LABEL_FIELDS = 'id,name,color';
+const ATTACHMENT_FIELDS = 'id,name,url,bytes,date,mimeType,isUpload';
 const MAX_CARDS = 1000;
 
 function mergeById<T extends { id: string }>(...groups: T[][]): T[] {
@@ -1258,6 +1260,41 @@ export class TrelloRepository {
     const card = await this.getCard(cardId, true);
     await mergeSyncSnapshot([card]);
     return card;
+  }
+
+  async getAttachments(cardId: string): Promise<TrelloAttachment[]> {
+    const attachments = await this.client.get<TrelloAttachment[]>(`/cards/${cardId}/attachments`, {
+      fields: ATTACHMENT_FIELDS,
+    });
+    return (attachments ?? []).filter((attachment) => Boolean(attachment?.id));
+  }
+
+  async addAttachmentUrl(
+    cardId: string,
+    url: string,
+    name?: string,
+  ): Promise<TrelloAttachment> {
+    return this.client.post<TrelloAttachment>(`/cards/${cardId}/attachments`, {
+      url,
+      name: name?.trim() || undefined,
+    });
+  }
+
+  async addAttachmentFile(
+    cardId: string,
+    bytes: Uint8Array,
+    name: string,
+    mimeType: string,
+  ): Promise<TrelloAttachment> {
+    return this.client.postMultipart<TrelloAttachment>(`/cards/${cardId}/attachments`, {
+      bytes,
+      name,
+      mimeType,
+    });
+  }
+
+  async deleteAttachment(cardId: string, attachmentId: string): Promise<void> {
+    await this.client.delete(`/cards/${cardId}/attachments/${attachmentId}`);
   }
 
   async getChecklists(cardId: string, fresh = false): Promise<TrelloChecklist[]> {

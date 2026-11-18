@@ -147,6 +147,7 @@ export function ProcessPanel({
         error={error}
         showProcessMeta={false}
         compact
+        descriptionExpanded
         activeLabels={labelFilter}
         onToggleLabel={toggleLabel}
         emptyMessage={

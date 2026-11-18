@@ -9,6 +9,7 @@ import { DescriptionEditor } from './DescriptionEditor';
 import { ConfirmDialog } from './Modal';
 import { InlineLocationPicker } from './InlineLocationPicker';
 import { ChecklistDialog } from './dialogs/ChecklistDialog';
+import { AttachmentsDialog } from './dialogs/AttachmentsDialog';
 import { DueDialog } from './dialogs/DueDialog';
 import { LabelsDialog } from './dialogs/LabelsDialog';
 
@@ -22,12 +23,13 @@ export interface CardItemProps {
   activeLabels?: string[];
   pinned?: boolean;
   onTogglePin?: (cardId: string) => void;
+  descriptionExpanded?: boolean;
   onToggleLabel?: (labelId: string) => void;
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
 }
 
-type DialogKind = 'due' | 'labels' | 'checklist' | null;
+type DialogKind = 'due' | 'labels' | 'checklist' | 'attachments' | null;
 
 export function CardItem({
   card,
@@ -39,6 +41,7 @@ export function CardItem({
   activeLabels,
   pinned = false,
   onTogglePin,
+  descriptionExpanded = false,
   onToggleLabel,
   onChanged,
   onRemoved,
@@ -370,7 +373,11 @@ export function CardItem({
               }}
               title="Editar descrição"
             >
-              <CardDescription text={card.description} compact />
+              <CardDescription
+                text={card.description}
+                compact={!descriptionExpanded}
+                className={descriptionExpanded ? 'sf-markdown--roomy' : undefined}
+              />
             </div>
           ) : (
             <button
@@ -470,6 +477,17 @@ export function CardItem({
             <button
               type="button"
               className="sf-btn sf-btn--ghost sf-btn--sm"
+              onClick={() => setDialog('attachments')}
+              disabled={busy}
+              aria-label="Anexos"
+              title="Anexos"
+            >
+              <Icon name="paperclip" size={14} />
+              {actionLabel('Anexos')}
+            </button>
+            <button
+              type="button"
+              className="sf-btn sf-btn--ghost sf-btn--sm"
               onClick={() => setDialog('due')}
               disabled={busy}
               aria-label="Prazo"
@@ -538,6 +556,9 @@ export function CardItem({
       )}
       {dialog === 'checklist' && (
         <ChecklistDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
+      )}
+      {dialog === 'attachments' && (
+        <AttachmentsDialog card={card} onClose={() => setDialog(null)} />
       )}
       {confirmUnlink && processNumber && (
         <ConfirmDialog

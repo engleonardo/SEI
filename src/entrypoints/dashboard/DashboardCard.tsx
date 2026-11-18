@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { CardPatch, TrelloCard } from '../../core/domain/types';
 import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import type { ProcessCatalog } from '../../core/storage/processes';
@@ -10,6 +10,7 @@ import { classNames, formatDue, labelColorHex, labelTextColor, locationLabel } f
 import { InlineLocationPicker } from '../../ui/components/InlineLocationPicker';
 import { ConfirmDialog } from '../../ui/components/Modal';
 import { ChecklistDialog } from '../../ui/components/dialogs/ChecklistDialog';
+import { AttachmentsDialog } from '../../ui/components/dialogs/AttachmentsDialog';
 import { DueDialog } from '../../ui/components/dialogs/DueDialog';
 import { LabelsDialog } from '../../ui/components/dialogs/LabelsDialog';
 import { cardHasUnreadProcess, formatActivity, processRecordsFor, processTypesFor } from './model';
@@ -19,6 +20,7 @@ export interface DashboardCardProps {
   catalog: ProcessCatalog;
   pinned?: boolean;
   dense?: boolean;
+  dragHandle?: ReactNode;
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
   onToggleLabel: (labelId: string) => void;
@@ -26,13 +28,14 @@ export interface DashboardCardProps {
   onTogglePin?: (cardId: string) => void;
 }
 
-type DialogKind = 'due' | 'labels' | 'checklist' | null;
+type DialogKind = 'due' | 'labels' | 'checklist' | 'attachments' | null;
 
 export function DashboardCard({
   card,
   catalog,
   pinned = false,
   dense = false,
+  dragHandle,
   onChanged,
   onRemoved,
   onToggleLabel,
@@ -464,6 +467,7 @@ export function DashboardCard({
 
         <div className="sdo-card__footer">
           <div className="sdo-card__footer-actions">
+            {dragHandle}
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
@@ -485,6 +489,17 @@ export function DashboardCard({
             >
               <Icon name="checklist" size={13} />
               <span className="sdo-card__action-label">Checklist</span>
+            </button>
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
+              onClick={() => setDialog('attachments')}
+              disabled={busy}
+              title="Anexos"
+              aria-label="Anexos"
+            >
+              <Icon name="paperclip" size={13} />
+              <span className="sdo-card__action-label">Anexos</span>
             </button>
             <button
               type="button"
@@ -546,6 +561,9 @@ export function DashboardCard({
       )}
       {dialog === 'checklist' && (
         <ChecklistDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
+      )}
+      {dialog === 'attachments' && (
+        <AttachmentsDialog card={card} onClose={() => setDialog(null)} />
       )}
       {confirmDelete && (
         <ConfirmDialog
