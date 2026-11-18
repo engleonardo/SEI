@@ -38,6 +38,7 @@ import {
 } from './model';
 import '../options/style.css';
 import './style.css';
+import { usePinnedCards } from '../../ui/hooks/usePinnedCards';
 
 function summarize(cards: TrelloCard[], catalog: ProcessCatalog) {
   let overdue = 0;
@@ -134,13 +135,16 @@ function Dashboard() {
           // global por cartões vinculados antes de o filtro de quadro ser aplicado.
           const firstLoadBoardId = defaultBoardApplied.current ? '' : nextSettings.defaultBoardId;
           const effectiveBoardId = filters.boardId || firstLoadBoardId;
+          // Sem vínculo só pode ser descoberto dentro de um quadro. Quando o
+          // filtro é "Todos os quadros", usamos o quadro padrão para esses cartões.
+          const unlinkedBoardId = effectiveBoardId || nextSettings.defaultBoardId;
 
           if (filters.link === 'unlinked') {
-            if (!effectiveBoardId) {
+            if (!unlinkedBoardId) {
               if (seq === loadSeq.current) setCards([]);
             } else {
               const boardCards = await callRpc('trello:board-cards', {
-                boardId: effectiveBoardId,
+                boardId: unlinkedBoardId,
                 fresh: true,
               });
               if (seq === loadSeq.current) {
@@ -155,7 +159,28 @@ function Dashboard() {
               fresh: true,
             });
             if (seq === loadSeq.current) {
-              setCards(boardCards.filter((card) => card.links.length > 0));
+              setCards(
+                filters.link === 'linked'
+                  ? boardCards.filter((card) => card.links.length > 0)
+                  : boardCards,
+              );
+            }
+          } else if (filters.link === 'all' && unlinkedBoardId) {
+            // Todos os quadros: vinculados de todo o Trello + sem vínculo do
+            // quadro padrão (não há como descobrir sem vínculo fora dos quadros).
+            const [linked, boardCards] = await Promise.all([
+              callRpc('trello:all-linked-cards', { fresh: true }),
+              callRpc('trello:board-cards', { boardId: unlinkedBoardId, fresh: true }).catch(
+                () => [] as TrelloCard[],
+              ),
+            ]);
+            if (seq === loadSeq.current) {
+              const merged = new Map<string, TrelloCard>();
+              for (const item of linked) merged.set(item.id, item);
+              for (const item of boardCards) {
+                if (item.links.length === 0) merged.set(item.id, item);
+              }
+              setCards(Array.from(merged.values()));
             }
           } else {
             const nextCards = await callRpc('trello:all-linked-cards', { fresh: true });
@@ -421,6 +446,18 @@ function Dashboard() {
     () => groupCards(visibleCards, SORT_GROUPS[filters.sort], filters.sort, catalog, listOrder),
     [visibleCards, filters.sort, catalog, listOrder],
   );
+  const { pinned, togglePin } = usePinnedCards();
+  // Fixados sobem ao topo de cada grupo, preservando a ordenação escolhida.
+  const orderedGroups = useMemo(
+    () =>
+      groups.map((group) => ({
+        ...group,
+        cards: [...group.cards].sort(
+          (a, b) => Number(pinned.has(b.id)) - Number(pinned.has(a.id)),
+        ),
+      })),
+    [groups, pinned],
+  );
 
   const exportCsv = () => {
     if (visibleCards.length === 0) {
@@ -471,8 +508,8 @@ function Dashboard() {
     });
   };
 
-  const toggleLinkFilter = () => {
-    const link = filters.link === 'unlinked' ? 'linked' : 'unlinked';
+  const toggleLinkFilter = (target: 'linked' | 'unlinked') => {
+    const link = filters.link === target ? 'all' : target;
     updateFilters({
       link,
       boardId: filters.boardId || settings?.defaultBoardId || '',
@@ -604,8 +641,11 @@ function Dashboard() {
       clear: { processUpdate: 'any' },
     });
   }
+  if (filters.link === 'linked') {
+    activeChips.push({ key: 'link', label: 'Com vínculo SEI', clear: { link: 'all' } });
+  }
   if (filters.link === 'unlinked') {
-    activeChips.push({ key: 'link', label: 'Sem vínculo SEI', clear: { link: 'linked' } });
+    activeChips.push({ key: 'link', label: 'Sem vínculo SEI', clear: { link: 'all' } });
   }
 
   return (
@@ -868,7 +908,13 @@ function Dashboard() {
             <Icon name="link" size={16} />
           </span>
           <span className="sdo-metric__body">
-            <span>{filters.link === 'unlinked' ? 'Total sem vínculo' : 'Total vinculado'}</span>
+            <span>
+              {filters.link === 'all'
+                ? 'Total de cartões'
+                : filters.link === 'unlinked'
+                  ? 'Total sem vínculo'
+                  : 'Total vinculado'}
+            </span>
             <strong>{scopeTotal}</strong>
             <small>{scopeName}</small>
           </span>
@@ -1006,9 +1052,24 @@ function Dashboard() {
               <button
                 type="button"
                 className={`sdo-unlinked-toggle${
+                  filters.link === 'linked' ? ' sdo-unlinked-toggle--on' : ''
+                }`}
+                onClick={() => toggleLinkFilter('linked')}
+                aria-pressed={filters.link === 'linked'}
+                title="Mostrar apenas cartões com vínculo com o SEI"
+              >
+                <Icon name="link" size={13} />
+                Com vínculo
+                {filters.link === 'linked' && (
+                  <span className="sdo-unlinked-toggle__count">{cards.length}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                className={`sdo-unlinked-toggle${
                   filters.link === 'unlinked' ? ' sdo-unlinked-toggle--on' : ''
                 }`}
-                onClick={toggleLinkFilter}
+                onClick={() => toggleLinkFilter('unlinked')}
                 aria-pressed={filters.link === 'unlinked'}
                 title="Mostrar apenas cartões sem vínculo com o SEI"
               >
@@ -1021,12 +1082,12 @@ function Dashboard() {
               <button
                 type="button"
                 className={`sdo-lists__all${
-                  filters.listId || filters.link === 'unlinked' ? ' sdo-lists__all--clear' : ''
+                  filters.listId || filters.link !== 'all' ? ' sdo-lists__all--clear' : ''
                 }`}
-                onClick={() => updateFilters({ listId: '', link: 'linked' })}
+                onClick={() => updateFilters({ listId: '', link: 'all' })}
                 title={
-                  filters.listId || filters.link === 'unlinked'
-                    ? 'Mostrar todas as listas e remover o filtro “Sem vínculo”'
+                  filters.listId || filters.link !== 'all'
+                    ? 'Mostrar todas as listas e remover o filtro de vínculo'
                     : 'Mostrar todas as listas do quadro'
                 }
               >
@@ -1120,7 +1181,9 @@ function Dashboard() {
             {cards.length === 0
               ? filters.link === 'unlinked'
                 ? 'Nenhum cartão sem vínculo neste quadro. Crie um em "Novo cartão".'
-                : 'Vincule cartões aos processos do SEI para vê-los aqui.'
+                : filters.link === 'linked'
+                  ? 'Vincule cartões aos processos do SEI para vê-los aqui.'
+                  : 'Nenhum cartão neste quadro. Crie um em "Novo cartão".'
               : 'Ajuste os filtros para ampliar os resultados.'}
           </span>
           {active > 0 && (
@@ -1130,7 +1193,7 @@ function Dashboard() {
           )}
         </div>
       ) : (
-        groups.map((group) => (
+        orderedGroups.map((group) => (
           <section key={group.key} className="sdo-section">
             {group.title && (
               <h2>
@@ -1146,10 +1209,12 @@ function Dashboard() {
                   key={`${group.key}:${card.id}`}
                   card={card}
                   catalog={catalog}
+                  pinned={pinned.has(card.id)}
                   onChanged={handleChanged}
                   onRemoved={handleRemoved}
                   onToggleLabel={handleToggleLabel}
                   onProcessesRead={handleProcessesRead}
+                  onTogglePin={togglePin}
                 />
               ))}
             </div>
@@ -1169,13 +1234,13 @@ function Dashboard() {
           initialListId={filters.listId || settings?.defaultListId}
           onClose={() => setShowCreate(false)}
           onCreated={(card) => {
-            if (filters.link === 'unlinked') {
+            if (filters.link !== 'linked') {
               if (card.idBoard && card.idBoard !== filters.boardId) {
                 updateFilters({ boardId: card.idBoard, listId: '' });
               }
               setCards((previous) => [card, ...previous]);
             } else {
-              updateFilters({ link: 'unlinked', boardId: card.idBoard });
+              updateFilters({ link: 'all', boardId: card.idBoard });
             }
           }}
         />

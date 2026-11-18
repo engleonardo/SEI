@@ -218,6 +218,11 @@
   color: var(--sf-danger);
 }
 
+.sf-icon-btn--pinned {
+  color: var(--sf-accent);
+  background: var(--sf-accent-soft);
+}
+
 /* ---------------------------------------------------------------- fields */
 
 .sf-field {
@@ -586,6 +591,112 @@
   text-align: left;
   font: inherit;
   cursor: text;
+}
+
+.sf-card__desc-view {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+  cursor: text;
+}
+
+.sf-markdown {
+  color: inherit;
+  font-size: inherit;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.sf-markdown > :first-child {
+  margin-top: 0;
+}
+
+.sf-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.sf-markdown p {
+  margin: 0 0 0.5em;
+}
+
+.sf-markdown ul,
+.sf-markdown ol {
+  margin: 0.35em 0 0.5em;
+  padding-left: 1.25em;
+}
+
+.sf-markdown li {
+  margin: 0.1em 0;
+}
+
+.sf-markdown a {
+  color: var(--sf-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.sf-markdown a:hover {
+  color: var(--sf-accent-hover);
+}
+
+.sf-markdown strong {
+  font-weight: 800;
+}
+
+.sf-markdown code {
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+  background: var(--sf-bg-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.sf-markdown pre {
+  margin: 0.5em 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--sf-bg-muted);
+  overflow-x: auto;
+}
+
+.sf-markdown pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.sf-markdown blockquote {
+  margin: 0.5em 0;
+  padding: 0.1em 0 0.1em 0.8em;
+  border-left: 3px solid var(--sf-border-strong);
+  color: var(--sf-text-soft);
+}
+
+.sf-markdown h1,
+.sf-markdown h2,
+.sf-markdown h3,
+.sf-markdown h4,
+.sf-markdown h5,
+.sf-markdown h6 {
+  margin: 0.6em 0 0.3em;
+  line-height: 1.25;
+}
+
+.sf-markdown--compact {
+  position: relative;
+  max-height: 4.4em;
+  overflow: hidden;
+}
+
+.sf-markdown--compact::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1.2em;
+  background: linear-gradient(transparent, var(--sf-card-bg, var(--sf-bg)));
+  pointer-events: none;
 }
 
 .sf-card__meta {

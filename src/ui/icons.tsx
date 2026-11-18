@@ -30,6 +30,7 @@ export type IconName =
   | 'arrowRight'
   | 'sun'
   | 'moon'
+  | 'pin'
   | 'info';
 
 const paths: Record<IconName, ReactNode> = {
@@ -94,6 +95,12 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <path d="M12 20h9" />
       <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+    </>
+  ),
+  pin: (
+    <>
+      <path d="M9 3h6l-1 6 4 4H6l4-4-1-6z" />
+      <path d="M12 13v8" />
     </>
   ),
   close: <path d="M6 6l12 12M18 6L6 18" />,

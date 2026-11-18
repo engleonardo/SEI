@@ -3,6 +3,7 @@ import type { CardPatch, TrelloCard } from '../../core/domain/types';
 import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import type { ProcessCatalog } from '../../core/storage/processes';
 import { Icon } from '../../ui/icons';
+import { CardDescription } from '../../ui/components/CardDescription';
 import { showToast } from '../../ui/toast';
 import { classNames, formatDue, labelColorHex, labelTextColor, locationLabel } from '../../ui/utils';
 import { InlineLocationPicker } from '../../ui/components/InlineLocationPicker';
@@ -15,10 +16,12 @@ import { cardHasUnreadProcess, formatActivity, processRecordsFor, processTypesFo
 export interface DashboardCardProps {
   card: TrelloCard;
   catalog: ProcessCatalog;
+  pinned?: boolean;
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
   onToggleLabel: (labelId: string) => void;
   onProcessesRead: (numbers: string[]) => void;
+  onTogglePin?: (cardId: string) => void;
 }
 
 type DialogKind = 'due' | 'labels' | 'checklist' | null;
@@ -26,10 +29,12 @@ type DialogKind = 'due' | 'labels' | 'checklist' | null;
 export function DashboardCard({
   card,
   catalog,
+  pinned = false,
   onChanged,
   onRemoved,
   onToggleLabel,
   onProcessesRead,
+  onTogglePin,
 }: DashboardCardProps) {
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [locationOpen, setLocationOpen] = useState(false);
@@ -305,17 +310,26 @@ export function DashboardCard({
               </div>
             </div>
           ) : card.description ? (
-            <button
-              type="button"
-              className="sdo-card__desc sdo-card__desc-button"
-              onClick={() => {
+            <div
+              className="sdo-card__desc sdo-card__desc-view"
+              role="button"
+              tabIndex={0}
+              onClick={(event) => {
+                if ((event.target as HTMLElement).closest('a')) return;
+                setDescDraft(card.description);
+                setEditingDesc(true);
+              }}
+              onKeyDown={(event) => {
+                if ((event.target as HTMLElement).closest('a')) return;
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
                 setDescDraft(card.description);
                 setEditingDesc(true);
               }}
               title="Editar descrição"
             >
-              {card.description}
-            </button>
+              <CardDescription text={card.description} compact />
+            </div>
           ) : (
             <button
               type="button"
@@ -415,6 +429,23 @@ export function DashboardCard({
             )
           )}
           <div className="sdo-card__side-actions">
+            {onTogglePin && (
+              <button
+                type="button"
+                className={classNames(
+                  'sfo-btn',
+                  'sfo-btn--sm',
+                  'sfo-btn--ghost',
+                  pinned && 'sfo-btn--pinned',
+                )}
+                onClick={() => onTogglePin(card.id)}
+                aria-pressed={pinned}
+                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+              >
+                <Icon name="pin" size={13} />
+                {pinned ? 'Fixado' : 'Fixar'}
+              </button>
+            )}
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"

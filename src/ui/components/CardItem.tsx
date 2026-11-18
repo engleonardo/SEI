@@ -4,6 +4,7 @@ import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import { Icon } from '../icons';
 import { showToast } from '../toast';
 import { classNames, formatDue, isOverdue, labelColorHex, labelTextColor, locationLabel } from '../utils';
+import { CardDescription } from './CardDescription';
 import { ConfirmDialog } from './Modal';
 import { InlineLocationPicker } from './InlineLocationPicker';
 import { ChecklistDialog } from './dialogs/ChecklistDialog';
@@ -18,6 +19,8 @@ export interface CardItemProps {
   compact?: boolean;
   highlight?: boolean;
   activeLabels?: string[];
+  pinned?: boolean;
+  onTogglePin?: (cardId: string) => void;
   onToggleLabel?: (labelId: string) => void;
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
@@ -33,6 +36,8 @@ export function CardItem({
   compact = false,
   highlight = false,
   activeLabels,
+  pinned = false,
+  onTogglePin,
   onToggleLabel,
   onChanged,
   onRemoved,
@@ -247,6 +252,17 @@ export function CardItem({
             </div>
 
             <div className="sf-card__actions">
+              {onTogglePin && (
+                <button
+                  type="button"
+                  className={classNames('sf-icon-btn', pinned && 'sf-icon-btn--pinned')}
+                  onClick={() => onTogglePin(card.id)}
+                  aria-pressed={pinned}
+                  title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+                >
+                  <Icon name="pin" size={15} />
+                </button>
+              )}
               <button
                 type="button"
                 className="sf-icon-btn"
@@ -346,17 +362,26 @@ export function CardItem({
               </div>
             </div>
           ) : card.description ? (
-            <button
-              type="button"
-              className="sf-card__desc sf-card__desc-button"
-              onClick={() => {
+            <div
+              className="sf-card__desc sf-card__desc-view"
+              role="button"
+              tabIndex={0}
+              onClick={(event) => {
+                if ((event.target as HTMLElement).closest('a')) return;
+                setDescDraft(card.description);
+                setEditingDesc(true);
+              }}
+              onKeyDown={(event) => {
+                if ((event.target as HTMLElement).closest('a')) return;
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
                 setDescDraft(card.description);
                 setEditingDesc(true);
               }}
               title="Editar descrição"
             >
-              {card.description}
-            </button>
+              <CardDescription text={card.description} compact />
+            </div>
           ) : (
             <button
               type="button"

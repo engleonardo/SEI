@@ -187,6 +187,16 @@ test('lista de processos mostra o cartão vinculado e o botão de ações', asyn
 
   await expect(page.getByText('Cartão vinculado')).toBeVisible();
   await expect(page.getByRole('button', { name: /Abrir ações do processo/ }).first()).toBeVisible();
+  // A ação fica imediatamente após o link do processo, não ao lado das etiquetas.
+  expect(
+    await page.evaluate(() => {
+      const anchor = document.querySelector<HTMLAnchorElement>(
+        'a[href*="id_procedimento=1"]',
+      );
+      const next = anchor?.nextElementSibling as HTMLElement | null;
+      return Boolean(next?.hasAttribute('data-sei-flow'));
+    }),
+  ).toBe(true);
   await expect(page.locator('.sf-card--highlight')).toHaveCount(1);
   await expect(page.getByText('+ Cartão')).toHaveCount(0);
   await expect(page.locator('.sf-toolbar__brand img').first()).toBeVisible();

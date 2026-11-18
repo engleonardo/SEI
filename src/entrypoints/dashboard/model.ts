@@ -6,7 +6,7 @@ export type ActivityFilter = 'any' | 'today' | '7d' | '30d' | 'sinceVisit';
 export type ProcessUpdateFilter = 'any' | 'unread' | 'read';
 export type GroupMode = 'due' | 'board' | 'list' | 'type' | 'label' | 'none';
 export type SortMode = 'due' | 'activity' | 'name' | 'list' | 'board' | 'label' | 'type';
-export type LinkFilter = 'linked' | 'unlinked';
+export type LinkFilter = 'linked' | 'unlinked' | 'all';
 
 export interface DashboardFilters {
   search: string;
@@ -35,7 +35,7 @@ export const DEFAULT_FILTERS: DashboardFilters = {
   processUpdate: 'any',
   sort: 'list',
   group: 'list',
-  link: 'linked',
+  link: 'all',
 };
 
 export type DueBucket = 'overdue' | 'today' | 'soon' | 'later' | 'none' | 'done';
@@ -105,6 +105,7 @@ export const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
 
 const FILTERS_KEY = 'sei-flow:dashboard:filters:v2';
 const LEGACY_FILTERS_KEY = 'sei-flow:dashboard:filters:v1';
+const LINK_ALL_MIGRATION_KEY = 'sei-flow:dashboard:filters:link-all:v1';
 const LAST_VISIT_KEY = 'sei-flow:dashboard:last-visit:v1';
 
 function startOfDay(date: Date): Date {
@@ -401,7 +402,7 @@ export function activeFilterCount(filters: DashboardFilters): number {
   if (filters.due !== 'any') count += 1;
   if (filters.activity !== 'any') count += 1;
   if (filters.processUpdate !== 'any') count += 1;
-  if (filters.link !== 'linked') count += 1;
+  if (filters.link !== 'all') count += 1;
   return count;
 }
 
@@ -421,7 +422,15 @@ export function loadFilters(): DashboardFilters {
     const group = !legacy && groupValues.includes(parsed.group as GroupMode)
       ? (parsed.group as GroupMode)
       : SORT_GROUPS[sort];
-    const link: LinkFilter = parsed.link === 'unlinked' ? 'unlinked' : 'linked';
+    const linkMigrated = window.localStorage.getItem(LINK_ALL_MIGRATION_KEY) === '1';
+    const link: LinkFilter = linkMigrated
+      ? parsed.link === 'unlinked'
+        ? 'unlinked'
+        : parsed.link === 'linked'
+          ? 'linked'
+          : 'all'
+      : 'all';
+    if (!linkMigrated) window.localStorage.setItem(LINK_ALL_MIGRATION_KEY, '1');
     const filters: DashboardFilters = {
       ...DEFAULT_FILTERS,
       ...parsed,

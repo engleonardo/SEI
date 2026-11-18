@@ -422,7 +422,12 @@ export class ListManager {
     action.host.style.display = 'inline-flex';
     action.host.style.verticalAlign = 'middle';
     action.host.style.marginLeft = '3px';
-    actionCell.appendChild(action.host);
+    // Sempre imediatamente após o número do processo, não ao lado das etiquetas.
+    if (info.anchor.parentElement) {
+      info.anchor.insertAdjacentElement('afterend', action.host);
+    } else {
+      actionCell.appendChild(action.host);
+    }
     const actionRoot = mountReact(
       action.container,
       <RowAction
