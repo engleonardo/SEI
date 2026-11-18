@@ -107,6 +107,7 @@ function Dashboard() {
   const [trelloBoards, setTrelloBoards] = useState<TrelloBoard[]>([]);
   const [boardLists, setBoardLists] = useState<TrelloList[]>([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [createTarget, setCreateTarget] = useState<{ boardId: string; listId: string } | null>(null);
   const [view, setView] = useState<'list' | 'board'>(() => {
     try {
       return window.localStorage.getItem('sei-flow:dashboard:view:v1') === 'board' ? 'board' : 'list';
@@ -550,6 +551,16 @@ function Dashboard() {
     }
   };
 
+  const openCreate = (target: { boardId: string; listId: string } | null = null) => {
+    setCreateTarget(target);
+    setShowCreate(true);
+  };
+
+  const closeCreate = () => {
+    setShowCreate(false);
+    setCreateTarget(null);
+  };
+
   const moveCardToList = async (cardId: string, targetListId: string) => {
     const card = cards.find((item) => item.id === cardId);
     if (!card || card.idList === targetListId) return;
@@ -866,7 +877,7 @@ function Dashboard() {
           <button
             type="button"
             className="sfo-btn sfo-btn--sm sfo-btn--primary"
-            onClick={() => setShowCreate(true)}
+            onClick={() => openCreate()}
             disabled={!connected}
             title="Criar cartão no Trello sem abrir o Trello"
           >
@@ -1412,6 +1423,7 @@ function Dashboard() {
           onMoveCard={moveCardToList}
           onMoveColumn={moveColumn}
           canMoveColumns={Boolean(filters.boardId)}
+          onAddCard={(boardId, listId) => openCreate({ boardId, listId })}
         />
       ) : (
         orderedGroups.map((group) => (
@@ -1451,18 +1463,21 @@ function Dashboard() {
       {showCreate && (
         <CreateCardDialog
           defaultName=""
-          initialBoardId={filters.boardId || settings?.defaultBoardId}
-          initialListId={filters.listId || settings?.defaultListId}
-          onClose={() => setShowCreate(false)}
+          initialBoardId={
+            createTarget?.boardId || filters.boardId || settings?.defaultBoardId
+          }
+          initialListId={createTarget?.listId || filters.listId || settings?.defaultListId}
+          onClose={closeCreate}
           onCreated={(card) => {
-            if (filters.link !== 'linked') {
-              if (card.idBoard && card.idBoard !== filters.boardId) {
-                updateFilters({ boardId: card.idBoard, listId: '' });
-              }
-              setCards((previous) => [card, ...previous]);
-            } else {
-              updateFilters({ link: 'all', boardId: card.idBoard });
+            if (card.idBoard && card.idBoard !== filters.boardId) {
+              updateFilters({ boardId: card.idBoard, listId: '' });
             }
+            const linkMismatch =
+              (filters.link === 'linked' && card.links.length === 0) ||
+              (filters.link === 'unlinked' && card.links.length > 0);
+            if (linkMismatch) updateFilters({ link: 'all' });
+            setCards((previous) => [card, ...previous]);
+            closeCreate();
           }}
         />
       )}

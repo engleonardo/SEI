@@ -2566,6 +2566,23 @@
   padding: 2px 0 12px;
   overflow-x: auto;
   scroll-padding-inline: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.sdo-kanban::-webkit-scrollbar {
+  height: 10px;
+}
+
+.sdo-kanban::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--border-strong);
+  background-clip: content-box;
+}
+
+.sdo-kanban::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .sdo-kanban-column {
@@ -2573,11 +2590,15 @@
   flex: 0 0 340px;
   flex-direction: column;
   gap: 8px;
+  width: 340px;
   max-width: 340px;
+  height: clamp(260px, calc(100vh - 440px), 720px);
+  height: clamp(260px, calc(100dvh - 440px), 720px);
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface-soft);
+  overflow: hidden;
   transition:
     border-color 0.15s ease,
     background 0.15s ease;
@@ -2661,9 +2682,50 @@
 
 .sdo-kanban-column__body {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 8px;
-  min-height: 80px;
+  min-height: 0;
+  padding-right: 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.sdo-kanban-column__body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sdo-kanban-column__body::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--border-strong);
+  background-clip: content-box;
+}
+
+.sdo-kanban-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sdo-kanban-add:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+  color: var(--accent);
 }
 
 .sdo-kanban-card {
@@ -2699,9 +2761,60 @@
 }
 
 .sdo-kanban-card .sdo-card {
-  padding: 10px 11px;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  padding: 8px 10px;
+  border-radius: 11px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+.sdo-card--kanban .sdo-card__title-row h3 {
+  font-size: 12.5px;
+}
+
+.sdo-card--kanban .sdo-card__desc {
+  margin-top: 5px;
+  font-size: 11.5px;
+}
+
+.sdo-card--kanban .sdo-card__desc .sf-markdown--compact {
+  max-height: 2.9em;
+}
+
+.sdo-card--kanban .sdo-card__labels {
+  margin-top: 5px;
+}
+
+.sdo-card--kanban .sdo-card__meta {
+  margin-top: 5px;
+  gap: 4px 8px;
+  font-size: 10.5px;
+}
+
+.sdo-card--kanban .sdo-card__footer {
+  margin-top: 6px;
+  padding-top: 5px;
+}
+
+.sdo-card--kanban .sdo-card__footer .sfo-btn {
+  min-height: 24px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+.sdo-card--kanban .sdo-card__action-label {
+  display: none;
+}
+
+.sdo-card--kanban .sdo-card__side {
+  gap: 4px;
+}
+
+.sdo-card--kanban .sdo-card__side .sfo-btn {
+  min-height: 26px;
+  padding: 0 6px;
+}
+
+.sdo-card--kanban .sdo-card__side-actions {
+  gap: 2px;
 }
 
 .sdo-kanban-card .sdo-card__main {

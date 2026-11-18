@@ -50,6 +50,7 @@ const common = {
   onMoveCard: vi.fn(),
   onMoveColumn: vi.fn(),
   canMoveColumns: true,
+  onAddCard: vi.fn(),
 };
 
 describe('KanbanBoard', () => {
@@ -66,5 +67,8 @@ describe('KanbanBoard', () => {
     expect(
       screen.getByRole('button', { name: 'Mover coluna Aguardando para a direita' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: 'Adicionar cartão' }).length,
+    ).toBeGreaterThan(0);
   });
 });

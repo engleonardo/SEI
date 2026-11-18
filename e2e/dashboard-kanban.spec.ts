@@ -107,6 +107,9 @@ async function stubDashboard(page: Page) {
               case 'trello:board-cards':
                 response = ok(cards);
                 break;
+              case 'trello:board-labels':
+                response = ok([]);
+                break;
               case 'trello:update-card':
                 cards = cards.map((item) => {
                   if (item.id !== message.payload?.cardId) return item;
@@ -190,7 +193,7 @@ test('kanban move cartão entre colunas', async ({ page }) => {
   const targetBox = await target.boundingBox();
   if (!cardBox || !targetBox) throw new Error('Sem geometria para o teste de arrastar.');
 
-  await page.mouse.move(cardBox.x + 24, cardBox.y + 20);
+  await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + 36);
   await page.mouse.down();
   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + 60, { steps: 12 });
   await page.mouse.up();
@@ -251,8 +254,19 @@ test('kanban reordena colunas', async ({ page }) => {
   expect(update?.payload?.listId).toBe('list-b');
 });
 
-test('kanban move cartão com o teclado', async ({ page }) => {
+test('kanban abre novo cartão na coluna', async ({ page }) => {
   await stubDashboard(page);
+  await openDashboard(page);
+
+  await page.getByRole('button', { name: 'Visão em quadro (Kanban)' }).click();
+  const firstColumn = page.getByRole('region', { name: 'Coluna Aguardando' });
+  await firstColumn.getByRole('button', { name: 'Adicionar cartão' }).click();
+
+  await expect(page.getByText('Novo cartão no Trello')).toBeVisible();
+  await expect(page.getByRole('dialog').getByLabel('Lista', { exact: true })).toHaveValue('list-a');
+});
+
+test('kanban move cartão com o teclado', async ({ page }) => {  await stubDashboard(page);
   await openDashboard(page);
 
   await expect(page.getByText('Cartão A')).toBeVisible();

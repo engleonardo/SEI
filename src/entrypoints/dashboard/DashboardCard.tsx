@@ -18,6 +18,7 @@ export interface DashboardCardProps {
   card: TrelloCard;
   catalog: ProcessCatalog;
   pinned?: boolean;
+  dense?: boolean;
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
   onToggleLabel: (labelId: string) => void;
@@ -31,6 +32,7 @@ export function DashboardCard({
   card,
   catalog,
   pinned = false,
+  dense = false,
   onChanged,
   onRemoved,
   onToggleLabel,
@@ -153,7 +155,12 @@ export function DashboardCard({
   return (
     <>
       <article
-        className={classNames('sdo-card', unread && 'sdo-card--unread', card.dueComplete && 'sdo-card--done')}
+        className={classNames(
+          'sdo-card',
+          dense && 'sdo-card--kanban',
+          unread && 'sdo-card--unread',
+          card.dueComplete && 'sdo-card--done',
+        )}
       >
         <div className="sdo-card__main">
           <div className="sdo-card__title-row">
@@ -447,9 +454,10 @@ export function DashboardCard({
               target="_blank"
               rel="noreferrer"
               title="Abrir no Trello"
+              aria-label="Abrir no Trello"
             >
               <Icon name="external" size={13} />
-              Trello
+              <span className="sdo-card__action-label">Trello</span>
             </a>
           </div>
         </div>
@@ -461,36 +469,44 @@ export function DashboardCard({
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
               onClick={() => setDialog('labels')}
               disabled={busy}
+              title="Etiquetas"
+              aria-label="Etiquetas"
             >
               <Icon name="tag" size={13} />
-              Etiquetas
+              <span className="sdo-card__action-label">Etiquetas</span>
             </button>
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
               onClick={() => setDialog('checklist')}
               disabled={busy}
+              title="Checklist"
+              aria-label="Checklist"
             >
               <Icon name="checklist" size={13} />
-              Checklist
+              <span className="sdo-card__action-label">Checklist</span>
             </button>
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
               onClick={() => setDialog('due')}
               disabled={busy}
+              title="Prazo"
+              aria-label="Prazo"
             >
               <Icon name="calendar" size={13} />
-              Prazo
+              <span className="sdo-card__action-label">Prazo</span>
             </button>
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
               onClick={() => setLocationOpen((current) => !current)}
               disabled={busy}
+              title="Mover"
+              aria-label="Mover"
             >
               <Icon name="board" size={13} />
-              Mover
+              <span className="sdo-card__action-label">Mover</span>
             </button>
             <button
               type="button"
@@ -500,9 +516,13 @@ export function DashboardCard({
               )}
               onClick={() => void toggleComplete()}
               disabled={busy}
+              title={card.dueComplete ? 'Reabrir' : 'Concluir'}
+              aria-label={card.dueComplete ? 'Reabrir' : 'Concluir'}
             >
               <Icon name={card.dueComplete ? 'refresh' : 'check'} size={13} />
-              {card.dueComplete ? 'Reabrir' : 'Concluir'}
+              <span className="sdo-card__action-label">
+                {card.dueComplete ? 'Reabrir' : 'Concluir'}
+              </span>
             </button>
           </div>
           <div className="sdo-card__footer-danger">

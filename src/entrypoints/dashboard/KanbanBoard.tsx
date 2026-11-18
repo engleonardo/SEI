@@ -1,15 +1,19 @@
-import { useState, type DOMAttributes, type KeyboardEventHandler } from 'react';
+import { useEffect, useRef, useState, type DOMAttributes, type KeyboardEventHandler } from 'react';
 import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
   TouchSensor,
   closestCorners,
+  pointerWithin,
+  rectIntersection,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
@@ -32,11 +36,17 @@ interface KanbanBoardProps {
   onMoveCard: (cardId: string, targetListId: string) => void | Promise<void>;
   onMoveColumn?: (listId: string, direction: 'left' | 'right') => void;
   canMoveColumns?: boolean;
+  onAddCard?: (boardId: string, listId: string) => void;
 }
 
 function listIdFromGroup(group: CardGroup): string {
   const index = group.key.indexOf(':');
   return index >= 0 ? group.key.slice(index + 1) : group.key;
+}
+
+function boardIdFromGroup(group: CardGroup): string {
+  const index = group.key.indexOf(':');
+  return index >= 0 ? group.key.slice(0, index) : '';
 }
 
 function KanbanCard({
@@ -70,6 +80,18 @@ function KanbanCard({
   const pointerListeners = (listeners
     ? { onPointerDown: listeners.onPointerDown, onTouchStart: listeners.onTouchStart }
     : {}) as Pick<DOMAttributes<HTMLDivElement>, 'onPointerDown' | 'onTouchStart'>;
+  const dragged = useRef(false);
+
+  useEffect(() => {
+    if (isDragging) {
+      dragged.current = true;
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      dragged.current = false;
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [isDragging]);
 
   return (
     <div
@@ -78,6 +100,11 @@ function KanbanCard({
       className={classNames('sdo-kanban-card', isDragging && 'sdo-kanban-card--dragging')}
       data-board={group.subtitle ?? ''}
       {...pointerListeners}
+      onClickCapture={(event) => {
+        if (!dragged.current) return;
+        event.preventDefault();
+        event.stopPropagation();
+      }}
     >
       <button
         type="button"
@@ -90,6 +117,7 @@ function KanbanCard({
         card={card}
         catalog={catalog}
         pinned={pinned.has(card.id)}
+        dense
         onChanged={onChanged}
         onRemoved={onRemoved}
         onToggleLabel={onToggleLabel}
@@ -106,6 +134,7 @@ function KanbanColumn({
   total,
   canMoveColumns,
   onMoveColumn,
+  onAddCard,
   catalog,
   pinned,
   onChanged,
@@ -119,6 +148,7 @@ function KanbanColumn({
   total: number;
   canMoveColumns: boolean;
   onMoveColumn?: (listId: string, direction: 'left' | 'right') => void;
+  onAddCard?: (boardId: string, listId: string) => void;
   catalog: ProcessCatalog;
   pinned: Set<string>;
   onChanged: (card: TrelloCard) => void;
@@ -183,6 +213,16 @@ function KanbanColumn({
           />
         ))}
       </div>
+      {onAddCard && (
+        <button
+          type="button"
+          className="sdo-kanban-add"
+          onClick={() => onAddCard(boardIdFromGroup(group), listId)}
+        >
+          <Icon name="plus" size={13} />
+          Adicionar cartão
+        </button>
+      )}
     </section>
   );
 }
@@ -199,6 +239,7 @@ export function KanbanBoard({
   onMoveCard,
   onMoveColumn,
   canMoveColumns = false,
+  onAddCard,
 }: KanbanBoardProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -206,6 +247,13 @@ export function KanbanBoard({
     useSensor(KeyboardSensor),
   );
   const [activeCard, setActiveCard] = useState<TrelloCard | null>(null);
+
+  const collisionDetection: CollisionDetection = (args) => {
+    const pointer = pointerWithin(args);
+    if (pointer.length > 0) return pointer;
+    const intersection = rectIntersection(args);
+    return intersection.length > 0 ? intersection : closestCorners(args);
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     const card = event.active.data.current?.card as TrelloCard | undefined;
@@ -223,7 +271,8 @@ export function KanbanBoard({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetection}
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
       onDragStart={handleDragStart}
       onDragCancel={() => setActiveCard(null)}
       onDragEnd={handleDragEnd}
@@ -237,6 +286,7 @@ export function KanbanBoard({
             total={groups.length}
             canMoveColumns={canMoveColumns}
             onMoveColumn={onMoveColumn}
+            onAddCard={onAddCard}
             catalog={catalog}
             pinned={pinned}
             onChanged={onChanged}
