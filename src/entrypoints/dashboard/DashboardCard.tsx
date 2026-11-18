@@ -422,18 +422,13 @@ export function DashboardCard({
             {onTogglePin && (
               <button
                 type="button"
-                className={classNames(
-                  'sfo-btn',
-                  'sfo-btn--sm',
-                  'sfo-btn--ghost',
-                  pinned && 'sfo-btn--pinned',
-                )}
+                className={classNames('sfo-icon-btn', pinned && 'sfo-icon-btn--pinned')}
                 onClick={() => onTogglePin(card.id)}
                 aria-pressed={pinned}
+                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
                 title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
               >
-                <Icon name="pin" size={13} />
-                {pinned ? 'Fixado' : 'Fixar'}
+                <Icon name="pin" size={14} />
               </button>
             )}
             <button

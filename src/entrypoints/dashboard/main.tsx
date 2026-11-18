@@ -16,6 +16,7 @@ import { showToast } from '../../ui/toast';
 import { setThemePreference } from '../../ui/theme';
 import { ActivationCard } from './ActivationCard';
 import { DashboardCard } from './DashboardCard';
+import { KanbanBoard } from './KanbanBoard';
 import { DashboardFilters, type LabelFilterOption, type TypeFilterOption } from './DashboardFilters';
 import {
   ACTIVITY_FILTER_OPTIONS,
@@ -97,6 +98,13 @@ function Dashboard() {
   const [trelloBoards, setTrelloBoards] = useState<TrelloBoard[]>([]);
   const [boardLists, setBoardLists] = useState<TrelloList[]>([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [view, setView] = useState<'list' | 'board'>(() => {
+    try {
+      return window.localStorage.getItem('sei-flow:dashboard:view:v1') === 'board' ? 'board' : 'list';
+    } catch {
+      return 'list';
+    }
+  });
 
   const version = browser.runtime.getManifest().version;
   const connected = Boolean(settings?.appKey && settings?.appToken);
@@ -459,6 +467,16 @@ function Dashboard() {
     [groups, pinned],
   );
 
+  const kanbanGroups = useMemo(() => {
+    const base = groupCards(visibleCards, 'list', filters.sort, catalog, listOrder);
+    return base.map((group) => ({
+      ...group,
+      cards: [...group.cards].sort(
+        (a, b) => Number(pinned.has(b.id)) - Number(pinned.has(a.id)),
+      ),
+    }));
+  }, [visibleCards, filters.sort, catalog, listOrder, pinned]);
+
   const exportCsv = () => {
     if (visibleCards.length === 0) {
       showToast('Não há cartões para exportar com os filtros atuais.', 'error');
@@ -483,6 +501,42 @@ function Dashboard() {
 
   const handleRemoved = (cardId: string) => {
     setCards((previous) => previous.filter((card) => card.id !== cardId));
+  };
+
+  const changeView = (next: 'list' | 'board') => {
+    setView(next);
+    try {
+      window.localStorage.setItem('sei-flow:dashboard:view:v1', next);
+    } catch {
+      // visualização é preferência local
+    }
+  };
+
+  const moveCardToList = async (cardId: string, targetListId: string) => {
+    const card = cards.find((item) => item.id === cardId);
+    if (!card || card.idList === targetListId) return;
+    const group = kanbanGroups.find((item) => {
+      const index = item.key.indexOf(':');
+      return (index >= 0 ? item.key.slice(index + 1) : item.key) === targetListId;
+    });
+    const listName = group?.title ?? 'outra lista';
+    const optimistic: TrelloCard = {
+      ...card,
+      idList: targetListId,
+      list: { id: targetListId, name: listName, pos: card.list?.pos },
+    };
+    setCards((previous) => previous.map((item) => (item.id === cardId ? optimistic : item)));
+    try {
+      const updated = await callRpc('trello:update-card', {
+        cardId,
+        patch: { idList: targetListId },
+      });
+      handleChanged(updated);
+      showToast(`Cartão movido para ${listName}.`, 'success');
+    } catch (cause) {
+      setCards((previous) => previous.map((item) => (item.id === cardId ? card : item)));
+      showToast(errorMessage(cause), 'error');
+    }
   };
 
   const handleProcessesRead = (numbers: string[]) => {
@@ -1030,6 +1084,28 @@ function Dashboard() {
             ))}
           </select>
         </label>
+        <div className="sdo-view-toggle" role="group" aria-label="Modo de visualização">
+          <button
+            type="button"
+            className={view === 'list' ? 'is-active' : ''}
+            onClick={() => changeView('list')}
+            aria-pressed={view === 'list'}
+            title="Visão em lista"
+            aria-label="Visão em lista"
+          >
+            <Icon name="list" size={14} />
+          </button>
+          <button
+            type="button"
+            className={view === 'board' ? 'is-active' : ''}
+            onClick={() => changeView('board')}
+            aria-pressed={view === 'board'}
+            title="Visão em quadro (Kanban)"
+            aria-label="Visão em quadro (Kanban)"
+          >
+            <Icon name="columns" size={14} />
+          </button>
+        </div>
         <button
           type="button"
           className="sdo-icon-action"
@@ -1041,7 +1117,7 @@ function Dashboard() {
         </button>
       </section>
 
-      {filters.boardId && listCounts.length > 0 && (
+      {view === 'list' && filters.boardId && listCounts.length > 0 && (
         <section className="sdo-lists" aria-label="Cartões por lista">
           <div className="sdo-lists__head">
             <span className="sdo-lists__title">
@@ -1192,6 +1268,18 @@ function Dashboard() {
             </button>
           )}
         </div>
+      ) : view === 'board' ? (
+        <KanbanBoard
+          groups={kanbanGroups}
+          catalog={catalog}
+          pinned={pinned}
+          onChanged={handleChanged}
+          onRemoved={handleRemoved}
+          onToggleLabel={handleToggleLabel}
+          onProcessesRead={handleProcessesRead}
+          onTogglePin={togglePin}
+          onMoveCard={moveCardToList}
+        />
       ) : (
         orderedGroups.map((group) => (
           <section key={group.key} className="sdo-section">

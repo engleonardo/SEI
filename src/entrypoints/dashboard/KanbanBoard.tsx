@@ -1,0 +1,222 @@
+import { useState } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  closestCorners,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import type { TrelloCard } from '../../core/domain/types';
+import type { ProcessCatalog } from '../../core/storage/processes';
+import { Icon } from '../../ui/icons';
+import { classNames } from '../../ui/utils';
+import { DashboardCard } from './DashboardCard';
+import type { CardGroup } from './model';
+
+interface KanbanBoardProps {
+  groups: CardGroup[];
+  catalog: ProcessCatalog;
+  pinned: Set<string>;
+  onChanged: (card: TrelloCard) => void;
+  onRemoved: (cardId: string) => void;
+  onToggleLabel: (labelId: string) => void;
+  onProcessesRead: (numbers: string[]) => void;
+  onTogglePin: (cardId: string) => void;
+  onMoveCard: (cardId: string, targetListId: string) => void | Promise<void>;
+}
+
+function listIdFromGroup(group: CardGroup): string {
+  const index = group.key.indexOf(':');
+  return index >= 0 ? group.key.slice(index + 1) : group.key;
+}
+
+function KanbanCard({
+  card,
+  group,
+  catalog,
+  pinned,
+  onChanged,
+  onRemoved,
+  onToggleLabel,
+  onProcessesRead,
+  onTogglePin,
+}: {
+  card: TrelloCard;
+  group: CardGroup;
+  catalog: ProcessCatalog;
+  pinned: Set<string>;
+  onChanged: (card: TrelloCard) => void;
+  onRemoved: (cardId: string) => void;
+  onToggleLabel: (labelId: string) => void;
+  onProcessesRead: (numbers: string[]) => void;
+  onTogglePin: (cardId: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: card.id,
+    data: { card },
+  });
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={classNames('sdo-kanban-card', isDragging && 'sdo-kanban-card--dragging')}
+      data-board={group.subtitle ?? ''}
+    >
+      <button
+        type="button"
+        className="sdo-kanban-card__handle"
+        {...listeners}
+        {...attributes}
+        aria-label={`Arrastar cartão ${card.name}`}
+        title="Arrastar cartão"
+      >
+        <Icon name="columns" size={12} />
+        Arrastar
+      </button>
+      <DashboardCard
+        card={card}
+        catalog={catalog}
+        pinned={pinned.has(card.id)}
+        onChanged={onChanged}
+        onRemoved={onRemoved}
+        onToggleLabel={onToggleLabel}
+        onProcessesRead={onProcessesRead}
+        onTogglePin={onTogglePin}
+      />
+    </div>
+  );
+}
+
+function KanbanColumn({
+  group,
+  catalog,
+  pinned,
+  onChanged,
+  onRemoved,
+  onToggleLabel,
+  onProcessesRead,
+  onTogglePin,
+}: {
+  group: CardGroup;
+  catalog: ProcessCatalog;
+  pinned: Set<string>;
+  onChanged: (card: TrelloCard) => void;
+  onRemoved: (cardId: string) => void;
+  onToggleLabel: (labelId: string) => void;
+  onProcessesRead: (numbers: string[]) => void;
+  onTogglePin: (cardId: string) => void;
+}) {
+  const listId = listIdFromGroup(group);
+  const { setNodeRef, isOver } = useDroppable({
+    id: `column:${group.key}`,
+    data: { listId },
+  });
+
+  return (
+    <section
+      ref={setNodeRef}
+      className={classNames('sdo-kanban-column', isOver && 'sdo-kanban-column--over')}
+      aria-label={`Coluna ${group.title}`}
+    >
+      <header className="sdo-kanban-column__head">
+        <span className="sdo-kanban-column__dot" />
+        <span className="sdo-kanban-column__title">{group.title}</span>
+        <span className="sdo-kanban-column__count">{group.cards.length}</span>
+        {group.subtitle && <span className="sdo-kanban-column__board">{group.subtitle}</span>}
+      </header>
+      <div className="sdo-kanban-column__body">
+        {group.cards.map((card) => (
+          <KanbanCard
+            key={card.id}
+            card={card}
+            group={group}
+            catalog={catalog}
+            pinned={pinned}
+            onChanged={onChanged}
+            onRemoved={onRemoved}
+            onToggleLabel={onToggleLabel}
+            onProcessesRead={onProcessesRead}
+            onTogglePin={onTogglePin}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function KanbanBoard({
+  groups,
+  catalog,
+  pinned,
+  onChanged,
+  onRemoved,
+  onToggleLabel,
+  onProcessesRead,
+  onTogglePin,
+  onMoveCard,
+}: KanbanBoardProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 160, tolerance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
+  const [activeCard, setActiveCard] = useState<TrelloCard | null>(null);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const card = event.active.data.current?.card as TrelloCard | undefined;
+    setActiveCard(card ?? null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveCard(null);
+    const card = event.active.data.current?.card as TrelloCard | undefined;
+    const targetListId = event.over?.data.current?.listId as string | undefined;
+    if (!card || !targetListId || card.idList === targetListId) return;
+    void onMoveCard(card.id, targetListId);
+  };
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragCancel={() => setActiveCard(null)}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="sdo-kanban" role="list" aria-label="Quadro Kanban">
+        {groups.map((group) => (
+          <KanbanColumn
+            key={group.key}
+            group={group}
+            catalog={catalog}
+            pinned={pinned}
+            onChanged={onChanged}
+            onRemoved={onRemoved}
+            onToggleLabel={onToggleLabel}
+            onProcessesRead={onProcessesRead}
+            onTogglePin={onTogglePin}
+          />
+        ))}
+      </div>
+      <DragOverlay dropAnimation={null}>
+        {activeCard ? (
+          <div className="sdo-kanban-overlay">
+            <Icon name="columns" size={13} />
+            {activeCard.name}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
