@@ -15,7 +15,7 @@ import {
 } from '../storage/settings';
 import { getLastActionTab } from '../storage/last-tab';
 import { exportBackup, importBackup } from '../storage/backup';
-import { listProcessRecords, upsertProcessRecords } from '../storage/processes';
+import { listProcessRecords, markSeiRulesHandled, upsertProcessRecords } from '../storage/processes';
 import { getRules, saveRules } from '../storage/rules';
 import { getLastRuleRun } from '../storage/rule-runs';
 import { clearRuleStats, getRuleStats } from '../storage/rule-stats';
@@ -197,9 +197,12 @@ const handlers = {
   'processes:upsert': async ({ processes }) => {
     const result = await upsertProcessRecords(processes);
     let rulesApplied = 0;
-    if (result.unread.length > 0) {
+    // `pending` também inclui novidades detectadas tarde (extensão fechada no
+    // momento da atualização) e que ainda não passaram pelas regras.
+    if (result.pending.length > 0) {
       try {
-        rulesApplied = (await repository.applySeiUpdateRules(result.unread)).applied;
+        rulesApplied = (await repository.applySeiUpdateRules(result.pending)).applied;
+        await markSeiRulesHandled(result.pending);
       } catch {
         rulesApplied = 0;
       }

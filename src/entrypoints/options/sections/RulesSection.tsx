@@ -695,7 +695,9 @@ export function RulesSection({
                   {rule.trigger.type === 'seiUpdated' && (
                     <p className="sfo-hint" style={{ margin: 0 }}>
                       Dispara quando a lista do SEI indicar novidade no processo vinculado. Roda uma vez por
-                      novidade, em todos os cartões do processo que estejam neste quadro.
+                      novidade, em todos os cartões do processo que estejam neste quadro. Se a novidade for
+                      detectada depois (por exemplo, com a extensão fechada), a regra roda na próxima leitura
+                      da lista.
                     </p>
                   )}
 

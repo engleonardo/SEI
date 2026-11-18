@@ -51,6 +51,22 @@ Antes de concluir qualquer mudança, rode `npm run verify`. Para mudanças de UI
 - Novas permissões exigem justificativa na documentação de publicação e revisão do manifest.
 - Componentes e funções devem ter uma responsabilidade clara; prefira arquivos focados.
 
+## Vault do projeto (Obsidian)
+
+- O planejamento vivo, decisões, escopo, riscos e diário de rodadas ficam em `H:\My Drive\Vault\Vault_SEIFlow`.
+- Antes de começar uma rodada, leia `00 - Início/SEI Flow.md`, `00 - Início/Decisões.md`, `00 - Início/Roadmap.md` e a rodada aberta em `03 - Rodadas`.
+- Registre no Vault: decisões, o que foi feito, testes, pendências e próximos passos.
+- O Vault é a fonte de verdade do planejamento; o repositório guarda código e documentação publicável.
+
+## Fluxo local até aprovação final
+
+- Trabalhe em branch local e valide com build unpacked (`npm run build`, `build:firefox`, `build:edge`).
+- **Não faça push, PR, release nem atualização de loja** enquanto o usuário não der o OK final.
+- Não altere versão (`package.json`), tag, descrição, screenshots ou manifest de loja durante a fase local.
+- Commits locais são permitidos como checkpoint; eles não devem ser enviados ao GitHub.
+- Só depois da validação 100% local: atualizar versão/docs de loja e publicar em uma única atualização.
+- Ao terminar cada rodada, atualize o diário no Vault e descreva a próxima rodada.
+
 ## Testes
 
 - Unidade: `src/**/*.test.ts` (Vitest + jsdom).

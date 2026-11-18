@@ -3,6 +3,12 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [Não lançado]
+
+### Corrigido
+
+- **Regra “processo SEI atualizado”**: novidades detectadas depois do momento da atualização (por exemplo, com a extensão fechada ou aberta no painel) agora são reavaliadas na próxima leitura da lista do SEI. A regra continua rodando **uma vez por novidade**, sem repetir comentários ou datas.
+
 ## [1.5.4] - 2026-11-09
 
 ### Corrigido

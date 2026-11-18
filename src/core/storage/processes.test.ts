@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { browser } from 'wxt/browser';
-import { getProcessCatalog, listProcessRecords, upsertProcessRecords } from './processes';
+import { getProcessCatalog, listProcessRecords, markSeiRulesHandled, upsertProcessRecords } from './processes';
 
 const PROCESS = '11111.111111/2024-11';
 const OTHER = '22222.222222/2025-12';
@@ -75,6 +75,25 @@ describe('catálogo de processos do SEI', () => {
       PROCESS,
     ]);
     expect((await upsertProcessRecords([{ number: PROCESS, unread: true }])).unread).toEqual([]);
+  });
+
+  it('mantém a novidade pendente até as regras serem avaliadas', async () => {
+    const first = await upsertProcessRecords([{ number: PROCESS, unread: true }]);
+    expect(first.pending).toEqual([PROCESS]);
+
+    await markSeiRulesHandled([PROCESS]);
+    let catalog = await getProcessCatalog();
+    expect(catalog[PROCESS]).toMatchObject({ unread: true, seiRuleHandled: true });
+
+    const handled = await upsertProcessRecords([{ number: PROCESS, unread: true }]);
+    expect(handled.pending).toEqual([]);
+
+    // Uma novidade nova reabre a avaliação uma única vez.
+    await upsertProcessRecords([{ number: PROCESS, unread: false }]);
+    const next = await upsertProcessRecords([{ number: PROCESS, unread: true }]);
+    expect(next.pending).toEqual([PROCESS]);
+    catalog = await getProcessCatalog();
+    expect(catalog[PROCESS]).toMatchObject({ unread: true, seiRuleHandled: false });
   });
 
   it('preserva novidade quando o upsert não informa unread', async () => {
