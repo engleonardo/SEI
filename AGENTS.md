@@ -54,6 +54,7 @@ Antes de concluir qualquer mudança, rode `npm run verify`. Para mudanças de UI
 ## Vault do projeto (Obsidian)
 
 - O planejamento vivo, decisões, escopo, riscos e diário de rodadas ficam em `H:\My Drive\Vault\Vault_SEIFlow`.
+- **O Vault nunca entra no GitHub**: não copie, versione, faça backup no repositório, commit ou push do conteúdo do Vault. Ele é um diretório privado/externo ao projeto.
 - Antes de começar uma rodada, leia `00 - Início/SEI Flow.md`, `00 - Início/Decisões.md`, `00 - Início/Roadmap.md` e a rodada aberta em `03 - Rodadas`.
 - Registre no Vault: decisões, o que foi feito, testes, pendências e próximos passos.
 - O Vault é a fonte de verdade do planejamento; o repositório guarda código e documentação publicável.

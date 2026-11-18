@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { CardPatch, TrelloCard } from '../../core/domain/types';
 import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import { Icon } from '../icons';
 import { showToast } from '../toast';
 import { classNames, formatDue, isOverdue, labelColorHex, labelTextColor, locationLabel } from '../utils';
 import { CardDescription } from './CardDescription';
+import { DescriptionEditor } from './DescriptionEditor';
 import { ConfirmDialog } from './Modal';
 import { InlineLocationPicker } from './InlineLocationPicker';
 import { ChecklistDialog } from './dialogs/ChecklistDialog';
@@ -51,16 +52,6 @@ export function CardItem({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (!editingDesc) return;
-    const textarea = descriptionRef.current;
-    if (!textarea) return;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight + 2}px`;
-    textarea.style.overflow = 'hidden';
-  }, [editingDesc, descDraft]);
 
   const due = formatDue(card.due, card.dueComplete);
   const overdue = isOverdue(card);
@@ -330,14 +321,13 @@ export function CardItem({
 
           {editingDesc ? (
             <div style={{ marginTop: 8 }}>
-              <textarea
-                ref={descriptionRef}
-                className="sf-textarea"
+              <DescriptionEditor
                 value={descDraft}
-                onChange={(event) => setDescDraft(event.target.value)}
-                autoFocus
+                onChange={setDescDraft}
                 disabled={busy}
-                aria-label="Descrição do cartão"
+                autoFocus
+                placeholder="Escreva a descrição…"
+                ariaLabel="Descrição do cartão"
               />
               <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                 <button

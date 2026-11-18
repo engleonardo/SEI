@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { CardPatch, TrelloCard } from '../../core/domain/types';
 import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import type { ProcessCatalog } from '../../core/storage/processes';
 import { Icon } from '../../ui/icons';
 import { CardDescription } from '../../ui/components/CardDescription';
+import { DescriptionEditor } from '../../ui/components/DescriptionEditor';
 import { showToast } from '../../ui/toast';
 import { classNames, formatDue, labelColorHex, labelTextColor, locationLabel } from '../../ui/utils';
 import { InlineLocationPicker } from '../../ui/components/InlineLocationPicker';
@@ -44,16 +45,6 @@ export function DashboardCard({
   const [descDraft, setDescDraft] = useState(card.description);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (!editingDesc) return;
-    const textarea = descriptionRef.current;
-    if (!textarea) return;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight + 2}px`;
-    textarea.style.overflow = 'hidden';
-  }, [editingDesc, descDraft]);
 
   const due = formatDue(card.due, card.dueComplete);
   const unread = cardHasUnreadProcess(card, catalog);
@@ -278,14 +269,13 @@ export function DashboardCard({
 
           {editingDesc ? (
             <div className="sdo-card__desc-edit">
-              <textarea
-                ref={descriptionRef}
-                className="sdo-inline-textarea"
+              <DescriptionEditor
                 value={descDraft}
-                onChange={(event) => setDescDraft(event.target.value)}
-                autoFocus
+                onChange={setDescDraft}
                 disabled={busy}
-                aria-label="Descrição do cartão"
+                autoFocus
+                placeholder="Escreva a descrição…"
+                ariaLabel="Descrição do cartão"
               />
               <div className="sdo-inline-edit">
                 <button

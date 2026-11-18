@@ -238,7 +238,7 @@ test('quadro/lista abre seletor inline, sem popup', async ({ page }) => {
   await page.getByRole('button', { name: 'Cancelar' }).click();
 });
 
-test('edição de descrição abre uma área ampla', async ({ page }) => {
+test('edição de descrição abre um editor WYSIWYG', async ({ page }) => {
   await openFixture(
     page,
     'sei-list-v4.html',
@@ -246,11 +246,25 @@ test('edição de descrição abre uma área ampla', async ({ page }) => {
   );
 
   await page.getByText('Descrição do cartão').click();
-  const textarea = page.getByLabel('Descrição do cartão');
-  await expect(textarea).toBeVisible();
-  expect(await textarea.evaluate((element) => (element as HTMLTextAreaElement).clientHeight)).toBeGreaterThan(
-    120,
-  );
+  const editor = page.getByRole('textbox', { name: 'Descrição do cartão' });
+  await expect(editor).toBeVisible();
+  expect(await editor.evaluate((element) => element.clientHeight)).toBeGreaterThan(100);
+
+  // A barra aplica negrito no texto selecionado (execCommand no Shadow DOM).
+  await editor.click();
+  await page.keyboard.press('Control+A');
+  await page.getByRole('button', { name: 'Negrito' }).click();
+  const html = await editor.evaluate((element) => element.innerHTML);
+  expect(html.toLowerCase()).toMatch(/<(strong|b)>/);
+
+  // O link usa a seleção salva antes de abrir o campo de URL.
+  await editor.click();
+  await page.keyboard.press('Control+A');
+  await page.getByRole('button', { name: 'Inserir link' }).click();
+  await page.getByLabel('URL do link').fill('https://trello.com');
+  await page.getByRole('button', { name: 'Aplicar' }).click();
+  const linked = await editor.evaluate((element) => element.innerHTML);
+  expect(linked).toMatch(/href="https:\/\/trello\.com\/?"/);
 });
 
 test('processo aberto mostra o painel completo', async ({ page }) => {
@@ -285,7 +299,7 @@ test('diálogo de novo cartão abre com o destino padrão', async ({ page }) => 
   await expect(page.getByText('Novo cartão no Trello')).toBeVisible();
   await expect(page.getByRole('dialog').getByLabel('Nome')).toHaveValue(PROCESS);
   await expect(page.getByRole('dialog').getByLabel('Quadro')).toHaveValue('board-1');
-  await expect(page.getByRole('dialog').getByLabel('Lista')).toHaveValue('list-1');
+  await expect(page.getByRole('dialog').getByLabel('Lista', { exact: true })).toHaveValue('list-1');
   await expect(page.getByRole('dialog').getByLabel('Início (opcional)')).toHaveValue('');
   await expect(page.getByRole('dialog').getByLabel('Término (opcional)')).toHaveValue('');
   await expect(page.getByRole('dialog').getByRole('button', { name: 'Nova etiqueta' })).toBeVisible();
