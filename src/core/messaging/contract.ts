@@ -35,6 +35,7 @@ export interface RpcMap {
   'dashboard:open': { payload: undefined; result: undefined };
   'trello:boards': { payload: { fresh?: boolean } | undefined; result: TrelloBoard[] };
   'trello:lists': { payload: { boardId: string; fresh?: boolean }; result: TrelloList[] };
+  'trello:update-list': { payload: { listId: string; pos: number }; result: TrelloList };
   'trello:board-cards': { payload: { boardId: string; fresh?: boolean }; result: TrelloCard[] };
   'trello:card': { payload: { cardId: string }; result: TrelloCard };
   'trello:cards-for-process': {

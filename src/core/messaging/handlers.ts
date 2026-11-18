@@ -74,6 +74,7 @@ const handlers = {
 
   'trello:boards': (payload) => repository.getBoards(payload?.fresh),
   'trello:lists': ({ boardId, fresh }) => repository.getLists(boardId, fresh),
+  'trello:update-list': ({ listId, pos }) => repository.updateListPosition(listId, pos),
   'trello:board-cards': ({ boardId, fresh }) => repository.getBoardCards(boardId, fresh),
   'trello:card': ({ cardId }) => repository.getCard(cardId),
   'trello:cards-for-process': ({ processNumber, fresh }) =>

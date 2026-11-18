@@ -48,6 +48,8 @@ const common = {
   onProcessesRead: vi.fn(),
   onTogglePin: vi.fn(),
   onMoveCard: vi.fn(),
+  onMoveColumn: vi.fn(),
+  canMoveColumns: true,
 };
 
 describe('KanbanBoard', () => {
@@ -59,7 +61,10 @@ describe('KanbanBoard', () => {
     expect(screen.getByText('Cartão A')).toBeInTheDocument();
     expect(screen.getByText('Cartão B')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Arrastar cartão Cartão A' }),
+      screen.getByRole('button', { name: /Mover cartão Cartão A/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Mover coluna Aguardando para a direita' }),
     ).toBeInTheDocument();
   });
 });

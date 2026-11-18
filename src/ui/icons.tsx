@@ -15,6 +15,8 @@ export type IconName =
   | 'search'
   | 'chevronDown'
   | 'chevronUp'
+  | 'chevronLeft'
+  | 'chevronRight'
   | 'download'
   | 'upload'
   | 'copy'
@@ -31,6 +33,7 @@ export type IconName =
   | 'sun'
   | 'moon'
   | 'pin'
+  | 'undo'
   | 'info';
 
 const paths: Record<IconName, ReactNode> = {
@@ -103,6 +106,12 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M12 13v8" />
     </>
   ),
+  undo: (
+    <>
+      <path d="M9 7L4 12l5 5" />
+      <path d="M4 12h9a6 6 0 0 1 6 6v1" />
+    </>
+  ),
   close: <path d="M6 6l12 12M18 6L6 18" />,
   search: (
     <>
@@ -112,6 +121,8 @@ const paths: Record<IconName, ReactNode> = {
   ),
   chevronDown: <path d="M6 9l6 6 6-6" />,
   chevronUp: <path d="M6 15l6-6 6 6" />,
+  chevronLeft: <path d="M15 6l-6 6 6 6" />,
+  chevronRight: <path d="M9 6l6 6-6 6" />,
   download: (
     <>
       <path d="M12 3v12" />

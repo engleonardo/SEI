@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type DOMAttributes, type KeyboardEventHandler } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -30,6 +30,8 @@ interface KanbanBoardProps {
   onProcessesRead: (numbers: string[]) => void;
   onTogglePin: (cardId: string) => void;
   onMoveCard: (cardId: string, targetListId: string) => void | Promise<void>;
+  onMoveColumn?: (listId: string, direction: 'left' | 'right') => void;
+  canMoveColumns?: boolean;
 }
 
 function listIdFromGroup(group: CardGroup): string {
@@ -65,6 +67,9 @@ function KanbanCard({
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
+  const pointerListeners = (listeners
+    ? { onPointerDown: listeners.onPointerDown, onTouchStart: listeners.onTouchStart }
+    : {}) as Pick<DOMAttributes<HTMLDivElement>, 'onPointerDown' | 'onTouchStart'>;
 
   return (
     <div
@@ -72,18 +77,15 @@ function KanbanCard({
       style={style}
       className={classNames('sdo-kanban-card', isDragging && 'sdo-kanban-card--dragging')}
       data-board={group.subtitle ?? ''}
+      {...pointerListeners}
     >
       <button
         type="button"
-        className="sdo-kanban-card__handle"
-        {...listeners}
+        className="sdo-kanban-card__a11y"
         {...attributes}
-        aria-label={`Arrastar cartão ${card.name}`}
-        title="Arrastar cartão"
-      >
-        <Icon name="columns" size={12} />
-        Arrastar
-      </button>
+        onKeyDown={listeners?.onKeyDown as KeyboardEventHandler<HTMLButtonElement> | undefined}
+        aria-label={`Mover cartão ${card.name}. Pressione Espaço, use as setas e confirme com Espaço.`}
+      />
       <DashboardCard
         card={card}
         catalog={catalog}
@@ -100,6 +102,10 @@ function KanbanCard({
 
 function KanbanColumn({
   group,
+  index,
+  total,
+  canMoveColumns,
+  onMoveColumn,
   catalog,
   pinned,
   onChanged,
@@ -109,6 +115,10 @@ function KanbanColumn({
   onTogglePin,
 }: {
   group: CardGroup;
+  index: number;
+  total: number;
+  canMoveColumns: boolean;
+  onMoveColumn?: (listId: string, direction: 'left' | 'right') => void;
   catalog: ProcessCatalog;
   pinned: Set<string>;
   onChanged: (card: TrelloCard) => void;
@@ -133,6 +143,28 @@ function KanbanColumn({
         <span className="sdo-kanban-column__dot" />
         <span className="sdo-kanban-column__title">{group.title}</span>
         <span className="sdo-kanban-column__count">{group.cards.length}</span>
+        {canMoveColumns && onMoveColumn && (
+          <div className="sdo-kanban-column__actions">
+            <button
+              type="button"
+              onClick={() => onMoveColumn(listId, 'left')}
+              disabled={index === 0}
+              title="Mover coluna para a esquerda"
+              aria-label={`Mover coluna ${group.title} para a esquerda`}
+            >
+              <Icon name="chevronLeft" size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onMoveColumn(listId, 'right')}
+              disabled={index === total - 1}
+              title="Mover coluna para a direita"
+              aria-label={`Mover coluna ${group.title} para a direita`}
+            >
+              <Icon name="chevronRight" size={13} />
+            </button>
+          </div>
+        )}
         {group.subtitle && <span className="sdo-kanban-column__board">{group.subtitle}</span>}
       </header>
       <div className="sdo-kanban-column__body">
@@ -165,6 +197,8 @@ export function KanbanBoard({
   onProcessesRead,
   onTogglePin,
   onMoveCard,
+  onMoveColumn,
+  canMoveColumns = false,
 }: KanbanBoardProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -195,10 +229,14 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
     >
       <div className="sdo-kanban" role="list" aria-label="Quadro Kanban">
-        {groups.map((group) => (
+        {groups.map((group, index) => (
           <KanbanColumn
             key={group.key}
             group={group}
+            index={index}
+            total={groups.length}
+            canMoveColumns={canMoveColumns}
+            onMoveColumn={onMoveColumn}
             catalog={catalog}
             pinned={pinned}
             onChanged={onChanged}

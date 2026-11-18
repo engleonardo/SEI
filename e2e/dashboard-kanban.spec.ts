@@ -5,6 +5,7 @@ const BOARD = { id: 'board-1', name: 'DEMANDAS' };
 const LISTS = [
   { id: 'list-a', name: 'Aguardando' },
   { id: 'list-b', name: 'Demandas' },
+  { id: 'list-c', name: 'Concluído' },
 ];
 
 function card(id: string, name: string, idList: string, links: string[]) {
@@ -74,7 +75,15 @@ async function stubDashboard(page: Page) {
           getURL: (path: string) => path,
           getManifest: () => ({ version: '1.5.4' }),
           sendMessage: (
-            message: { rpc: string; payload?: { cardId?: string; patch?: { idList?: string } } },
+            message: {
+              rpc: string;
+              payload?: {
+                cardId?: string;
+                patch?: { idList?: string };
+                listId?: string;
+                pos?: number;
+              };
+            },
             callback?: (response: unknown) => void,
           ) => {
             calls.push({ rpc: message.rpc, payload: message.payload });
@@ -109,6 +118,13 @@ async function stubDashboard(page: Page) {
                   };
                 });
                 response = ok(cards.find((item) => item.id === message.payload?.cardId));
+                break;
+              case 'trello:update-list':
+                response = ok({
+                  id: message.payload?.listId,
+                  name: lists.find((list) => list.id === message.payload?.listId)?.name ?? '',
+                  pos: message.payload?.pos,
+                });
                 break;
               default:
                 response = ok(null);
@@ -153,15 +169,28 @@ test('kanban move cartão entre colunas', async ({ page }) => {
   await expect(page.getByText('Cartão A')).toBeVisible();
   await page.getByRole('button', { name: 'Visão em quadro (Kanban)' }).click();
   await expect(page.getByRole('region', { name: 'Coluna Aguardando' })).toBeVisible();
+  await expect(page.locator('.sdo-page')).toHaveClass(/sdo-page--kanban/);
+  await expect(page.locator('.sdo-kanban-column__title')).toHaveText([
+    'Aguardando',
+    'Demandas',
+    'Concluído',
+  ]);
+  await expect(page.getByRole('region', { name: 'Coluna Concluído' })).toBeVisible();
+  await expect(page.getByText('Arrastar', { exact: true })).toHaveCount(0);
+  const cardOverflow = await page
+    .locator('.sdo-kanban-card')
+    .first()
+    .evaluate((element) => element.scrollWidth - element.clientWidth);
+  expect(cardOverflow).toBeLessThanOrEqual(1);
   const target = page.getByRole('region', { name: 'Coluna Demandas' });
   await expect(target).toBeVisible();
 
-  const handle = page.getByRole('button', { name: 'Arrastar cartão Cartão A' });
-  const handleBox = await handle.boundingBox();
+  const sourceCard = page.locator('.sdo-kanban-card').filter({ hasText: 'Cartão A' }).first();
+  const cardBox = await sourceCard.boundingBox();
   const targetBox = await target.boundingBox();
-  if (!handleBox || !targetBox) throw new Error('Sem geometria para o teste de arrastar.');
+  if (!cardBox || !targetBox) throw new Error('Sem geometria para o teste de arrastar.');
 
-  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.move(cardBox.x + 24, cardBox.y + 20);
   await page.mouse.down();
   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + 60, { steps: 12 });
   await page.mouse.up();
@@ -184,6 +213,42 @@ test('kanban move cartão entre colunas', async ({ page }) => {
   );
   expect(update?.payload?.patch?.idList).toBe('list-b');
   await expect(target.getByText('Cartão A')).toBeVisible();
+
+  // Desfazer pelo botão devolve o cartão para a coluna de origem.
+  await page.getByRole('button', { name: 'Desfazer última movimentação' }).click();
+  await expect(page.getByRole('region', { name: 'Coluna Aguardando' }).getByText('Cartão A')).toBeVisible();
+  const undoCall = await page.evaluate(
+    () =>
+      ((window as unknown as { __rpcCalls?: Array<{ rpc: string; payload?: { patch?: { idList?: string } } }> })
+        .__rpcCalls ?? []).filter((call) => call.rpc === 'trello:update-card').at(-1),
+  );
+  expect(undoCall?.payload?.patch?.idList).toBe('list-a');
+});
+
+test('kanban reordena colunas', async ({ page }) => {
+  await stubDashboard(page);
+  await openDashboard(page);
+
+  await page.getByRole('button', { name: 'Visão em quadro (Kanban)' }).click();
+  await expect(page.locator('.sdo-kanban-column__title')).toHaveText([
+    'Aguardando',
+    'Demandas',
+    'Concluído',
+  ]);
+
+  await page.getByRole('button', { name: 'Mover coluna Demandas para a esquerda' }).click();
+  await expect(page.locator('.sdo-kanban-column__title')).toHaveText([
+    'Demandas',
+    'Aguardando',
+    'Concluído',
+  ]);
+
+  const update = await page.evaluate(
+    () =>
+      ((window as unknown as { __rpcCalls?: Array<{ rpc: string; payload?: { listId?: string } }> })
+        .__rpcCalls ?? []).filter((call) => call.rpc === 'trello:update-list').at(-1),
+  );
+  expect(update?.payload?.listId).toBe('list-b');
 });
 
 test('kanban move cartão com o teclado', async ({ page }) => {
@@ -192,10 +257,10 @@ test('kanban move cartão com o teclado', async ({ page }) => {
 
   await expect(page.getByText('Cartão A')).toBeVisible();
   await page.getByRole('button', { name: 'Visão em quadro (Kanban)' }).click();
-  const handle = page.getByRole('button', { name: 'Arrastar cartão Cartão A' });
+  const handle = page.getByRole('button', { name: /Mover cartão Cartão A/ });
   await handle.focus();
   await page.keyboard.press('Space');
-  for (let index = 0; index < 24; index += 1) {
+  for (let index = 0; index < 14; index += 1) {
     await page.keyboard.press('ArrowRight');
   }
   await page.keyboard.press('Space');
@@ -217,4 +282,23 @@ test('kanban move cartão com o teclado', async ({ page }) => {
         .__rpcCalls ?? []).find((call) => call.rpc === 'trello:update-card'),
   );
   expect(update?.payload?.patch?.idList).toBe('list-b');
+
+  // Ctrl+Z desfaz a última movimentação.
+  await page.keyboard.press('Control+z');
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          ((window as unknown as { __rpcCalls?: Array<{ rpc: string }> }).__rpcCalls ?? []).filter(
+            (call) => call.rpc === 'trello:update-card',
+          ).length,
+      ),
+    )
+    .toBeGreaterThan(1);
+  const undoCall = await page.evaluate(
+    () =>
+      ((window as unknown as { __rpcCalls?: Array<{ rpc: string; payload?: { patch?: { idList?: string } } }> })
+        .__rpcCalls ?? []).filter((call) => call.rpc === 'trello:update-card').at(-1),
+  );
+  expect(undoCall?.payload?.patch?.idList).toBe('list-a');
 });

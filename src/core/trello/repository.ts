@@ -133,6 +133,21 @@ export class TrelloRepository {
     return cacheGetOrSet(`lists:${boardId}`, CACHE_TTL.boardLists, load);
   }
 
+  async updateListPosition(listId: string, pos: number): Promise<TrelloList> {
+    const response = await this.client.put<{
+      id: string;
+      name: string;
+      pos?: number;
+    }>(`/lists/${listId}`, { pos });
+    await cacheDeleteByPrefix('lists:');
+    await cacheDeleteByPrefix('boardcards:');
+    return {
+      id: response?.id ?? listId,
+      name: response?.name ?? '',
+      pos: response?.pos ?? pos,
+    };
+  }
+
   async getBoardCards(boardId: string, fresh = false): Promise<TrelloCard[]> {
     const load = async () => {
       const [board, lists, raw] = await Promise.all([

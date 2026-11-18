@@ -84,6 +84,15 @@ function summarize(cards: TrelloCard[], catalog: ProcessCatalog) {
   };
 }
 
+interface MoveHistoryEntry {
+  cardId: string;
+  cardName: string;
+  fromListId: string;
+  fromListName: string;
+  toListId: string;
+  toListName: string;
+}
+
 function Dashboard() {
   const [cards, setCards] = useState<TrelloCard[]>([]);
   const [catalog, setCatalog] = useState<ProcessCatalog>({});
@@ -105,6 +114,8 @@ function Dashboard() {
       return 'list';
     }
   });
+  const [moveHistory, setMoveHistory] = useState<MoveHistoryEntry[]>([]);
+  const undoRef = useRef<() => void>(() => undefined);
 
   const version = browser.runtime.getManifest().version;
   const connected = Boolean(settings?.appKey && settings?.appToken);
@@ -286,6 +297,11 @@ function Dashboard() {
         target instanceof HTMLSelectElement ||
         (target instanceof HTMLElement && target.isContentEditable);
       if (editable) return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        undoRef.current();
+        return;
+      }
       const isShortcut =
         event.key === '/' || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k');
       if (!isShortcut) return;
@@ -468,14 +484,36 @@ function Dashboard() {
   );
 
   const kanbanGroups = useMemo(() => {
+    const sortPinned = (a: TrelloCard, b: TrelloCard) =>
+      Number(pinned.has(b.id)) - Number(pinned.has(a.id));
+    if (filters.boardId && listCounts.length > 0) {
+      const boardName =
+        boards.find((board) => board.id === filters.boardId)?.name ??
+        settings?.defaultBoardName ??
+        'Quadro';
+      return listCounts.map((list) => ({
+        key: `${filters.boardId}:${list.id}`,
+        title: list.name,
+        subtitle: boardName,
+        cards: visibleCards.filter((card) => card.idList === list.id).sort(sortPinned),
+      }));
+    }
     const base = groupCards(visibleCards, 'list', filters.sort, catalog, listOrder);
     return base.map((group) => ({
       ...group,
-      cards: [...group.cards].sort(
-        (a, b) => Number(pinned.has(b.id)) - Number(pinned.has(a.id)),
-      ),
+      cards: [...group.cards].sort(sortPinned),
     }));
-  }, [visibleCards, filters.sort, catalog, listOrder, pinned]);
+  }, [
+    filters.boardId,
+    listCounts,
+    visibleCards,
+    filters.sort,
+    catalog,
+    listOrder,
+    pinned,
+    boards,
+    settings?.defaultBoardName,
+  ]);
 
   const exportCsv = () => {
     if (visibleCards.length === 0) {
@@ -520,6 +558,7 @@ function Dashboard() {
       return (index >= 0 ? item.key.slice(index + 1) : item.key) === targetListId;
     });
     const listName = group?.title ?? 'outra lista';
+    const fromListName = card.list?.name ?? 'lista atual';
     const optimistic: TrelloCard = {
       ...card,
       idList: targetListId,
@@ -532,12 +571,93 @@ function Dashboard() {
         patch: { idList: targetListId },
       });
       handleChanged(updated);
+      setMoveHistory((previous) => [
+        ...previous.slice(-19),
+        {
+          cardId,
+          cardName: card.name,
+          fromListId: card.idList,
+          fromListName,
+          toListId: targetListId,
+          toListName: listName,
+        },
+      ]);
       showToast(`Cartão movido para ${listName}.`, 'success');
     } catch (cause) {
       setCards((previous) => previous.map((item) => (item.id === cardId ? card : item)));
       showToast(errorMessage(cause), 'error');
     }
   };
+
+  const moveColumn = async (listId: string, direction: 'left' | 'right') => {
+    if (!filters.boardId) return;
+    const index = boardLists.findIndex((list) => list.id === listId);
+    if (index < 0) return;
+    const targetIndex = direction === 'left' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= boardLists.length) return;
+    const current = boardLists[index];
+    const target = boardLists[targetIndex];
+    if (!current || !target) return;
+    const neighbor = boardLists[direction === 'left' ? index - 2 : index + 2];
+    const targetPos = target.pos ?? targetIndex;
+    const neighborPos =
+      neighbor?.pos ?? (direction === 'left' ? targetPos - 1 : targetPos + 1);
+    const newPos =
+      direction === 'left'
+        ? neighbor
+          ? (neighborPos + targetPos) / 2
+          : targetPos - 1
+        : neighbor
+          ? (targetPos + neighborPos) / 2
+          : targetPos + 1;
+    const previous = boardLists;
+    const moved = { ...current, pos: newPos };
+    const reordered = boardLists.filter((list) => list.id !== listId);
+    reordered.splice(targetIndex, 0, moved);
+    setBoardLists(reordered);
+    try {
+      await callRpc('trello:update-list', { listId, pos: newPos });
+      showToast('Ordem das listas atualizada.', 'success');
+    } catch (cause) {
+      setBoardLists(previous);
+      showToast(errorMessage(cause), 'error');
+    }
+  };
+
+  const undoLastMove = async () => {    const entry = moveHistory[moveHistory.length - 1];
+    if (!entry) return;
+    const card = cards.find((item) => item.id === entry.cardId);
+    if (!card) {
+      setMoveHistory((previous) => previous.slice(0, -1));
+      return;
+    }
+    const optimistic: TrelloCard = {
+      ...card,
+      idList: entry.fromListId,
+      list: { id: entry.fromListId, name: entry.fromListName, pos: card.list?.pos },
+    };
+    setCards((previous) => previous.map((item) => (item.id === entry.cardId ? optimistic : item)));
+    try {
+      const updated = await callRpc('trello:update-card', {
+        cardId: entry.cardId,
+        patch: { idList: entry.fromListId },
+      });
+      handleChanged(updated);
+      setMoveHistory((previous) => previous.slice(0, -1));
+      showToast(`Movimentação desfeita: ${entry.cardName} voltou para ${entry.fromListName}.`, 'success');
+    } catch (cause) {
+      setCards((previous) => previous.map((item) => (item.id === entry.cardId ? card : item)));
+      showToast(errorMessage(cause), 'error');
+    }
+  };
+
+  useEffect(() => {
+    undoRef.current = () => void undoLastMove();
+  });
+
+  useEffect(() => {
+    setMoveHistory([]);
+  }, [filters.boardId]);
 
   const handleProcessesRead = (numbers: string[]) => {
     setCatalog((previous) => {
@@ -703,7 +823,7 @@ function Dashboard() {
   }
 
   return (
-    <div className="sdo-page">
+    <div className={`sdo-page${view === 'board' ? ' sdo-page--kanban' : ''}`}>
       <header className="sdo-hero">
         <div className="sdo-hero__brand">
           <div className="sdo-hero__mark">
@@ -1106,6 +1226,17 @@ function Dashboard() {
             <Icon name="columns" size={14} />
           </button>
         </div>
+        {view === 'board' && moveHistory.length > 0 && (
+          <button
+            type="button"
+            className="sdo-icon-action"
+            onClick={() => void undoLastMove()}
+            title="Desfazer última movimentação (Ctrl+Z)"
+            aria-label="Desfazer última movimentação"
+          >
+            <Icon name="undo" size={15} />
+          </button>
+        )}
         <button
           type="button"
           className="sdo-icon-action"
@@ -1279,6 +1410,8 @@ function Dashboard() {
           onProcessesRead={handleProcessesRead}
           onTogglePin={togglePin}
           onMoveCard={moveCardToList}
+          onMoveColumn={moveColumn}
+          canMoveColumns={Boolean(filters.boardId)}
         />
       ) : (
         orderedGroups.map((group) => (
