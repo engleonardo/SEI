@@ -123,6 +123,11 @@ function Dashboard() {
   const [connected, setConnected] = useState(
     Boolean(settings?.appKey && settings?.appToken),
   );
+  const [authAccount, setAuthAccount] = useState<{
+    fullName: string;
+    username: string;
+  } | null>(null);
+  const [authMode, setAuthMode] = useState<'oauth' | 'token' | 'none' | null>(null);
   const loadSeq = useRef(0);
   const defaultBoardApplied = useRef(false);
   const mirrorSynced = useRef(false);
@@ -143,6 +148,14 @@ function Dashboard() {
           ? auth.connected
           : Boolean(nextSettings.appKey && nextSettings.appToken);
         setConnected(hasCredentials);
+        setAuthMode(
+          auth?.mode ?? (nextSettings.appKey && nextSettings.appToken ? 'token' : 'none'),
+        );
+        setAuthAccount(
+          auth?.account
+            ? { fullName: auth.account.fullName, username: auth.account.username }
+            : null,
+        );
 
         const [processRecords, nextLastTab, nextBoards] = await Promise.all([
           callRpc('processes:list', undefined),
@@ -872,9 +885,23 @@ function Dashboard() {
             </div>
             <p>Gestão eficiente de processos, prazos, etiquetas e cartões.</p>
             <div className="sdo-hero__status">
-              <span className={`sdo-status ${connected ? 'sdo-status--on' : 'sdo-status--off'}`}>
+              <span
+                className={`sdo-status ${connected ? 'sdo-status--on' : 'sdo-status--off'}`}
+                title={
+                  authAccount
+                    ? `Conectado como ${authAccount.fullName} (@${authAccount.username})`
+                    : undefined
+                }
+              >
                 <span className="sdo-status__dot" />
-                Trello {connected ? 'conectado' : 'não conectado'}
+                <span className="sdo-status__label">
+                  Trello {connected ? 'conectado' : 'não conectado'}
+                  {connected && authAccount
+                    ? ` · ${authAccount.fullName}`
+                    : connected && authMode === 'token'
+                      ? ' · manual'
+                      : ''}
+                </span>
               </span>
               <span
                 className={`sdo-status ${hasActivatedSite ? 'sdo-status--on' : 'sdo-status--off'}`}

@@ -17,7 +17,7 @@ import {
  * É público por definição: não existe client secret nesta extensão.
  * Se o login retornar `invalid_client`, confira o valor com o botão "Copiar".
  */
-export const OAUTH_CLIENT_ID = 'VXXJc2TKaHxJm5AG3gCRcydxlBJUkpW4';
+export const OAUTH_CLIENT_ID = 'VVXJc2IKaHxJm5AG3gCRCydxIBjUKpW4';
 
 /** Precisa ser idêntica à URL registrada no app do Trello (sem barra final). */
 export const OAUTH_REDIRECT_URI = 'https://engleonardo.github.io/SEI/oauth-callback.html';
