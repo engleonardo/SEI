@@ -114,7 +114,7 @@ function App() {
 
   const reloadBoards = useCallback(async (): Promise<Settings | null> => {
     try {
-      await callRpc('sync:config', { force: false }).catch(() => null);
+      void callRpc('sync:config', { force: false }).catch(() => null);
       const current = await callRpc('settings:get', undefined);
       setSettings(current);
       void hasBroadSiteAccess().then(setSitePermission);

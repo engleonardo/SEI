@@ -131,6 +131,7 @@ function Dashboard() {
   const loadSeq = useRef(0);
   const defaultBoardApplied = useRef(false);
   const mirrorSynced = useRef(false);
+  const skipNextLoad = useRef(false);
 
   const load = useCallback(
     async (silent = false, quiet = false) => {
@@ -141,8 +142,8 @@ function Dashboard() {
       try {
         const auth = await callRpc('auth:status', undefined).catch(() => null);
         if (auth?.connected) {
-          // Puxa regras/destino salvos em outro navegador (no máximo 1x por minuto).
-          await callRpc('sync:config', { force: false }).catch(() => null);
+          // Puxa regras/destino em segundo plano; não bloqueia o painel.
+          void callRpc('sync:config', { force: false }).catch(() => null);
         }
         const nextSettings = await callRpc('settings:get', undefined);
         if (seq !== loadSeq.current) return;
@@ -250,12 +251,17 @@ function Dashboard() {
   );
 
   useEffect(() => {
+    if (skipNextLoad.current) {
+      skipNextLoad.current = false;
+      return;
+    }
     void load();
   }, [load]);
 
   // Ao desconectar, não deixa filtros/quadro do usuário anterior no painel.
   useEffect(() => {
     if (loading || connected) return;
+    skipNextLoad.current = true;
     setShowFilters(false);
     setFilters(DEFAULT_FILTERS);
     saveFilters(DEFAULT_FILTERS);

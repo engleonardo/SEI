@@ -255,6 +255,7 @@ async function pushConfig(client: TrelloClient): Promise<SyncResult> {
 
 /** Envia o estado local agora (usado após salvar regras/destino). */
 export async function pushConfigNow(): Promise<SyncResult> {
+  if (syncInFlight) await syncInFlight.catch(() => undefined);
   const client = new TrelloClient(loadTrelloCredentials);
   return pushConfig(client);
 }
@@ -263,7 +264,7 @@ export async function pushConfigNow(): Promise<SyncResult> {
  * Pull/push conforme o mais recente. A primeira sincronização de um navegador
  * vazio não sobrescreve o Trello com as regras padrão.
  */
-export async function syncConfig(options: { force?: boolean } = {}): Promise<SyncResult> {
+async function runSync(options: { force?: boolean } = {}): Promise<SyncResult> {
   const client = new TrelloClient(loadTrelloCredentials);
   if (pendingPush) {
     // Mudança local ainda não enviada: envia antes de qualquer pull.
@@ -302,6 +303,17 @@ export async function syncConfig(options: { force?: boolean } = {}): Promise<Syn
 
   await writeMeta({ boardId, listId, updatedAt: config.updatedAt, lastAttemptAt: now });
   return { pulled: false, pushed: false, updatedAt: config.updatedAt };
+}
+
+let syncInFlight: Promise<SyncResult> | null = null;
+
+/** Evita duas sincronizações concorrentes (login + painel + alarme). */
+export function syncConfig(options: { force?: boolean } = {}): Promise<SyncResult> {
+  if (syncInFlight) return syncInFlight;
+  syncInFlight = runSync(options).finally(() => {
+    syncInFlight = null;
+  });
+  return syncInFlight;
 }
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null;

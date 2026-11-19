@@ -88,11 +88,11 @@ const handlers = {
 
   'auth:login': async () => {
     const session = await startLogin();
-    try {
-      await syncConfig({ force: true });
-    } catch {
-      // Sincronização é best-effort: não impede o login.
-    }
+    // Dá uma chance ao sync, mas não deixa o login preso se o Trello demorar.
+    await Promise.race([
+      syncConfig({ force: true }),
+      new Promise<void>((resolve) => setTimeout(resolve, 4_000)),
+    ]).catch(() => undefined);
     try {
       const info = await repository.testConnection();
       const updated = await writeAccount({
