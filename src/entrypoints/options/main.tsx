@@ -138,7 +138,7 @@ function App() {
       setTab('destination');
       return;
     }
-    if (!fresh.allSites && fresh.activatedOrigins.length === 0) {
+    if (!fresh.allSites && !fresh.autoSeiHosts && fresh.activatedOrigins.length === 0) {
       setTab('sites');
     }
   }, []);

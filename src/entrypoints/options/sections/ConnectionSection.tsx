@@ -73,8 +73,10 @@ export function ConnectionSection({
           ? `Conectado como ${status.account.fullName}.`
           : 'Login com o Trello concluído.',
       });
-      const fresh = await reloadBoards();
+      // Navega para o próximo passo sem esperar o recarregamento dos quadros.
+      const fresh = await callRpc('settings:get', undefined).catch(() => null);
       onLoginComplete?.(fresh);
+      void reloadBoards();
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
     } finally {

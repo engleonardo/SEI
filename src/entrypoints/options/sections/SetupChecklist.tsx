@@ -17,7 +17,10 @@ export function SetupChecklist({
   if (!connected) return null;
 
   const destinationDone = Boolean(settings.defaultBoardId && settings.defaultListId);
-  const siteDone = settings.allSites || settings.activatedOrigins.length > 0;
+  const siteDone =
+    settings.allSites ||
+    settings.autoSeiHosts ||
+    settings.activatedOrigins.length > 0;
 
   const steps = [
     {
