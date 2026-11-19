@@ -1276,6 +1276,46 @@ function Dashboard() {
         </button>
       </section>
 
+      {showFilters && (
+        <DashboardFilters
+          filters={filters}
+          boards={boards}
+          lists={lists}
+          labels={labels}
+          types={types}
+          visibleCount={visibleCards.length}
+          totalCount={cards.length}
+          lastVisit={lastVisit}
+          onChange={updateFilters}
+          onClear={clearFilters}
+          onMarkSeen={markSeen}
+          onExport={exportCsv}
+          onCollapse={() => setShowFilters(false)}
+          showSearch={false}
+        />
+      )}
+
+      {activeChips.length > 0 && (
+        <div className="sdo-active-chips">
+          <span className="sdo-active-chips__label">Filtros ativos</span>
+          {activeChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              className="sdo-chip sdo-chip--removable"
+              onClick={() => updateFilters(chip.clear)}
+              title={`Remover filtro: ${chip.label}`}
+            >
+              {chip.label}
+              <Icon name="close" size={10} />
+            </button>
+          ))}
+          <button type="button" className="sdo-chip sdo-chip--clear" onClick={clearFilters}>
+            <Icon name="close" size={11} /> Limpar
+          </button>
+        </div>
+      )}
+
       {view === 'list' && filters.boardId && listCounts.length > 0 && (
         <section className="sdo-lists" aria-label="Cartões por lista">
           <div className="sdo-lists__head">
@@ -1364,44 +1404,7 @@ function Dashboard() {
         </section>
       )}
 
-      {activeChips.length > 0 && (
-        <div className="sdo-active-chips">
-          <span className="sdo-active-chips__label">Filtros ativos</span>
-          {activeChips.map((chip) => (
-            <button
-              key={chip.key}
-              type="button"
-              className="sdo-chip sdo-chip--removable"
-              onClick={() => updateFilters(chip.clear)}
-              title={`Remover filtro: ${chip.label}`}
-            >
-              {chip.label}
-              <Icon name="close" size={10} />
-            </button>
-          ))}
-          <button type="button" className="sdo-chip sdo-chip--clear" onClick={clearFilters}>
-            <Icon name="close" size={11} /> Limpar
-          </button>
-        </div>
-      )}
 
-      {showFilters && (
-        <DashboardFilters
-          filters={filters}
-          boards={boards}
-          lists={lists}
-          labels={labels}
-          types={types}
-          visibleCount={visibleCards.length}
-          totalCount={cards.length}
-          lastVisit={lastVisit}
-          onChange={updateFilters}
-          onClear={clearFilters}
-          onMarkSeen={markSeen}
-          onExport={exportCsv}
-          showSearch={false}
-        />
-      )}
 
       {loading ? (
         <div className="sdo-loading">

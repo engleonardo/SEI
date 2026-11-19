@@ -502,6 +502,26 @@ test('exclusão de espelho pode remover todos', async ({ page }) => {
   expect(deleteCall?.payload?.deleteMirrors).toBe(true);
 });
 
+test('filtros abrem antes das listas e recolhem', async ({ page }) => {
+  await stubDashboard(page);
+  await openDashboard(page);
+
+  const filtersButton = page.getByRole('button', { name: /^Filtros/ });
+  await filtersButton.click();
+  const filters = page.locator('.sdo-filters');
+  const lists = page.locator('.sdo-lists');
+  await expect(filters).toBeVisible();
+  await expect(lists).toBeVisible();
+  const positions = await Promise.all([
+    filters.evaluate((element) => element.getBoundingClientRect().top),
+    lists.evaluate((element) => element.getBoundingClientRect().top),
+  ]);
+  expect(positions[0]).toBeLessThan(positions[1]);
+
+  await filters.getByRole('button', { name: 'Recolher' }).click();
+  await expect(filters).toHaveCount(0);
+});
+
 test('kanban move cartão com o teclado', async ({ page }) => {  await stubDashboard(page);
   await openDashboard(page);
 

@@ -341,7 +341,7 @@ function pageStub({
 }
 
 async function shootPage({ fixture, url, out, after }) {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {});
   const page = await browser.newPage({ viewport: VIEWPORT });
   await page.addInitScript(pageStub, {
     settingsData: settings,
@@ -427,7 +427,7 @@ const stubData = {
 
 // 1) Painel inicial
 {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {});
   const page = await browser.newPage({ viewport: VIEWPORT });
   await page.addInitScript(pageStub, stubData);
   await page.goto('http://127.0.0.1:4190/dashboard.html');
@@ -443,7 +443,14 @@ const stubData = {
   await page.locator('.sdo-theme-toggle').click();
   await page.waitForTimeout(500);
 
-  // 3) Filtros e etiquetas
+  // 3) Kanban
+  await page.getByRole('button', { name: 'Visão em quadro (Kanban)' }).click();
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: join(OUT, 'kanban-1280x800.png') });
+  await page.getByRole('button', { name: 'Visão em lista' }).click();
+  await page.waitForTimeout(400);
+
+  // 4) Filtros e etiquetas
   await page.getByRole('button', { name: /^Filtros/ }).click();
   await page.waitForTimeout(700);
   await page.screenshot({ path: join(OUT, 'filter-1280x800.png') });
@@ -477,7 +484,7 @@ await shootPage({
 
 // 6) Regras automáticas
 {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {});
   const page = await browser.newPage({ viewport: VIEWPORT });
   await page.addInitScript(pageStub, stubData);
   await page.goto('http://127.0.0.1:4190/options.html');
