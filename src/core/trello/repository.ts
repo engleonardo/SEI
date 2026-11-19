@@ -46,6 +46,14 @@ import { recordRuleApplications } from '../storage/rule-stats';
 import { pushRuleLog, type RuleLogEntry } from '../storage/rule-log';
 import { getSettings } from '../storage/settings';
 import { getProcessCatalog } from '../storage/processes';
+import {
+  addMirror,
+  getMirrorGroup,
+  listMirrorGroups,
+  removeMirrorCard,
+  removeMirrorGroup,
+  type MirrorGroup,
+} from '../storage/mirrors';
 import { mapLimit } from '../utils/async';
 import { CACHE_TTL, cacheDelete, cacheDeleteByPrefix, cacheGet, cacheGetOrSet, cacheSet } from './cache';
 import { TrelloClient, TrelloError, type TrelloCredentials } from './client';
@@ -1306,6 +1314,82 @@ export class TrelloRepository {
     await this.invalidateCardCaches();
     await cacheDeleteByPrefix('boardcards:');
     return toCard(raw);
+  }
+
+  async createCardMirror(
+    cardId: string,
+    listId: string,
+  ): Promise<{ card: TrelloCard; group: MirrorGroup }> {
+    const card = await this.copyCard(cardId, listId);
+    const group = await addMirror(cardId, card.id);
+    return { card, group };
+  }
+
+  private mirrorSync: Promise<{ updated: number }> | null = null;
+
+  private async syncMirrorGroup(group: MirrorGroup): Promise<number> {
+    const cards: TrelloCard[] = [];
+    for (const id of group.cardIds) {
+      try {
+        cards.push(await this.getCard(id, true));
+      } catch {
+        await removeMirrorCard(id);
+      }
+    }
+    if (cards.length < 2) return 0;
+
+    const activity = (card: TrelloCard) => {
+      const value = card.lastActivity ? new Date(card.lastActivity).getTime() : 0;
+      return Number.isFinite(value) ? value : 0;
+    };
+    const source = [...cards].sort((a, b) => activity(b) - activity(a))[0];
+    if (!source) return 0;
+
+    let updated = 0;
+    for (const card of cards) {
+      if (card.id === source.id) continue;
+      if (card.name === source.name && card.desc === source.desc) continue;
+      await this.client.put(`/cards/${card.id}`, {
+        name: source.name,
+        desc: source.desc,
+      });
+      updated += 1;
+    }
+    if (updated > 0) await this.invalidateCardCaches();
+    return updated;
+  }
+
+  async syncMirrorsForCard(cardId: string): Promise<{ updated: number }> {
+    const group = await getMirrorGroup(cardId);
+    if (!group) return { updated: 0 };
+    return { updated: await this.syncMirrorGroup(group) };
+  }
+
+  async syncMirrors(): Promise<{ updated: number }> {
+    if (this.mirrorSync) return this.mirrorSync;
+    this.mirrorSync = (async () => {
+      const groups = await listMirrorGroups();
+      let updated = 0;
+      for (const group of groups) {
+        try {
+          updated += await this.syncMirrorGroup(group);
+        } catch {
+          // um grupo com problema não interrompe os demais
+        }
+      }
+      return { updated };
+    })().finally(() => {
+      this.mirrorSync = null;
+    });
+    return this.mirrorSync;
+  }
+
+  async removeMirror(cardId: string): Promise<void> {
+    await removeMirrorCard(cardId);
+  }
+
+  async deleteMirrorGroup(groupId: string): Promise<void> {
+    await removeMirrorGroup(groupId);
   }
 
   async copyBoard(boardId: string, name: string): Promise<TrelloBoard> {

@@ -16,6 +16,7 @@ import {
 import { getLastActionTab } from '../storage/last-tab';
 import { exportBackup, importBackup } from '../storage/backup';
 import { listProcessRecords, markSeiRulesHandled, upsertProcessRecords } from '../storage/processes';
+import { getMirrorGroup } from '../storage/mirrors';
 import { getRules, saveRules } from '../storage/rules';
 import { getLastRuleRun } from '../storage/rule-runs';
 import { clearRuleStats, getRuleStats } from '../storage/rule-stats';
@@ -85,9 +86,23 @@ const handlers = {
   'trello:search-cards': ({ query }) => repository.searchCardsByName(query),
   'trello:unlinked-candidates': ({ boardId }) => repository.findUnlinkedCandidates(boardId),
   'trello:create-card': (payload) => repository.createCard(payload),
-  'trello:update-card': ({ cardId, patch }) => repository.updateCard(cardId, patch),
-  'trello:delete-card': async ({ cardId }) => {
-    await repository.deleteCard(cardId);
+  'trello:update-card': async ({ cardId, patch }) => {
+    const card = await repository.updateCard(cardId, patch);
+    await repository.syncMirrorsForCard(cardId).catch(() => undefined);
+    return card;
+  },
+  'trello:delete-card': async ({ cardId, deleteMirrors }) => {
+    const group = deleteMirrors ? await getMirrorGroup(cardId) : null;
+    const ids = group ? Array.from(new Set(group.cardIds)) : [cardId];
+    for (const id of ids) {
+      try {
+        await repository.deleteCard(id);
+      } catch {
+        // segue removendo os demais
+      }
+    }
+    if (group) await repository.deleteMirrorGroup(group.id);
+    else await repository.removeMirror(cardId);
     return undefined;
   },
   'trello:link-cards': ({ cardIds, processNumber }) => repository.linkCards(cardIds, processNumber),
@@ -104,6 +119,13 @@ const handlers = {
   },
   'trello:copy-card': ({ cardId, listId }) => repository.copyCard(cardId, listId),
   'trello:copy-board': ({ boardId, name }) => repository.copyBoard(boardId, name),
+  'trello:mirror-card': ({ cardId, listId }) => repository.createCardMirror(cardId, listId),
+  'mirrors:status': ({ cardId }) => getMirrorGroup(cardId),
+  'mirrors:remove': async ({ cardId }) => {
+    await repository.removeMirror(cardId);
+    return undefined;
+  },
+  'mirrors:sync': () => repository.syncMirrors(),
   'trello:create-label': ({ boardId, name, color }) => repository.createLabel(boardId, name, color),
   'trello:add-label': ({ cardId, labelId }) => repository.addLabelToCard(cardId, labelId),
   'trello:remove-label': ({ cardId, labelId }) => repository.removeLabelFromCard(cardId, labelId),

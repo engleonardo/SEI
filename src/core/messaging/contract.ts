@@ -18,6 +18,7 @@ import type { RuleStats } from '../storage/rule-stats';
 import type { RuleLogEntry } from '../storage/rule-log';
 import type { LinkCandidate } from '../link/scan';
 import type { SettingsBackup } from '../storage/backup';
+import type { MirrorGroup } from '../storage/mirrors';
 
 export interface RpcMap {
   'settings:get': { payload: undefined; result: Settings };
@@ -66,7 +67,7 @@ export interface RpcMap {
     result: TrelloCard;
   };
   'trello:update-card': { payload: { cardId: string; patch: CardPatch }; result: TrelloCard };
-  'trello:delete-card': { payload: { cardId: string }; result: undefined };
+  'trello:delete-card': { payload: { cardId: string; deleteMirrors?: boolean }; result: undefined };
   'trello:link-cards': {
     payload: { cardIds: string[]; processNumber: string };
     result: BulkLinkResult[];
@@ -91,6 +92,13 @@ export interface RpcMap {
   };
   'trello:copy-card': { payload: { cardId: string; listId: string }; result: TrelloCard };
   'trello:copy-board': { payload: { boardId: string; name: string }; result: TrelloBoard };
+  'trello:mirror-card': {
+    payload: { cardId: string; listId: string };
+    result: { card: TrelloCard; group: MirrorGroup };
+  };
+  'mirrors:status': { payload: { cardId: string }; result: MirrorGroup | null };
+  'mirrors:remove': { payload: { cardId: string }; result: undefined };
+  'mirrors:sync': { payload: undefined; result: { updated: number } };
   'trello:create-label': {
     payload: { boardId: string; name: string; color: string };
     result: TrelloLabel;

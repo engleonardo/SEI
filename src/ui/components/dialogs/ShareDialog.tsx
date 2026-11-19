@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { TrelloBoard, TrelloCard, TrelloList } from '../../../core/domain/types';
+import type { MirrorGroup } from '../../../core/storage/mirrors';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
 import { Icon } from '../../icons';
 import { showToast } from '../../toast';
@@ -30,6 +31,26 @@ export function ShareDialog({ card, onClose }: { card: TrelloCard; onClose: () =
   const [copying, setCopying] = useState(false);
   const [boardName, setBoardName] = useState(`${card.board?.name ?? 'Quadro'} (cópia)`);
   const [copyingBoard, setCopyingBoard] = useState(false);
+  const [mirrorGroup, setMirrorGroup] = useState<MirrorGroup | null>(null);
+  const [mirroring, setMirroring] = useState(false);
+  const [mirrorLoading, setMirrorLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    callRpc('mirrors:status', { cardId: card.id })
+      .then((value) => {
+        if (active) setMirrorGroup(value);
+      })
+      .catch(() => {
+        if (active) setMirrorGroup(null);
+      })
+      .finally(() => {
+        if (active) setMirrorLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [card.id]);
 
   useEffect(() => {
     let active = true;
@@ -100,8 +121,40 @@ export function ShareDialog({ card, onClose }: { card: TrelloCard; onClose: () =
     }
   };
 
-  const copyBoard = async () => {
-    if (!card.idBoard || !boardName.trim()) return;
+  const mirrorCard = async () => {
+    if (!targetListId) {
+      showToast('Escolha a lista de destino.', 'error');
+      return;
+    }
+    setMirroring(true);
+    try {
+      const result = await callRpc('trello:mirror-card', {
+        cardId: card.id,
+        listId: targetListId,
+      });
+      setMirrorGroup(result.group);
+      showToast('Espelho criado. Nome e descrição serão sincronizados.', 'success');
+    } catch (cause) {
+      showToast(errorMessage(cause), 'error');
+    } finally {
+      setMirroring(false);
+    }
+  };
+
+  const unmirror = async () => {
+    setMirroring(true);
+    try {
+      await callRpc('mirrors:remove', { cardId: card.id });
+      setMirrorGroup(null);
+      showToast('Cartão removido do espelho. Os outros cartões não foram excluídos.', 'success');
+    } catch (cause) {
+      showToast(errorMessage(cause), 'error');
+    } finally {
+      setMirroring(false);
+    }
+  };
+
+  const copyBoard = async () => {    if (!card.idBoard || !boardName.trim()) return;
     setCopyingBoard(true);
     try {
       const board = await callRpc('trello:copy-board', {
@@ -195,6 +248,50 @@ export function ShareDialog({ card, onClose }: { card: TrelloCard; onClose: () =
             {copying ? <Spinner /> : <Icon name="copy" size={13} />}
             Clonar cartão
           </button>
+        </section>
+
+        <section className="sf-share__section">
+          <h3>Espelhar cartão</h3>
+          <p className="sf-hint">
+            Cria uma cópia ligada a este cartão e mantém <strong>nome e descrição</strong>{' '}
+            sincronizados enquanto a extensão estiver ativa. A lista/quadro de destino é a mesma
+            selecionada acima.
+          </p>
+          {mirrorLoading ? (
+            <div className="sf-share__status">
+              <Spinner /> Verificando espelho…
+            </div>
+          ) : mirrorGroup ? (
+            <>
+              <p className="sf-share__status">
+                <Icon name="link" size={13} />
+                Espelhado com {Math.max(0, mirrorGroup.cardIds.length - 1)} cartão(ões).
+              </p>
+              <button
+                type="button"
+                className="sf-btn sf-btn--sm"
+                onClick={() => void unmirror()}
+                disabled={mirroring}
+              >
+                {mirroring ? <Spinner /> : <Icon name="unlink" size={13} />}
+                Desespelhar
+              </button>
+              <p className="sf-hint">
+                Desespelhar não exclui os outros cartões. Para excluir todos, use “Excluir cartão”
+                em um deles.
+              </p>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="sf-btn sf-btn--sm sf-btn--primary"
+              onClick={() => void mirrorCard()}
+              disabled={mirroring || !targetListId}
+            >
+              {mirroring ? <Spinner /> : <Icon name="copy" size={13} />}
+              Espelhar cartão
+            </button>
+          )}
         </section>
 
         <section className="sf-share__section">

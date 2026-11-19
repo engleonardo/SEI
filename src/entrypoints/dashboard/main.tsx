@@ -123,6 +123,7 @@ function Dashboard() {
   const connected = Boolean(settings?.appKey && settings?.appToken);
   const loadSeq = useRef(0);
   const defaultBoardApplied = useRef(false);
+  const mirrorSynced = useRef(false);
 
   const load = useCallback(
     async (silent = false, quiet = false) => {
@@ -226,6 +227,16 @@ function Dashboard() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!connected || mirrorSynced.current) return;
+    mirrorSynced.current = true;
+    void callRpc('mirrors:sync', undefined)
+      .then((result) => {
+        if (result.updated > 0) void load(true, true);
+      })
+      .catch(() => undefined);
+  }, [connected, load]);
 
   useEffect(() => {
     if (settings) setThemePreference(settings.theme);

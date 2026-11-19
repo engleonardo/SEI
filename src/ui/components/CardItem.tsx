@@ -11,6 +11,7 @@ import { InlineLocationPicker } from './InlineLocationPicker';
 import { ChecklistDialog } from './dialogs/ChecklistDialog';
 import { AttachmentsDialog } from './dialogs/AttachmentsDialog';
 import { ShareDialog } from './dialogs/ShareDialog';
+import { DeleteCardDialog } from './dialogs/DeleteCardDialog';
 import { DueDialog } from './dialogs/DueDialog';
 import { LabelsDialog } from './dialogs/LabelsDialog';
 
@@ -141,20 +142,6 @@ export function CardItem({
       if (updated.links.includes(processNumber)) onChanged(updated);
       else onRemoved(card.id);
       showToast('Cartão desvinculado deste processo.', 'success');
-    } catch (cause) {
-      showToast(errorMessage(cause), 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const remove = async () => {
-    setBusy(true);
-    try {
-      await callRpc('trello:delete-card', { cardId: card.id });
-      setConfirmDelete(false);
-      onRemoved(card.id);
-      showToast('Cartão movido para a lixeira do Trello.', 'success');
     } catch (cause) {
       showToast(errorMessage(cause), 'error');
     } finally {
@@ -586,14 +573,12 @@ export function CardItem({
       )}
 
       {confirmDelete && (
-        <ConfirmDialog
-          title="Excluir cartão"
-          message="O cartão será movido para a lixeira do Trello e deixará de aparecer neste processo."
-          confirmLabel="Excluir do Trello"
-          tone="danger"
-          busy={busy}
-          onConfirm={() => void remove()}
+        <DeleteCardDialog
+          card={card}
           onClose={() => setConfirmDelete(false)}
+          onDeleted={(ids) => {
+            for (const id of ids) onRemoved(id);
+          }}
         />
       )}
     </>

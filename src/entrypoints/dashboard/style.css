@@ -2810,17 +2810,26 @@
 }
 
 .sdo-card--kanban .sdo-card__desc .sf-markdown--compact {
-  max-height: 2.9em;
+  max-height: 4.5em;
 }
 
-.sdo-card--kanban .sdo-card__labels {
-  margin-top: 5px;
+.sdo-card--kanban .sdo-meta-button,
+.sdo-card--kanban .sdo-type {
+  display: none;
+}
+
+.sdo-card--kanban .sdo-card__side-actions {
+  gap: 0;
 }
 
 .sdo-card--kanban .sdo-card__meta {
   margin-top: 4px;
-  gap: 2px 8px;
-  font-size: 10px;
+  gap: 2px 6px;
+  font-size: 9.5px;
+}
+
+.sdo-card--kanban .sdo-card__labels {
+  margin-top: 5px;
 }
 
 .sdo-card--kanban .sdo-card__meta svg {

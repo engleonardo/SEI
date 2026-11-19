@@ -2096,3 +2096,13 @@
   flex: 1 1 180px;
   min-width: 0;
 }
+
+.sf-share__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--sf-text-soft);
+  font-size: 12px;
+  font-weight: 600;
+}

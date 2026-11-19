@@ -8,10 +8,10 @@ import { DescriptionEditor } from '../../ui/components/DescriptionEditor';
 import { showToast } from '../../ui/toast';
 import { classNames, formatDue, labelColorHex, labelTextColor, locationLabel } from '../../ui/utils';
 import { InlineLocationPicker } from '../../ui/components/InlineLocationPicker';
-import { ConfirmDialog } from '../../ui/components/Modal';
 import { ChecklistDialog } from '../../ui/components/dialogs/ChecklistDialog';
 import { AttachmentsDialog } from '../../ui/components/dialogs/AttachmentsDialog';
 import { ShareDialog } from '../../ui/components/dialogs/ShareDialog';
+import { DeleteCardDialog } from '../../ui/components/dialogs/DeleteCardDialog';
 import { DueDialog } from '../../ui/components/dialogs/DueDialog';
 import { LabelsDialog } from '../../ui/components/dialogs/LabelsDialog';
 import { cardHasUnreadProcess, formatActivity, processRecordsFor, processTypesFor } from './model';
@@ -68,20 +68,6 @@ export function DashboardCard({
     } catch (cause) {
       showToast(errorMessage(cause), 'error');
       return false;
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const remove = async () => {
-    setBusy(true);
-    try {
-      await callRpc('trello:delete-card', { cardId: card.id });
-      setConfirmDelete(false);
-      onRemoved(card.id);
-      showToast('Cartão movido para a lixeira do Trello.', 'success');
-    } catch (cause) {
-      showToast(errorMessage(cause), 'error');
     } finally {
       setBusy(false);
     }
@@ -579,14 +565,12 @@ export function DashboardCard({
       )}
       {dialog === 'share' && <ShareDialog card={card} onClose={() => setDialog(null)} />}
       {confirmDelete && (
-        <ConfirmDialog
-          title="Excluir cartão"
-          message="O cartão será movido para a lixeira do Trello e removido deste painel."
-          confirmLabel="Excluir do Trello"
-          tone="danger"
-          busy={busy}
-          onConfirm={() => void remove()}
+        <DeleteCardDialog
+          card={card}
           onClose={() => setConfirmDelete(false)}
+          onDeleted={(ids) => {
+            for (const id of ids) onRemoved(id);
+          }}
         />
       )}
     </>

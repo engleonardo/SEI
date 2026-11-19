@@ -31,9 +31,9 @@ function card(id: string, name: string, idList: string, links: string[]) {
   };
 }
 
-async function stubDashboard(page: Page) {
+async function stubDashboard(page: Page, options: { mirrored?: boolean } = {}) {
   await page.addInitScript(
-    ({ board, lists, initialCards }) => {
+    ({ board, lists, initialCards, mirrored }) => {
       const ok = (data: unknown) => Promise.resolve({ ok: true, data });
       const withCallback = <T>(value: T | Promise<T>, callback?: (result: T) => void) => {
         if (typeof callback === 'function') {
@@ -58,6 +58,9 @@ async function stubDashboard(page: Page) {
         autoRefreshMinutes: 0,
       };
       let cards = initialCards as Array<Record<string, unknown>>;
+      let mirrorGroup = mirrored
+        ? { id: 'mirror-1', cardIds: ['card-1', 'card-2'], createdAt: 1 }
+        : null;
       const calls: Array<{ rpc: string; payload?: unknown }> = [];
       (window as unknown as { __rpcCalls: typeof calls }).__rpcCalls = calls;
 
@@ -149,6 +152,27 @@ async function stubDashboard(page: Page) {
                   name: message.payload?.name ?? 'Cópia',
                 });
                 break;
+              case 'mirrors:status':
+                response = ok(mirrorGroup);
+                break;
+              case 'trello:mirror-card':
+                mirrorGroup = {
+                  id: 'mirror-1',
+                  cardIds: [message.payload?.cardId ?? 'card-1', 'copy-1'],
+                  createdAt: 1,
+                };
+                response = ok({
+                  card: { id: 'copy-1', name: 'Cópia', shortUrl: 'https://trello.com/c/copy' },
+                  group: mirrorGroup,
+                });
+                break;
+              case 'mirrors:remove':
+                mirrorGroup = null;
+                response = ok(undefined);
+                break;
+              case 'trello:delete-card':
+                response = ok(undefined);
+                break;
               case 'trello:update-card':
                 cards = cards.map((item) => {
                   if (item.id !== message.payload?.cardId) return item;
@@ -205,6 +229,7 @@ async function stubDashboard(page: Page) {
         },
         card('card-2', 'Cartão B', 'list-b', []),
       ],
+      mirrored: options.mirrored ?? false,
     },
   );
 }
@@ -403,6 +428,78 @@ test('kanban abre compartilhar e clona cartão', async ({ page }) => {
         .__rpcCalls ?? []).find((call) => call.rpc === 'trello:copy-card'),
   );
   expect(copyCall?.payload?.listId).toBe('list-b');
+});
+
+test('kanban cria espelho do cartão', async ({ page }) => {
+  await stubDashboard(page);
+  await openDashboard(page);
+
+  await page.getByRole('button', { name: 'Visão em quadro (Kanban)' }).click();
+  const card = page.locator('.sdo-kanban-card').filter({ hasText: 'Cartão A' }).first();
+  await card.getByRole('button', { name: 'Compartilhar e clonar' }).click();
+  await page.getByRole('dialog').getByLabel('Lista de destino').selectOption('list-b');
+  await page.getByRole('button', { name: 'Espelhar cartão' }).click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          ((window as unknown as { __rpcCalls?: Array<{ rpc: string }> }).__rpcCalls ?? []).filter(
+            (call) => call.rpc === 'trello:mirror-card',
+          ).length,
+      ),
+    )
+    .toBeGreaterThan(0);
+  await expect(page.getByRole('dialog').getByText(/Espelhado com 1 cartão/)).toBeVisible();
+});
+
+test('exclusão de espelho oferece só este ou todos', async ({ page }) => {
+  await stubDashboard(page, { mirrored: true });
+  await openDashboard(page);
+
+  await page.getByRole('button', { name: 'Visão em quadro (Kanban)' }).click();
+  const card = page.locator('.sdo-kanban-card').filter({ hasText: 'Cartão A' }).first();
+  await card.getByRole('button', { name: 'Excluir cartão' }).click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByText('Excluir cartão espelhado')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Só este' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Todos os espelhos' })).toBeVisible();
+
+  await dialog.getByRole('button', { name: 'Só este' }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          ((window as unknown as { __rpcCalls?: Array<{ rpc: string }> }).__rpcCalls ?? []).filter(
+            (call) => call.rpc === 'trello:delete-card',
+          ).length,
+      ),
+    )
+    .toBeGreaterThan(0);
+  const deleteCall = await page.evaluate(
+    () =>
+      ((window as unknown as { __rpcCalls?: Array<{ rpc: string; payload?: { deleteMirrors?: boolean } }> })
+        .__rpcCalls ?? []).find((call) => call.rpc === 'trello:delete-card'),
+  );
+  expect(deleteCall?.payload?.deleteMirrors).toBe(false);
+});
+
+test('exclusão de espelho pode remover todos', async ({ page }) => {
+  await stubDashboard(page, { mirrored: true });
+  await openDashboard(page);
+
+  await page.getByRole('button', { name: 'Visão em quadro (Kanban)' }).click();
+  const card = page.locator('.sdo-kanban-card').filter({ hasText: 'Cartão A' }).first();
+  await card.getByRole('button', { name: 'Excluir cartão' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Todos os espelhos' }).click();
+
+  const deleteCall = await page.evaluate(
+    () =>
+      ((window as unknown as { __rpcCalls?: Array<{ rpc: string; payload?: { deleteMirrors?: boolean } }> })
+        .__rpcCalls ?? []).find((call) => call.rpc === 'trello:delete-card'),
+  );
+  expect(deleteCall?.payload?.deleteMirrors).toBe(true);
 });
 
 test('kanban move cartão com o teclado', async ({ page }) => {  await stubDashboard(page);
