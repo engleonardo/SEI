@@ -404,9 +404,8 @@ test('kanban abre compartilhar e clona cartão', async ({ page }) => {
   const card = page.locator('.sdo-kanban-card').filter({ hasText: 'Cartão A' }).first();
   await card.getByRole('button', { name: 'Compartilhar e clonar' }).click();
 
-  await expect(
-    page.getByRole('dialog').getByRole('heading', { name: 'Clonar cartão' }),
-  ).toBeVisible();
+  await page.getByRole('tab', { name: 'Duplicar' }).click();
+  await expect(page.getByRole('radio', { name: /Cópia independente/ })).toBeVisible();
   const listSelect = page.getByRole('dialog').getByLabel('Lista de destino');
   await listSelect.selectOption('list-b');
   await page.getByRole('button', { name: 'Clonar cartão' }).click();
@@ -437,6 +436,8 @@ test('kanban cria espelho do cartão', async ({ page }) => {
   await page.getByRole('button', { name: 'Visão em quadro (Kanban)' }).click();
   const card = page.locator('.sdo-kanban-card').filter({ hasText: 'Cartão A' }).first();
   await card.getByRole('button', { name: 'Compartilhar e clonar' }).click();
+  await page.getByRole('tab', { name: 'Duplicar' }).click();
+  await page.getByRole('radio', { name: /Espelho sincronizado/ }).click();
   await page.getByRole('dialog').getByLabel('Lista de destino').selectOption('list-b');
   await page.getByRole('button', { name: 'Espelhar cartão' }).click();
 

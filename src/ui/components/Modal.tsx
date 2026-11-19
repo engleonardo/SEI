@@ -11,6 +11,7 @@ export interface ModalProps {
   children: ReactNode;
   footer?: ReactNode;
   size?: 'sm' | 'md';
+  className?: string;
   closeOnBackdrop?: boolean;
 }
 
@@ -21,6 +22,7 @@ export function Modal({
   children,
   footer,
   size = 'md',
+  className,
   closeOnBackdrop = true,
 }: ModalProps) {
   const [container] = useState(() => getDialogContainer());
@@ -64,7 +66,7 @@ export function Modal({
     >
       <div
         ref={modalRef}
-        className={classNames('sf-modal', size === 'sm' && 'sf-modal--sm')}
+        className={classNames('sf-modal', size === 'sm' && 'sf-modal--sm', className)}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
