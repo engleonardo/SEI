@@ -105,8 +105,12 @@ const handlers = {
     };
   },
 
-  'auth:logout': async () => {
+  'auth:logout': async (payload) => {
     await logout();
+    if (payload?.clearManual) {
+      await saveSettings({ appKey: '', appToken: '' });
+      await cacheClear();
+    }
     const settings = await getSettings();
     if (settings.appKey && settings.appToken) {
       return { connected: true, mode: 'token' as const };

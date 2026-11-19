@@ -28,7 +28,7 @@ export interface RpcMap {
   'settings:test-connection': { payload: undefined; result: ConnectionInfo };
   'auth:status': { payload: undefined; result: AuthStatus };
   'auth:login': { payload: undefined; result: AuthStatus };
-  'auth:logout': { payload: undefined; result: AuthStatus };
+  'auth:logout': { payload: { clearManual?: boolean } | undefined; result: AuthStatus };
   'sync:config': { payload: { force?: boolean } | undefined; result: SyncResult };  'settings:clear-cache': { payload: undefined; result: { cleared: true } };
   'settings:export': {
     payload: { includeCredentials: boolean; includeRules?: boolean };
