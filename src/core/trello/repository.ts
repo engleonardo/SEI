@@ -1332,8 +1332,12 @@ export class TrelloRepository {
     for (const id of group.cardIds) {
       try {
         cards.push(await this.getCard(id, true));
-      } catch {
-        await removeMirrorCard(id);
+      } catch (error) {
+        // Só remove do grupo quando o Trello confirma que o cartão não existe.
+        // Falhas de rede, limite ou credenciais não podem quebrar o espelho.
+        if (error instanceof TrelloError && error.code === 'not_found') {
+          await removeMirrorCard(id);
+        }
       }
     }
     if (cards.length < 2) return 0;

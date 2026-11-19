@@ -94,15 +94,24 @@ const handlers = {
   'trello:delete-card': async ({ cardId, deleteMirrors }) => {
     const group = deleteMirrors ? await getMirrorGroup(cardId) : null;
     const ids = group ? Array.from(new Set(group.cardIds)) : [cardId];
+    let failed = 0;
+    let requestedError: unknown = null;
     for (const id of ids) {
       try {
         await repository.deleteCard(id);
-      } catch {
-        // segue removendo os demais
+      } catch (error) {
+        failed += 1;
+        if (id === cardId) requestedError = error;
       }
     }
-    if (group) await repository.deleteMirrorGroup(group.id);
-    else await repository.removeMirror(cardId);
+    // Se o cartão escolhido não foi excluído, mantém o espelho intacto e avisa a interface.
+    if (requestedError) throw requestedError;
+    if (group) {
+      // Falha parcial: mantém o grupo para tentar de novo, sem perder a sincronização.
+      if (failed === 0) await repository.deleteMirrorGroup(group.id);
+    } else {
+      await repository.removeMirror(cardId);
+    }
     return undefined;
   },
   'trello:link-cards': ({ cardIds, processNumber }) => repository.linkCards(cardIds, processNumber),

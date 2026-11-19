@@ -32,4 +32,29 @@ describe('editor de descrição', () => {
     expect(markdown).toContain('~~feito~~');
     expect(markdown).toContain('> nota');
   });
+
+  it('mantém imagens, tabelas e listas de tarefas ao editar', () => {
+    const original = [
+      '![logo](https://trello.com/logo.png)',
+      '',
+      '| Item | Prazo |',
+      '| --- | --- |',
+      '| Um | Hoje |',
+      '',
+      '- [x] feito',
+      '- [ ] pendente',
+    ].join('\n');
+
+    const html = markdownToEditorHtml(original);
+    expect(html).toContain('<img');
+    expect(html).toContain('<table>');
+    expect(html).toContain('type="checkbox"');
+
+    const markdown = editorHtmlToMarkdown(html);
+    expect(markdown).toContain('![logo](https://trello.com/logo.png)');
+    expect(markdown).toContain('| Item | Prazo |');
+    expect(markdown).toContain('| Um | Hoje |');
+    expect(markdown).toContain('- [x] feito');
+    expect(markdown).toContain('- [ ] pendente');
+  });
 });

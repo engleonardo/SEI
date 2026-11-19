@@ -27,9 +27,29 @@ const ALLOWED_TAGS = [
   'h6',
   'a',
   'hr',
+  'img',
+  'table',
+  'thead',
+  'tbody',
+  'tr',
+  'th',
+  'td',
+  'input',
 ];
 
-const ALLOWED_ATTRIBUTES = ['href', 'title', 'target', 'rel'];
+const ALLOWED_ATTRIBUTES = [
+  'href',
+  'title',
+  'target',
+  'rel',
+  'src',
+  'alt',
+  'colspan',
+  'rowspan',
+  'type',
+  'checked',
+  'disabled',
+];
 
 const turndown = new TurndownService({
   headingStyle: 'atx',
@@ -74,6 +94,7 @@ export function editorHtmlToMarkdown(html: string): string {
     .replace(/\u00a0/g, ' ')
     .replace(/^(\s*[-*+])\s{2,}/gm, '$1 ')
     .replace(/^(\s*\d+\.)\s{2,}/gm, '$1 ')
+    .replace(/^(\s*[-*+] \[[ xX]\])\s{2,}/gm, '$1 ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
