@@ -522,7 +522,8 @@ test('filtros abrem antes das listas e recolhem', async ({ page }) => {
   await expect(filters).toHaveCount(0);
 });
 
-test('kanban move cartão com o teclado', async ({ page }) => {  await stubDashboard(page);
+test('kanban move cartão com o teclado', async ({ page }) => {
+  await stubDashboard(page);
   await openDashboard(page);
 
   await expect(page.getByText('Cartão A')).toBeVisible();
@@ -530,9 +531,15 @@ test('kanban move cartão com o teclado', async ({ page }) => {  await stubDashb
   const handle = page.getByRole('button', { name: 'Arrastar cartão Cartão A' });
   await handle.focus();
   await page.keyboard.press('Space');
-  for (let index = 0; index < 14; index += 1) {
-    await page.keyboard.press('ArrowRight');
-  }
+  // O dnd-kit registra o listener de teclado logo depois de iniciar o arraste.
+  await expect(page.locator('.sdo-kanban-card--dragging').first()).toBeVisible();
+  await page.waitForTimeout(120);
+  // Cada seta salta para a coluna vizinha, independente do tamanho da tela.
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.sdo-kanban-column--over')).toHaveAttribute(
+    'aria-label',
+    'Coluna Demandas',
+  );
   await page.keyboard.press('Space');
 
   await expect

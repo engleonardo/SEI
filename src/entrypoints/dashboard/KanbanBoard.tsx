@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   DndContext,
   DragOverlay,
+  KeyboardCode,
   KeyboardSensor,
   MeasuringStrategy,
   PointerSensor,
@@ -16,6 +17,7 @@ import {
   type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
+  type KeyboardCoordinateGetter,
 } from '@dnd-kit/core';
 import type { TrelloCard } from '../../core/domain/types';
 import type { ProcessCatalog } from '../../core/storage/processes';
@@ -23,6 +25,43 @@ import { Icon } from '../../ui/icons';
 import { classNames } from '../../ui/utils';
 import { DashboardCard } from './DashboardCard';
 import type { CardGroup } from './model';
+
+/**
+ * Teclado: cada seta para o lado salta direto para a coluna vizinha,
+ * em vez de deslocar 25px (que variava com o tamanho da janela).
+ */
+const columnKeyboardCoordinateGetter: KeyboardCoordinateGetter = (event, args) => {
+  const { currentCoordinates, context } = args;
+  const rect = context.collisionRect;
+  if (!rect) return undefined;
+
+  const direction =
+    event.code === KeyboardCode.Right ? 1 : event.code === KeyboardCode.Left ? -1 : 0;
+  if (direction === 0) return undefined;
+
+  const origin = rect.left + rect.width / 2;
+  const targets = context.droppableContainers
+    .getEnabled()
+    .map((container) => {
+      const droppableRect = context.droppableRects.get(container.id);
+      if (!droppableRect || !container.data.current?.listId) return null;
+      const center = droppableRect.left + droppableRect.width / 2;
+      // Ignora a coluna atual: o centro dela quase coincide com o do cartão.
+      if (Math.abs(center - origin) < 8) return null;
+      if (direction > 0 ? center < origin : center > origin) return null;
+      return { center, distance: Math.abs(center - origin) };
+    })
+    .filter((target): target is { center: number; distance: number } => target !== null)
+    .sort((a, b) => a.distance - b.distance);
+
+  const next = targets[0];
+  if (!next) return undefined;
+
+  return {
+    x: currentCoordinates.x + (next.center - origin),
+    y: currentCoordinates.y,
+  };
+};
 
 interface KanbanBoardProps {
   groups: CardGroup[];
@@ -228,7 +267,7 @@ export function KanbanBoard({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 160, tolerance: 8 } }),
-    useSensor(KeyboardSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: columnKeyboardCoordinateGetter }),
   );
   const [activeCard, setActiveCard] = useState<TrelloCard | null>(null);
 
