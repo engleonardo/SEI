@@ -12,12 +12,14 @@ export function ConnectionSection({
   notify,
   reloadBoards,
   onLoginComplete,
+  onLoggedOut,
 }: {
   settings: Settings;
   save: (patch: Partial<Settings>) => Promise<Settings>;
   notify: (notice: Notice) => void;
   reloadBoards: () => Promise<Settings | null>;
   onLoginComplete?: (fresh: Settings | null) => void;
+  onLoggedOut?: () => void;
 }) {
   const [appKey, setAppKey] = useState(settings.appKey);
   const [appToken, setAppToken] = useState(settings.appToken);
@@ -94,8 +96,9 @@ export function ConnectionSection({
       setAuth(status);
       setConnection(null);
       setLogoutOpen(false);
-      notify({ kind: 'success', text: 'Sessão encerrada e credenciais removidas.' });
+      notify({ kind: 'success', text: 'Sessão encerrada e dados locais removidos.' });
       await reloadBoards();
+      onLoggedOut?.();
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
     } finally {
@@ -397,7 +400,7 @@ export function ConnectionSection({
       {logoutOpen && (
         <ConfirmDialog
           title="Sair do Trello"
-          message="O login e as credenciais salvas neste navegador serão removidos. Suas regras, destino e preferências continuam salvos. Ao entrar de novo, tudo estará configurado."
+          message="O login, as credenciais e os dados locais deste navegador serão removidos. Suas regras e destino ficam salvos na sua conta do Trello e voltam ao entrar de novo."
           confirmLabel="Sair"
           cancelLabel="Cancelar"
           busy={authBusy}

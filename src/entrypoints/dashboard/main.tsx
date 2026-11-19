@@ -253,6 +253,15 @@ function Dashboard() {
     void load();
   }, [load]);
 
+  // Ao desconectar, não deixa filtros/quadro do usuário anterior no painel.
+  useEffect(() => {
+    if (loading || connected) return;
+    setShowFilters(false);
+    setFilters(DEFAULT_FILTERS);
+    saveFilters(DEFAULT_FILTERS);
+    defaultBoardApplied.current = false;
+  }, [connected, loading]);
+
   useEffect(() => {
     if (!connected || mirrorSynced.current) return;
     mirrorSynced.current = true;

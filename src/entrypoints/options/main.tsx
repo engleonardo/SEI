@@ -310,6 +310,7 @@ function App() {
             notify={notify}
             reloadBoards={reloadBoards}
             onLoginComplete={goToNextStep}
+            onLoggedOut={() => setTab('connection')}
           />
         )}
 

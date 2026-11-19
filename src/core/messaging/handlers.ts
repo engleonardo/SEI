@@ -13,17 +13,30 @@ import {
   removeActivatedOrigin,
   saveSettings,
 } from '../storage/settings';
-import { getLastActionTab } from '../storage/last-tab';
+import { getLastActionTab, clearLastActionTab } from '../storage/last-tab';
 import { exportBackup, importBackup } from '../storage/backup';
-import { listProcessRecords, markSeiRulesHandled, upsertProcessRecords } from '../storage/processes';
-import { getMirrorGroup } from '../storage/mirrors';
-import { getRules, saveRules } from '../storage/rules';
-import { getLastRuleRun } from '../storage/rule-runs';
+import {
+  clearProcesses,
+  listProcessRecords,
+  markSeiRulesHandled,
+  upsertProcessRecords,
+} from '../storage/processes';
+import { clearMirrors, getMirrorGroup } from '../storage/mirrors';
+import { clearRules, getRules, saveRules } from '../storage/rules';
+import { clearRuleRuns, getLastRuleRun } from '../storage/rule-runs';
 import { clearRuleStats, getRuleStats } from '../storage/rule-stats';
 import { clearRuleLog, getRuleLog } from '../storage/rule-log';
+import { clearPins } from '../storage/pins';
 import { clearSyncSnapshot } from '../storage/sync';
+import { markSyncChanged } from '../storage/sync-tick';
 import { setOptionsTarget } from '../storage/options-target';
-import { queueConfigSync, syncConfig } from '../sync/config';
+import {
+  cancelConfigSync,
+  clearConfigSyncMeta,
+  pushConfigNow,
+  queueConfigSync,
+  syncConfig,
+} from '../sync/config';
 import { loadTrelloCredentials } from '../auth/credentials';
 import { logout, startLogin } from '../auth/oauth';
 import { readSession, writeAccount } from '../auth/session';
@@ -107,10 +120,33 @@ const handlers = {
   },
 
   'auth:logout': async (payload) => {
+    if (payload?.clearManual) {
+      // Salva o estado mais recente no quadro de configuração antes de limpar.
+      cancelConfigSync();
+      await pushConfigNow().catch(() => undefined);
+    }
     await logout();
     if (payload?.clearManual) {
-      await saveSettings({ appKey: '', appToken: '' });
+      await saveSettings({
+        appKey: '',
+        appToken: '',
+        defaultBoardId: '',
+        defaultBoardName: '',
+        defaultListId: '',
+        defaultListName: '',
+      });
       await cacheClear();
+      await clearRules();
+      await clearRuleStats();
+      await clearRuleLog();
+      await clearRuleRuns();
+      await clearProcesses();
+      await clearMirrors();
+      await clearPins();
+      await clearLastActionTab();
+      await clearSyncSnapshot();
+      await clearConfigSyncMeta();
+      await markSyncChanged();
     }
     const settings = await getSettings();
     if (settings.appKey && settings.appToken) {

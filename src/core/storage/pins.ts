@@ -93,3 +93,8 @@ export function watchPinnedCards(listener: Listener): () => void {
   void load().then((ids) => listener(Array.from(ids)));
   return () => listeners.delete(listener);
 }
+
+export async function clearPins(): Promise<void> {
+  await browser.storage.local.remove(PINS_KEY);
+}
+

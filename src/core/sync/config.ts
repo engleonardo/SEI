@@ -316,3 +316,17 @@ export function queueConfigSync(): void {
     void pushConfigNow().catch(() => undefined);
   }, 1_500);
 }
+
+/** Cancela um push pendente (usado no logout, antes de limpar os dados). */
+export function cancelConfigSync(): void {
+  pendingPush = false;
+  if (pushTimer) {
+    clearTimeout(pushTimer);
+    pushTimer = null;
+  }
+}
+
+/** Esquece a última sincronização para o próximo login puxar do Trello. */
+export async function clearConfigSyncMeta(): Promise<void> {
+  await browser.storage.local.remove(META_KEY);
+}

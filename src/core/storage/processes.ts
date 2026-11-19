@@ -181,3 +181,8 @@ export async function markSeiRulesHandled(numbers: string[]): Promise<void> {
     // Na próxima leitura da lista a regra é avaliada de novo.
   }
 }
+
+export async function clearProcesses(): Promise<void> {
+  await browser.storage.local.remove(PROCESSES_KEY);
+}
+
