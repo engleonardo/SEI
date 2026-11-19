@@ -1,12 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { CardPatch, TrelloCard } from '../../core/domain/types';
 import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import { Icon } from '../icons';
 import { showToast } from '../toast';
 import { classNames, formatDue, isOverdue, labelColorHex, labelTextColor, locationLabel } from '../utils';
+import { CardDescription } from './CardDescription';
+import { DescriptionEditor } from './DescriptionEditor';
 import { ConfirmDialog } from './Modal';
 import { InlineLocationPicker } from './InlineLocationPicker';
 import { ChecklistDialog } from './dialogs/ChecklistDialog';
+import { AttachmentsDialog } from './dialogs/AttachmentsDialog';
+import { ShareDialog } from './dialogs/ShareDialog';
+import { DeleteCardDialog } from './dialogs/DeleteCardDialog';
 import { DueDialog } from './dialogs/DueDialog';
 import { LabelsDialog } from './dialogs/LabelsDialog';
 
@@ -18,12 +23,15 @@ export interface CardItemProps {
   compact?: boolean;
   highlight?: boolean;
   activeLabels?: string[];
+  pinned?: boolean;
+  onTogglePin?: (cardId: string) => void;
+  descriptionExpanded?: boolean;
   onToggleLabel?: (labelId: string) => void;
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
 }
 
-type DialogKind = 'due' | 'labels' | 'checklist' | null;
+type DialogKind = 'due' | 'labels' | 'checklist' | 'attachments' | 'share' | null;
 
 export function CardItem({
   card,
@@ -33,6 +41,9 @@ export function CardItem({
   compact = false,
   highlight = false,
   activeLabels,
+  pinned = false,
+  onTogglePin,
+  descriptionExpanded = false,
   onToggleLabel,
   onChanged,
   onRemoved,
@@ -46,16 +57,6 @@ export function CardItem({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (!editingDesc) return;
-    const textarea = descriptionRef.current;
-    if (!textarea) return;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight + 2}px`;
-    textarea.style.overflow = 'hidden';
-  }, [editingDesc, descDraft]);
 
   const due = formatDue(card.due, card.dueComplete);
   const overdue = isOverdue(card);
@@ -148,20 +149,6 @@ export function CardItem({
     }
   };
 
-  const remove = async () => {
-    setBusy(true);
-    try {
-      await callRpc('trello:delete-card', { cardId: card.id });
-      setConfirmDelete(false);
-      onRemoved(card.id);
-      showToast('Cartão movido para a lixeira do Trello.', 'success');
-    } catch (cause) {
-      showToast(errorMessage(cause), 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const actionLabel = (label: string) => (compact ? undefined : label);
 
   return (
@@ -247,6 +234,17 @@ export function CardItem({
             </div>
 
             <div className="sf-card__actions">
+              {onTogglePin && (
+                <button
+                  type="button"
+                  className={classNames('sf-icon-btn', pinned && 'sf-icon-btn--pinned')}
+                  onClick={() => onTogglePin(card.id)}
+                  aria-pressed={pinned}
+                  title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+                >
+                  <Icon name="pin" size={15} />
+                </button>
+              )}
               <button
                 type="button"
                 className="sf-icon-btn"
@@ -314,14 +312,13 @@ export function CardItem({
 
           {editingDesc ? (
             <div style={{ marginTop: 8 }}>
-              <textarea
-                ref={descriptionRef}
-                className="sf-textarea"
+              <DescriptionEditor
                 value={descDraft}
-                onChange={(event) => setDescDraft(event.target.value)}
-                autoFocus
+                onChange={setDescDraft}
                 disabled={busy}
-                aria-label="Descrição do cartão"
+                autoFocus
+                placeholder="Escreva a descrição…"
+                ariaLabel="Descrição do cartão"
               />
               <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                 <button
@@ -346,17 +343,30 @@ export function CardItem({
               </div>
             </div>
           ) : card.description ? (
-            <button
-              type="button"
-              className="sf-card__desc sf-card__desc-button"
-              onClick={() => {
+            <div
+              className="sf-card__desc sf-card__desc-view"
+              role="button"
+              tabIndex={0}
+              onClick={(event) => {
+                if ((event.target as HTMLElement).closest('a')) return;
+                setDescDraft(card.description);
+                setEditingDesc(true);
+              }}
+              onKeyDown={(event) => {
+                if ((event.target as HTMLElement).closest('a')) return;
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
                 setDescDraft(card.description);
                 setEditingDesc(true);
               }}
               title="Editar descrição"
             >
-              {card.description}
-            </button>
+              <CardDescription
+                text={card.description}
+                compact={!descriptionExpanded}
+                className={descriptionExpanded ? 'sf-markdown--roomy' : undefined}
+              />
+            </div>
           ) : (
             <button
               type="button"
@@ -455,6 +465,28 @@ export function CardItem({
             <button
               type="button"
               className="sf-btn sf-btn--ghost sf-btn--sm"
+              onClick={() => setDialog('attachments')}
+              disabled={busy}
+              aria-label="Anexos"
+              title="Anexos"
+            >
+              <Icon name="paperclip" size={14} />
+              {actionLabel('Anexos')}
+            </button>
+            <button
+              type="button"
+              className="sf-btn sf-btn--ghost sf-btn--sm"
+              onClick={() => setDialog('share')}
+              disabled={busy}
+              aria-label="Compartilhar e clonar"
+              title="Compartilhar e clonar"
+            >
+              <Icon name="copy" size={14} />
+              {actionLabel('Compartilhar')}
+            </button>
+            <button
+              type="button"
+              className="sf-btn sf-btn--ghost sf-btn--sm"
               onClick={() => setDialog('due')}
               disabled={busy}
               aria-label="Prazo"
@@ -524,6 +556,10 @@ export function CardItem({
       {dialog === 'checklist' && (
         <ChecklistDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
       )}
+      {dialog === 'attachments' && (
+        <AttachmentsDialog card={card} onClose={() => setDialog(null)} />
+      )}
+      {dialog === 'share' && <ShareDialog card={card} onClose={() => setDialog(null)} />}
       {confirmUnlink && processNumber && (
         <ConfirmDialog
           title="Desvincular cartão"
@@ -537,14 +573,12 @@ export function CardItem({
       )}
 
       {confirmDelete && (
-        <ConfirmDialog
-          title="Excluir cartão"
-          message="O cartão será movido para a lixeira do Trello e deixará de aparecer neste processo."
-          confirmLabel="Excluir do Trello"
-          tone="danger"
-          busy={busy}
-          onConfirm={() => void remove()}
+        <DeleteCardDialog
+          card={card}
           onClose={() => setConfirmDelete(false)}
+          onDeleted={(ids) => {
+            for (const id of ids) onRemoved(id);
+          }}
         />
       )}
     </>

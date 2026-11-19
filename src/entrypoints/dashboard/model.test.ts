@@ -183,17 +183,36 @@ describe('modelo do dashboard', () => {
     expect(window.localStorage.getItem('sei-flow:dashboard:filters:v2')).toBeTruthy();
   });
 
-  it('filtra por vínculo com o SEI', () => {    const linked = card();
+  it('filtra por vínculo com o SEI', () => {
+    const linked = card();
     const unlinked = card({ links: [], desc: 'Sem vínculo', description: 'Sem vínculo' });
     expect(matchesFilters(linked, filters(), catalog, 0)).toBe(true);
-    expect(matchesFilters(unlinked, filters(), catalog, 0)).toBe(false);
+    expect(matchesFilters(unlinked, filters(), catalog, 0)).toBe(true);
+    expect(matchesFilters(linked, filters({ link: 'linked' }), catalog, 0)).toBe(true);
+    expect(matchesFilters(unlinked, filters({ link: 'linked' }), catalog, 0)).toBe(false);
     expect(matchesFilters(unlinked, filters({ link: 'unlinked' }), catalog, 0)).toBe(true);
     expect(matchesFilters(linked, filters({ link: 'unlinked' }), catalog, 0)).toBe(false);
+  });
+
+  it('migra o filtro de vínculo para “todos” uma única vez', () => {
+    window.localStorage.clear();
+    window.localStorage.setItem(
+      'sei-flow:dashboard:filters:v2',
+      JSON.stringify({ ...DEFAULT_FILTERS, link: 'linked' }),
+    );
+    expect(loadFilters().link).toBe('all');
+
+    window.localStorage.setItem(
+      'sei-flow:dashboard:filters:v2',
+      JSON.stringify({ ...DEFAULT_FILTERS, link: 'linked' }),
+    );
+    expect(loadFilters().link).toBe('linked');
   });
 
   it('conta filtros ativos e exporta CSV', () => {
     expect(activeFilterCount(filters())).toBe(0);
     expect(activeFilterCount(filters({ link: 'unlinked' }))).toBe(1);
+    expect(activeFilterCount(filters({ link: 'linked' }))).toBe(1);
     expect(
       activeFilterCount(
         filters({ labelIds: ['label-1'], due: 'overdue', activity: '7d', processType: 'X' }),

@@ -1,13 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { CardPatch, TrelloCard } from '../../core/domain/types';
 import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import type { ProcessCatalog } from '../../core/storage/processes';
 import { Icon } from '../../ui/icons';
+import { CardDescription } from '../../ui/components/CardDescription';
+import { DescriptionEditor } from '../../ui/components/DescriptionEditor';
 import { showToast } from '../../ui/toast';
 import { classNames, formatDue, labelColorHex, labelTextColor, locationLabel } from '../../ui/utils';
 import { InlineLocationPicker } from '../../ui/components/InlineLocationPicker';
-import { ConfirmDialog } from '../../ui/components/Modal';
 import { ChecklistDialog } from '../../ui/components/dialogs/ChecklistDialog';
+import { AttachmentsDialog } from '../../ui/components/dialogs/AttachmentsDialog';
+import { ShareDialog } from '../../ui/components/dialogs/ShareDialog';
+import { DeleteCardDialog } from '../../ui/components/dialogs/DeleteCardDialog';
 import { DueDialog } from '../../ui/components/dialogs/DueDialog';
 import { LabelsDialog } from '../../ui/components/dialogs/LabelsDialog';
 import { cardHasUnreadProcess, formatActivity, processRecordsFor, processTypesFor } from './model';
@@ -15,21 +19,29 @@ import { cardHasUnreadProcess, formatActivity, processRecordsFor, processTypesFo
 export interface DashboardCardProps {
   card: TrelloCard;
   catalog: ProcessCatalog;
+  pinned?: boolean;
+  dense?: boolean;
+  dragHandle?: ReactNode;
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
   onToggleLabel: (labelId: string) => void;
   onProcessesRead: (numbers: string[]) => void;
+  onTogglePin?: (cardId: string) => void;
 }
 
-type DialogKind = 'due' | 'labels' | 'checklist' | null;
+type DialogKind = 'due' | 'labels' | 'checklist' | 'attachments' | 'share' | null;
 
 export function DashboardCard({
   card,
   catalog,
+  pinned = false,
+  dense = false,
+  dragHandle,
   onChanged,
   onRemoved,
   onToggleLabel,
   onProcessesRead,
+  onTogglePin,
 }: DashboardCardProps) {
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [locationOpen, setLocationOpen] = useState(false);
@@ -39,16 +51,6 @@ export function DashboardCard({
   const [descDraft, setDescDraft] = useState(card.description);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (!editingDesc) return;
-    const textarea = descriptionRef.current;
-    if (!textarea) return;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight + 2}px`;
-    textarea.style.overflow = 'hidden';
-  }, [editingDesc, descDraft]);
 
   const due = formatDue(card.due, card.dueComplete);
   const unread = cardHasUnreadProcess(card, catalog);
@@ -66,20 +68,6 @@ export function DashboardCard({
     } catch (cause) {
       showToast(errorMessage(cause), 'error');
       return false;
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const remove = async () => {
-    setBusy(true);
-    try {
-      await callRpc('trello:delete-card', { cardId: card.id });
-      setConfirmDelete(false);
-      onRemoved(card.id);
-      showToast('Cartão movido para a lixeira do Trello.', 'success');
-    } catch (cause) {
-      showToast(errorMessage(cause), 'error');
     } finally {
       setBusy(false);
     }
@@ -157,7 +145,12 @@ export function DashboardCard({
   return (
     <>
       <article
-        className={classNames('sdo-card', unread && 'sdo-card--unread', card.dueComplete && 'sdo-card--done')}
+        className={classNames(
+          'sdo-card',
+          dense && 'sdo-card--kanban',
+          unread && 'sdo-card--unread',
+          card.dueComplete && 'sdo-card--done',
+        )}
       >
         <div className="sdo-card__main">
           <div className="sdo-card__title-row">
@@ -273,14 +266,13 @@ export function DashboardCard({
 
           {editingDesc ? (
             <div className="sdo-card__desc-edit">
-              <textarea
-                ref={descriptionRef}
-                className="sdo-inline-textarea"
+              <DescriptionEditor
                 value={descDraft}
-                onChange={(event) => setDescDraft(event.target.value)}
-                autoFocus
+                onChange={setDescDraft}
                 disabled={busy}
-                aria-label="Descrição do cartão"
+                autoFocus
+                placeholder="Escreva a descrição…"
+                ariaLabel="Descrição do cartão"
               />
               <div className="sdo-inline-edit">
                 <button
@@ -305,17 +297,26 @@ export function DashboardCard({
               </div>
             </div>
           ) : card.description ? (
-            <button
-              type="button"
-              className="sdo-card__desc sdo-card__desc-button"
-              onClick={() => {
+            <div
+              className="sdo-card__desc sdo-card__desc-view"
+              role="button"
+              tabIndex={0}
+              onClick={(event) => {
+                if ((event.target as HTMLElement).closest('a')) return;
+                setDescDraft(card.description);
+                setEditingDesc(true);
+              }}
+              onKeyDown={(event) => {
+                if ((event.target as HTMLElement).closest('a')) return;
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
                 setDescDraft(card.description);
                 setEditingDesc(true);
               }}
               title="Editar descrição"
             >
-              {card.description}
-            </button>
+              <CardDescription text={card.description} compact />
+            </div>
           ) : (
             <button
               type="button"
@@ -415,6 +416,18 @@ export function DashboardCard({
             )
           )}
           <div className="sdo-card__side-actions">
+            {onTogglePin && (
+              <button
+                type="button"
+                className={classNames('sfo-icon-btn', pinned && 'sfo-icon-btn--pinned')}
+                onClick={() => onTogglePin(card.id)}
+                aria-pressed={pinned}
+                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+              >
+                <Icon name="pin" size={14} />
+              </button>
+            )}
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
@@ -431,50 +444,82 @@ export function DashboardCard({
               target="_blank"
               rel="noreferrer"
               title="Abrir no Trello"
+              aria-label="Abrir no Trello"
             >
               <Icon name="external" size={13} />
-              Trello
+              <span className="sdo-card__action-label">Trello</span>
             </a>
           </div>
         </div>
 
         <div className="sdo-card__footer">
           <div className="sdo-card__footer-actions">
+            {dragHandle}
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
               onClick={() => setDialog('labels')}
               disabled={busy}
+              title="Etiquetas"
+              aria-label="Etiquetas"
             >
               <Icon name="tag" size={13} />
-              Etiquetas
+              <span className="sdo-card__action-label">Etiquetas</span>
             </button>
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
               onClick={() => setDialog('checklist')}
               disabled={busy}
+              title="Checklist"
+              aria-label="Checklist"
             >
               <Icon name="checklist" size={13} />
-              Checklist
+              <span className="sdo-card__action-label">Checklist</span>
+            </button>
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
+              onClick={() => setDialog('attachments')}
+              disabled={busy}
+              title="Anexos"
+              aria-label="Anexos"
+            >
+              <Icon name="paperclip" size={13} />
+              <span className="sdo-card__action-label">Anexos</span>
+            </button>
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
+              onClick={() => setDialog('share')}
+              disabled={busy}
+              title="Compartilhar e clonar"
+              aria-label="Compartilhar e clonar"
+            >
+              <Icon name="copy" size={13} />
+              <span className="sdo-card__action-label">Compartilhar</span>
             </button>
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
               onClick={() => setDialog('due')}
               disabled={busy}
+              title="Prazo"
+              aria-label="Prazo"
             >
               <Icon name="calendar" size={13} />
-              Prazo
+              <span className="sdo-card__action-label">Prazo</span>
             </button>
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
               onClick={() => setLocationOpen((current) => !current)}
               disabled={busy}
+              title="Mover"
+              aria-label="Mover"
             >
               <Icon name="board" size={13} />
-              Mover
+              <span className="sdo-card__action-label">Mover</span>
             </button>
             <button
               type="button"
@@ -484,9 +529,13 @@ export function DashboardCard({
               )}
               onClick={() => void toggleComplete()}
               disabled={busy}
+              title={card.dueComplete ? 'Reabrir' : 'Concluir'}
+              aria-label={card.dueComplete ? 'Reabrir' : 'Concluir'}
             >
               <Icon name={card.dueComplete ? 'refresh' : 'check'} size={13} />
-              {card.dueComplete ? 'Reabrir' : 'Concluir'}
+              <span className="sdo-card__action-label">
+                {card.dueComplete ? 'Reabrir' : 'Concluir'}
+              </span>
             </button>
           </div>
           <div className="sdo-card__footer-danger">
@@ -511,15 +560,17 @@ export function DashboardCard({
       {dialog === 'checklist' && (
         <ChecklistDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
       )}
+      {dialog === 'attachments' && (
+        <AttachmentsDialog card={card} onClose={() => setDialog(null)} />
+      )}
+      {dialog === 'share' && <ShareDialog card={card} onClose={() => setDialog(null)} />}
       {confirmDelete && (
-        <ConfirmDialog
-          title="Excluir cartão"
-          message="O cartão será movido para a lixeira do Trello e removido deste painel."
-          confirmLabel="Excluir do Trello"
-          tone="danger"
-          busy={busy}
-          onConfirm={() => void remove()}
+        <DeleteCardDialog
+          card={card}
           onClose={() => setConfirmDelete(false)}
+          onDeleted={(ids) => {
+            for (const id of ids) onRemoved(id);
+          }}
         />
       )}
     </>

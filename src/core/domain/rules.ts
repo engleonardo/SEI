@@ -4,6 +4,10 @@ export interface RuleTrigger {
   type: RuleTriggerType;
   /** Lista do quadro da regra que dispara `enterList` ou filtra `seiUpdated`. */
   listId?: string;
+  /** Etiquetas exigidas no cartão para o gatilho. Vazio/ausente = sem condição. */
+  labelIds?: string[];
+  /** Como combinar várias etiquetas: qualquer uma (`any`, padrão) ou todas (`all`). */
+  labelMode?: 'any' | 'all';
 }
 
 export type RuleActionType =
@@ -300,15 +304,36 @@ export function ruleRunChangeCount(run: RuleRun): number {
   );
 }
 
+function triggerLabelIds(rule: Rule): string[] {
+  return Array.isArray(rule.trigger.labelIds)
+    ? rule.trigger.labelIds.filter((id): id is string => typeof id === 'string' && Boolean(id))
+    : [];
+}
+
+/** Condição de etiqueta do gatilho: vazia = passa; senão qualquer/todas. */
+export function ruleLabelMatches(
+  rule: Rule,
+  card: { labels?: Array<{ id: string }> },
+): boolean {
+  const ids = triggerLabelIds(rule);
+  if (ids.length === 0) return true;
+  const cardLabels = new Set((card.labels ?? []).map((label) => label.id));
+  if (rule.trigger.labelMode === 'all') {
+    return ids.every((id) => cardLabels.has(id));
+  }
+  return ids.some((id) => cardLabels.has(id));
+}
+
 export function ruleMatches(
   rule: Rule,
   event: RuleEvent,
-  card: { idBoard: string; idList: string; links: string[] },
+  card: { idBoard: string; idList: string; links: string[]; labels?: Array<{ id: string }> },
 ): boolean {
   if (!rule.enabled) return false;
   if (rule.requiresSeiLink !== false && card.links.length === 0) return false;
   if (!rule.boardId || card.idBoard !== rule.boardId) return false;
   if (ruleIssue(rule)) return false;
+  if (!ruleLabelMatches(rule, card)) return false;
 
   switch (rule.trigger.type) {
     case 'created':
@@ -449,12 +474,19 @@ export function ruleWouldChange(rule: Rule, card: RuleCardState): boolean {
  */
 export function ruleAppliesNow(
   rule: Rule,
-  card: { idBoard: string; idList: string; dueComplete: boolean; links: string[] },
+  card: {
+    idBoard: string;
+    idList: string;
+    dueComplete: boolean;
+    links: string[];
+    labels?: Array<{ id: string }>;
+  },
   options: { seiUnread?: boolean } = {},
 ): boolean {
   if (rule.requiresSeiLink !== false && card.links.length === 0) return false;
   if (!rule.boardId || card.idBoard !== rule.boardId) return false;
   if (ruleIssue(rule)) return false;
+  if (!ruleLabelMatches(rule, card)) return false;
 
   switch (rule.trigger.type) {
     case 'created':

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { TrelloCard } from '../../core/domain/types';
 import { Icon } from '../icons';
+import { usePinnedCards } from '../hooks/usePinnedCards';
 import { CardItem } from './CardItem';
 import { EmptyState, ErrorState } from './common';
 import { CreateCardDialog } from './CreateCardDialog';
@@ -19,6 +20,7 @@ export interface CardStackProps {
   compact?: boolean;
   highlight?: boolean;
   activeLabels?: string[];
+  descriptionExpanded?: boolean;
   emptyMessage?: ReactNode;
   onToggleLabel?: (labelId: string) => void;
   onReload: () => void;
@@ -39,6 +41,7 @@ export function CardStack({
   compact = false,
   highlight = false,
   activeLabels,
+  descriptionExpanded = false,
   emptyMessage,
   onToggleLabel,
   onReload,
@@ -48,6 +51,10 @@ export function CardStack({
 }: CardStackProps) {
   const [showCreate, setShowCreate] = useState(false);
   const [showLink, setShowLink] = useState(false);
+  const { pinned, togglePin } = usePinnedCards();
+  const orderedCards = [...cards].sort(
+    (a, b) => Number(pinned.has(b.id)) - Number(pinned.has(a.id)),
+  );
 
   return (
     <div className="sf-stack">
@@ -118,7 +125,7 @@ export function CardStack({
         </EmptyState>
       )}
 
-      {cards.map((card) => (
+      {orderedCards.map((card) => (
         <CardItem
           key={card.id}
           card={card}
@@ -128,6 +135,9 @@ export function CardStack({
           compact={compact}
           highlight={highlight}
           activeLabels={activeLabels}
+          pinned={pinned.has(card.id)}
+          onTogglePin={togglePin}
+          descriptionExpanded={descriptionExpanded}
           onToggleLabel={onToggleLabel}
           onChanged={onChanged}
           onRemoved={onRemoved}

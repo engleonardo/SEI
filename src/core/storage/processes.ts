@@ -14,6 +14,8 @@ export interface ProcessRecord {
   unread: boolean;
   /** Usuário já viu/dispensou a novidade sem que o SEI tenha marcado como lido. */
   acknowledged?: boolean;
+  /** Regras de "processo atualizado" já avaliadas para a novidade atual. */
+  seiRuleHandled?: boolean;
   updatedAt: number;
 }
 
@@ -40,6 +42,7 @@ function sanitizeRecord(value: unknown, fallbackNumber?: string): ProcessRecord 
     origin,
     unread: Boolean(raw.unread),
     acknowledged: Boolean(raw.acknowledged),
+    seiRuleHandled: Boolean(raw.seiRuleHandled),
     updatedAt:
       typeof raw.updatedAt === 'number' && Number.isFinite(raw.updatedAt)
         ? raw.updatedAt
@@ -70,11 +73,12 @@ export async function listProcessRecords(): Promise<ProcessRecord[]> {
 
 export async function upsertProcessRecords(
   records: Array<Partial<ProcessRecord> & { number: string }>,
-): Promise<{ updated: number; total: number; unread: string[] }> {
+): Promise<{ updated: number; total: number; unread: string[]; pending: string[] }> {
   const catalog = await getProcessCatalog();
   let updated = 0;
   const now = Date.now();
   const unread: string[] = [];
+  const pending: string[] = [];
 
   for (const input of records) {
     const sanitized = sanitizeRecord({ ...input, updatedAt: now }, input.number);
@@ -92,6 +96,11 @@ export async function upsertProcessRecords(
         : input.unread === false
           ? false
           : (previous?.acknowledged ?? false);
+    const seiRuleHandled = sourceTransition
+      ? false
+      : input.unread === false
+        ? false
+        : (previous?.seiRuleHandled ?? false);
 
     const next: ProcessRecord = {
       ...previous,
@@ -99,11 +108,15 @@ export async function upsertProcessRecords(
       // `unread` é o estado da fonte (SEI); `acknowledged` é só a ciência do usuário.
       unread: sourceUnread,
       acknowledged,
+      // A regra roda uma vez por novidade, mesmo que ela tenha sido detectada
+      // tarde (ex.: extensão fechada no momento da atualização).
+      seiRuleHandled,
       specification: sanitized.specification || previous?.specification || '',
       processType: sanitized.processType || previous?.processType || '',
       url: sanitized.url || previous?.url || '',
       origin: sanitized.origin || previous?.origin || '',
     };
+    if (next.unread && !next.seiRuleHandled) pending.push(next.number);
     if (
       previous &&
       previous.specification === next.specification &&
@@ -111,7 +124,8 @@ export async function upsertProcessRecords(
       previous.url === next.url &&
       previous.origin === next.origin &&
       previous.unread === next.unread &&
-      Boolean(previous.acknowledged) === Boolean(next.acknowledged)
+      Boolean(previous.acknowledged) === Boolean(next.acknowledged) &&
+      Boolean(previous.seiRuleHandled) === Boolean(next.seiRuleHandled)
     ) {
       continue;
     }
@@ -132,9 +146,38 @@ export async function upsertProcessRecords(
     try {
       await browser.storage.local.set({ [PROCESSES_KEY]: trimmed });
     } catch {
-      return { updated: 0, total: Object.keys(catalog).length, unread: [] };
+      return { updated: 0, total: Object.keys(catalog).length, unread: [], pending: [] };
     }
   }
 
-  return { updated, total: Object.keys(catalog).length, unread };
+  return { updated, total: Object.keys(catalog).length, unread, pending };
+}
+
+/**
+ * Marca que as regras de "processo atualizado" já foram avaliadas nesta
+ * novidade. Evita repetir comentários/datas quando a lista do SEI é relida.
+ */
+export async function markSeiRulesHandled(numbers: string[]): Promise<void> {
+  const targets = new Set(
+    numbers
+      .map((number) => normalizeProcessNumber(number))
+      .filter((number): number is string => Boolean(number)),
+  );
+  if (targets.size === 0) return;
+
+  const catalog = await getProcessCatalog();
+  let changed = false;
+  for (const number of targets) {
+    const record = catalog[number];
+    if (!record || !record.unread || record.seiRuleHandled) continue;
+    catalog[number] = { ...record, seiRuleHandled: true };
+    changed = true;
+  }
+  if (!changed) return;
+
+  try {
+    await browser.storage.local.set({ [PROCESSES_KEY]: catalog });
+  } catch {
+    // Na próxima leitura da lista a regra é avaliada de novo.
+  }
 }

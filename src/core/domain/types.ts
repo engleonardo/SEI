@@ -43,6 +43,16 @@ export interface TrelloChecklist {
   checkItems: TrelloChecklistItem[];
 }
 
+export interface TrelloAttachment {
+  id: string;
+  name: string;
+  url: string;
+  bytes?: number | null;
+  date?: string | null;
+  mimeType?: string | null;
+  isUpload?: boolean;
+}
+
 export interface TrelloCardApi {
   id: string;
   name: string;

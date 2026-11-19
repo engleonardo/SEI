@@ -18,6 +18,7 @@ import {
 } from '../utils';
 import { Modal } from './Modal';
 import { ErrorState, Spinner } from './common';
+import { DescriptionEditor } from './DescriptionEditor';
 
 export interface CreateCardDialogProps {
   processNumber?: string;
@@ -330,14 +331,13 @@ export function CreateCardDialog({
           </div>
 
           <div className="sf-field">
-            <label htmlFor="sf-create-desc">Descrição (opcional)</label>
-            <textarea
-              id="sf-create-desc"
-              className="sf-textarea"
+            <span className="sf-label">Descrição (opcional)</span>
+            <DescriptionEditor
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Contexto, próximos passos, links…"
+              onChange={setDescription}
               disabled={busy}
+              placeholder="Contexto, próximos passos, links…"
+              ariaLabel="Descrição do cartão"
             />
           </div>
 

@@ -3,6 +3,7 @@ import type {
   CardPatch,
   ConnectionInfo,
   Settings,
+  TrelloAttachment,
   TrelloBoard,
   TrelloCard,
   TrelloChecklist,
@@ -17,6 +18,7 @@ import type { RuleStats } from '../storage/rule-stats';
 import type { RuleLogEntry } from '../storage/rule-log';
 import type { LinkCandidate } from '../link/scan';
 import type { SettingsBackup } from '../storage/backup';
+import type { MirrorGroup } from '../storage/mirrors';
 
 export interface RpcMap {
   'settings:get': { payload: undefined; result: Settings };
@@ -35,6 +37,7 @@ export interface RpcMap {
   'dashboard:open': { payload: undefined; result: undefined };
   'trello:boards': { payload: { fresh?: boolean } | undefined; result: TrelloBoard[] };
   'trello:lists': { payload: { boardId: string; fresh?: boolean }; result: TrelloList[] };
+  'trello:update-list': { payload: { listId: string; pos: number }; result: TrelloList };
   'trello:board-cards': { payload: { boardId: string; fresh?: boolean }; result: TrelloCard[] };
   'trello:card': { payload: { cardId: string }; result: TrelloCard };
   'trello:cards-for-process': {
@@ -64,7 +67,7 @@ export interface RpcMap {
     result: TrelloCard;
   };
   'trello:update-card': { payload: { cardId: string; patch: CardPatch }; result: TrelloCard };
-  'trello:delete-card': { payload: { cardId: string }; result: undefined };
+  'trello:delete-card': { payload: { cardId: string; deleteMirrors?: boolean }; result: undefined };
   'trello:link-cards': {
     payload: { cardIds: string[]; processNumber: string };
     result: BulkLinkResult[];
@@ -78,6 +81,24 @@ export interface RpcMap {
     result: TrelloCard;
   };
   'trello:board-labels': { payload: { boardId: string; fresh?: boolean }; result: TrelloLabel[] };
+  'trello:attachments': { payload: { cardId: string }; result: TrelloAttachment[] };
+  'trello:add-attachment-url': {
+    payload: { cardId: string; url: string; name?: string };
+    result: TrelloAttachment;
+  };
+  'trello:delete-attachment': {
+    payload: { cardId: string; attachmentId: string };
+    result: undefined;
+  };
+  'trello:copy-card': { payload: { cardId: string; listId: string }; result: TrelloCard };
+  'trello:copy-board': { payload: { boardId: string; name: string }; result: TrelloBoard };
+  'trello:mirror-card': {
+    payload: { cardId: string; listId: string };
+    result: { card: TrelloCard; group: MirrorGroup };
+  };
+  'mirrors:status': { payload: { cardId: string }; result: MirrorGroup | null };
+  'mirrors:remove': { payload: { cardId: string }; result: undefined };
+  'mirrors:sync': { payload: undefined; result: { updated: number } };
   'trello:create-label': {
     payload: { boardId: string; name: string; color: string };
     result: TrelloLabel;

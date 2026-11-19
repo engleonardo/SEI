@@ -15,7 +15,8 @@ import {
 } from '../storage/settings';
 import { getLastActionTab } from '../storage/last-tab';
 import { exportBackup, importBackup } from '../storage/backup';
-import { listProcessRecords, upsertProcessRecords } from '../storage/processes';
+import { listProcessRecords, markSeiRulesHandled, upsertProcessRecords } from '../storage/processes';
+import { getMirrorGroup } from '../storage/mirrors';
 import { getRules, saveRules } from '../storage/rules';
 import { getLastRuleRun } from '../storage/rule-runs';
 import { clearRuleStats, getRuleStats } from '../storage/rule-stats';
@@ -74,6 +75,7 @@ const handlers = {
 
   'trello:boards': (payload) => repository.getBoards(payload?.fresh),
   'trello:lists': ({ boardId, fresh }) => repository.getLists(boardId, fresh),
+  'trello:update-list': ({ listId, pos }) => repository.updateListPosition(listId, pos),
   'trello:board-cards': ({ boardId, fresh }) => repository.getBoardCards(boardId, fresh),
   'trello:card': ({ cardId }) => repository.getCard(cardId),
   'trello:cards-for-process': ({ processNumber, fresh }) =>
@@ -84,9 +86,32 @@ const handlers = {
   'trello:search-cards': ({ query }) => repository.searchCardsByName(query),
   'trello:unlinked-candidates': ({ boardId }) => repository.findUnlinkedCandidates(boardId),
   'trello:create-card': (payload) => repository.createCard(payload),
-  'trello:update-card': ({ cardId, patch }) => repository.updateCard(cardId, patch),
-  'trello:delete-card': async ({ cardId }) => {
-    await repository.deleteCard(cardId);
+  'trello:update-card': async ({ cardId, patch }) => {
+    const card = await repository.updateCard(cardId, patch);
+    await repository.syncMirrorsForCard(cardId).catch(() => undefined);
+    return card;
+  },
+  'trello:delete-card': async ({ cardId, deleteMirrors }) => {
+    const group = deleteMirrors ? await getMirrorGroup(cardId) : null;
+    const ids = group ? Array.from(new Set(group.cardIds)) : [cardId];
+    let failed = 0;
+    let requestedError: unknown = null;
+    for (const id of ids) {
+      try {
+        await repository.deleteCard(id);
+      } catch (error) {
+        failed += 1;
+        if (id === cardId) requestedError = error;
+      }
+    }
+    // Se o cartão escolhido não foi excluído, mantém o espelho intacto e avisa a interface.
+    if (requestedError) throw requestedError;
+    if (group) {
+      // Falha parcial: mantém o grupo para tentar de novo, sem perder a sincronização.
+      if (failed === 0) await repository.deleteMirrorGroup(group.id);
+    } else {
+      await repository.removeMirror(cardId);
+    }
     return undefined;
   },
   'trello:link-cards': ({ cardIds, processNumber }) => repository.linkCards(cardIds, processNumber),
@@ -94,6 +119,22 @@ const handlers = {
     repository.linkCardsToProcesses(cardIds, processNumbers),
   'trello:unlink-card': ({ cardId, processNumber }) => repository.unlinkCard(cardId, processNumber),
   'trello:board-labels': ({ boardId, fresh }) => repository.getBoardLabels(boardId, fresh),
+  'trello:attachments': ({ cardId }) => repository.getAttachments(cardId),
+  'trello:add-attachment-url': ({ cardId, url, name }) =>
+    repository.addAttachmentUrl(cardId, url, name),
+  'trello:delete-attachment': async ({ cardId, attachmentId }) => {
+    await repository.deleteAttachment(cardId, attachmentId);
+    return undefined;
+  },
+  'trello:copy-card': ({ cardId, listId }) => repository.copyCard(cardId, listId),
+  'trello:copy-board': ({ boardId, name }) => repository.copyBoard(boardId, name),
+  'trello:mirror-card': ({ cardId, listId }) => repository.createCardMirror(cardId, listId),
+  'mirrors:status': ({ cardId }) => getMirrorGroup(cardId),
+  'mirrors:remove': async ({ cardId }) => {
+    await repository.removeMirror(cardId);
+    return undefined;
+  },
+  'mirrors:sync': () => repository.syncMirrors(),
   'trello:create-label': ({ boardId, name, color }) => repository.createLabel(boardId, name, color),
   'trello:add-label': ({ cardId, labelId }) => repository.addLabelToCard(cardId, labelId),
   'trello:remove-label': ({ cardId, labelId }) => repository.removeLabelFromCard(cardId, labelId),
@@ -197,9 +238,12 @@ const handlers = {
   'processes:upsert': async ({ processes }) => {
     const result = await upsertProcessRecords(processes);
     let rulesApplied = 0;
-    if (result.unread.length > 0) {
+    // `pending` também inclui novidades detectadas tarde (extensão fechada no
+    // momento da atualização) e que ainda não passaram pelas regras.
+    if (result.pending.length > 0) {
       try {
-        rulesApplied = (await repository.applySeiUpdateRules(result.unread)).applied;
+        rulesApplied = (await repository.applySeiUpdateRules(result.pending)).applied;
+        await markSeiRulesHandled(result.pending);
       } catch {
         rulesApplied = 0;
       }

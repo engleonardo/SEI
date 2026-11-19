@@ -278,7 +278,7 @@ export function RulesSection({
   const changeBoard = (rule: Rule, boardId: string) => {
     updateRule(rule.id, {
       boardId,
-      trigger: { ...rule.trigger, listId: undefined },
+      trigger: { ...rule.trigger, listId: undefined, labelIds: undefined, labelMode: undefined },
       actions: rule.actions.map((action) => ({
         ...action,
         listId: undefined,
@@ -287,6 +287,20 @@ export function RulesSection({
       })),
     });
     void loadBoardData(boardId);
+  };
+
+  const toggleConditionLabel = (rule: Rule, labelId: string) => {
+    const current = rule.trigger.labelIds ?? [];
+    const next = current.includes(labelId)
+      ? current.filter((id) => id !== labelId)
+      : [...current, labelId];
+    updateRule(rule.id, {
+      trigger: {
+        ...rule.trigger,
+        labelIds: next.length > 0 ? next : undefined,
+        labelMode: next.length > 0 ? (rule.trigger.labelMode ?? 'any') : undefined,
+      },
+    });
   };
 
   const updateAction = (ruleId: string, index: number, patch: Partial<RuleAction>) => {
@@ -692,10 +706,63 @@ export function RulesSection({
                     )}
                   </div>
 
+                  <div className="sfo-rule__row">
+                    <span className="sfo-rule__label">Etiquetas</span>
+                    <div className="sfo-rule__labels">
+                      {boardLabels(rule.boardId).length === 0 ? (
+                        <span className="sfo-hint">
+                          {rule.boardId
+                            ? 'Nenhuma etiqueta neste quadro.'
+                            : 'Escolha o quadro para listar as etiquetas.'}
+                        </span>
+                      ) : (
+                        boardLabels(rule.boardId).map((label) => {
+                          const selected = (rule.trigger.labelIds ?? []).includes(label.id);
+                          return (
+                            <label
+                              key={label.id}
+                              className={`sfo-rule__label-chip${
+                                selected ? ' sfo-rule__label-chip--active' : ''
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() => toggleConditionLabel(rule, label.id)}
+                              />
+                              {label.name || label.color || 'Etiqueta'}
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                    {(rule.trigger.labelIds?.length ?? 0) > 1 && (
+                      <select
+                        className="sfo-select"
+                        value={rule.trigger.labelMode ?? 'any'}
+                        onChange={(event) =>
+                          updateRule(rule.id, {
+                            trigger: {
+                              ...rule.trigger,
+                              labelMode: event.target.value === 'all' ? 'all' : 'any',
+                            },
+                          })
+                        }
+                        aria-label="Combinação das etiquetas"
+                        title="Como combinar as etiquetas selecionadas"
+                      >
+                        <option value="any">Qualquer uma</option>
+                        <option value="all">Todas</option>
+                      </select>
+                    )}
+                  </div>
+
                   {rule.trigger.type === 'seiUpdated' && (
                     <p className="sfo-hint" style={{ margin: 0 }}>
                       Dispara quando a lista do SEI indicar novidade no processo vinculado. Roda uma vez por
-                      novidade, em todos os cartões do processo que estejam neste quadro.
+                      novidade, em todos os cartões do processo que estejam neste quadro. Se a novidade for
+                      detectada depois (por exemplo, com a extensão fechada), a regra roda na próxima leitura
+                      da lista.
                     </p>
                   )}
 

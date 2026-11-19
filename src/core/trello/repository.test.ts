@@ -921,6 +921,66 @@ describe('TrelloRepository', () => {
     expect(client.post).toHaveBeenCalledTimes(1);
   });
 
+  it('move o cartão que está na lista do gatilho quando o processo é atualizado', async () => {
+    mocks.settings = { ...mocks.settings, defaultBoardId: 'board-1' };
+    mocks.rules = [
+      {
+        id: 'rule-sei-list',
+        name: 'Aguardando info atualizado vai para Demandas',
+        enabled: true,
+        boardId: 'board-1',
+        requiresSeiLink: true,
+        trigger: { type: 'seiUpdated', listId: 'list-aguardando' },
+        actions: [
+          { type: 'moveToList', listId: 'list-demandas' },
+          { type: 'moveToTop' },
+        ],
+      },
+    ];
+
+    let currentList = 'list-aguardando';
+    const client = fakeClient();
+    const card = () =>
+      rawCard({
+        id: 'card-1',
+        desc: `SEI ${PROCESS}`,
+        idList: currentList,
+        list: { id: currentList, name: currentList === 'list-demandas' ? 'Demandas' : 'Aguardando info' },
+      });
+
+    vi.mocked(client.get).mockImplementation(async (path: string) => {
+      if (path === '/members/me/boards') return [{ id: 'board-1', name: 'DEMANDAS ENG' }];
+      if (path === '/boards/board-1/lists') {
+        return [
+          { id: 'list-aguardando', name: 'Aguardando info' },
+          { id: 'list-demandas', name: 'Demandas' },
+        ];
+      }
+      if (path === '/boards/board-1/labels') return [];
+      if (path === '/boards/board-1/cards') return [card()];
+      if (path === '/search') return { cards: [card()] };
+      if (path.startsWith('/boards/')) return [];
+      return card();
+    });
+    vi.mocked(client.put).mockImplementation(async (path: string, body?: unknown) => {
+      if (path === '/cards/card-1') {
+        const patch = body as { idList?: string } | undefined;
+        if (patch?.idList) currentList = patch.idList;
+      }
+      return {};
+    });
+
+    const repo = repository(client);
+    const result = await repo.applySeiUpdateRules([PROCESS]);
+
+    expect(result.applied).toBe(1);
+    expect(client.put).toHaveBeenCalledWith('/cards/card-1', {
+      pos: 'top',
+      idList: 'list-demandas',
+    });
+    expect(currentList).toBe('list-demandas');
+  });
+
   it('aplicar agora ignora cartões que já estão na lista de destino', async () => {
     mocks.settings = { ...mocks.settings, defaultBoardId: '' };
     mocks.rules = [

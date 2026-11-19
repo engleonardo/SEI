@@ -93,6 +93,13 @@ function sanitizeRule(value: unknown): Rule | null {
     trigger: {
       type: triggerType as RuleTriggerType,
       listId: typeof trigger.listId === 'string' ? trigger.listId : undefined,
+      labelIds: Array.isArray(trigger.labelIds)
+        ? trigger.labelIds.filter(
+            (id): id is string => typeof id === 'string' && Boolean(id),
+          )
+        : undefined,
+      labelMode:
+        trigger.labelMode === 'all' ? 'all' : trigger.labelMode === 'any' ? 'any' : undefined,
     },
     actions,
     requiresSeiLink: rule.requiresSeiLink !== false,

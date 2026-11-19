@@ -42,6 +42,7 @@ export interface DashboardFiltersProps {
   onClear: () => void;
   onMarkSeen: () => void;
   onExport: () => void;
+  onCollapse?: () => void;
   showSearch?: boolean;
 }
 
@@ -58,6 +59,7 @@ export function DashboardFilters({
   onClear,
   onMarkSeen,
   onExport,
+  onCollapse,
   showSearch = true,
 }: DashboardFiltersProps) {
   const active = activeFilterCount(filters);
@@ -81,7 +83,12 @@ export function DashboardFilters({
   };
 
   return (
-    <section className="sdo-filters">
+    <section
+      className="sdo-filters"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onCollapse?.();
+      }}
+    >
       <div className={`sdo-filters__top${showSearch ? '' : ' sdo-filters__top--actions-only'}`}>
         {showSearch && (
           <div className="sdo-search">
@@ -109,6 +116,12 @@ export function DashboardFilters({
         )}
 
         <div className="sdo-filters__actions">
+          {onCollapse && (
+            <button type="button" className="sfo-btn sfo-btn--sm" onClick={onCollapse}>
+              <Icon name="chevronUp" size={14} />
+              Recolher
+            </button>
+          )}
           <button type="button" className="sfo-btn sfo-btn--sm" onClick={onExport}>
             <Icon name="external" size={14} />
             Exportar CSV

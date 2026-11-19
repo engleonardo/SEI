@@ -187,6 +187,16 @@ test('lista de processos mostra o cartão vinculado e o botão de ações', asyn
 
   await expect(page.getByText('Cartão vinculado')).toBeVisible();
   await expect(page.getByRole('button', { name: /Abrir ações do processo/ }).first()).toBeVisible();
+  // A ação fica imediatamente após o link do processo, não ao lado das etiquetas.
+  expect(
+    await page.evaluate(() => {
+      const anchor = document.querySelector<HTMLAnchorElement>(
+        'a[href*="id_procedimento=1"]',
+      );
+      const next = anchor?.nextElementSibling as HTMLElement | null;
+      return Boolean(next?.hasAttribute('data-sei-flow'));
+    }),
+  ).toBe(true);
   await expect(page.locator('.sf-card--highlight')).toHaveCount(1);
   await expect(page.getByText('+ Cartão')).toHaveCount(0);
   await expect(page.locator('.sf-toolbar__brand img').first()).toBeVisible();
@@ -228,7 +238,7 @@ test('quadro/lista abre seletor inline, sem popup', async ({ page }) => {
   await page.getByRole('button', { name: 'Cancelar' }).click();
 });
 
-test('edição de descrição abre uma área ampla', async ({ page }) => {
+test('edição de descrição abre um editor WYSIWYG', async ({ page }) => {
   await openFixture(
     page,
     'sei-list-v4.html',
@@ -236,11 +246,25 @@ test('edição de descrição abre uma área ampla', async ({ page }) => {
   );
 
   await page.getByText('Descrição do cartão').click();
-  const textarea = page.getByLabel('Descrição do cartão');
-  await expect(textarea).toBeVisible();
-  expect(await textarea.evaluate((element) => (element as HTMLTextAreaElement).clientHeight)).toBeGreaterThan(
-    120,
-  );
+  const editor = page.getByRole('textbox', { name: 'Descrição do cartão' });
+  await expect(editor).toBeVisible();
+  expect(await editor.evaluate((element) => element.clientHeight)).toBeGreaterThan(100);
+
+  // A barra aplica negrito no texto selecionado (execCommand no Shadow DOM).
+  await editor.click();
+  await page.keyboard.press('Control+A');
+  await page.getByRole('button', { name: 'Negrito' }).click();
+  const html = await editor.evaluate((element) => element.innerHTML);
+  expect(html.toLowerCase()).toMatch(/<(strong|b)>/);
+
+  // O link usa a seleção salva antes de abrir o campo de URL.
+  await editor.click();
+  await page.keyboard.press('Control+A');
+  await page.getByRole('button', { name: 'Inserir link' }).click();
+  await page.getByLabel('URL do link').fill('https://trello.com');
+  await page.getByRole('button', { name: 'Aplicar' }).click();
+  const linked = await editor.evaluate((element) => element.innerHTML);
+  expect(linked).toMatch(/href="https:\/\/trello\.com\/?"/);
 });
 
 test('processo aberto mostra o painel completo', async ({ page }) => {
@@ -255,6 +279,7 @@ test('processo aberto mostra o painel completo', async ({ page }) => {
   await expect(page.getByText('Cartão vinculado')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Novo cartão' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Vincular cartões' })).toBeVisible();
+  await expect(page.locator('.sf-process-panel .sf-markdown--roomy').first()).toBeVisible();
 
   // Etiqueta clicável aplica filtro dentro do painel do processo.
   const chip = page.locator('.sf-label-chip--button').first();
@@ -275,7 +300,7 @@ test('diálogo de novo cartão abre com o destino padrão', async ({ page }) => 
   await expect(page.getByText('Novo cartão no Trello')).toBeVisible();
   await expect(page.getByRole('dialog').getByLabel('Nome')).toHaveValue(PROCESS);
   await expect(page.getByRole('dialog').getByLabel('Quadro')).toHaveValue('board-1');
-  await expect(page.getByRole('dialog').getByLabel('Lista')).toHaveValue('list-1');
+  await expect(page.getByRole('dialog').getByLabel('Lista', { exact: true })).toHaveValue('list-1');
   await expect(page.getByRole('dialog').getByLabel('Início (opcional)')).toHaveValue('');
   await expect(page.getByRole('dialog').getByLabel('Término (opcional)')).toHaveValue('');
   await expect(page.getByRole('dialog').getByRole('button', { name: 'Nova etiqueta' })).toBeVisible();

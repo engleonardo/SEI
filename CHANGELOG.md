@@ -3,6 +3,34 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.5.5] - 2026-11-18
+
+### Adicionado
+
+- **Visão Kanban** no dashboard, com colunas por lista, arraste de cartões, reordenação de colunas, rolagem interna por coluna, botão **Adicionar cartão** em cada coluna, **Desfazer** e **Ctrl+Z**.
+- **Editor WYSIWYG** para descrições, com negrito, itálico, tachado, títulos, listas, citação e links, sem exigir Markdown do usuário.
+- **Anexos** no cartão: enviar arquivo até 10MB, anexar por URL, listar, abrir e excluir.
+- **Compartilhar e clonar**: copiar link, clonar cartão para outro quadro/lista, copiar quadro e **espelhar cartão**.
+- **Espelho de cartão**: nome e descrição sincronizados entre os cartões espelhados; exclusão com opção **Só este** ou **Todos os espelhos**.
+- **Fixar/favoritar cartões** no topo das listas e grupos (favorito local).
+- **Regras com condição por etiqueta**, com modo “qualquer uma” ou “todas”.
+- Dashboard mostra **cartões vinculados e sem vínculo juntos**, com filtros “Com vínculo”, “Sem vínculo” e “Todos”.
+
+### Alterado
+
+- O **+** de ação no SEI agora fica imediatamente após o número do processo.
+- O cartão do processo SEI mostra mais linhas da descrição.
+- Cartões do Kanban mais compactos, com 3 linhas de descrição, contorno de hover, espaçamento maior e grip dedicado para arrastar.
+- Filtros ativos com mais espaçamento; filtros abrem antes das listas e podem ser recolhidos.
+- Rodapé do dashboard mais próximo do conteúdo.
+
+### Corrigido
+
+- **Regra “processo SEI atualizado”**: novidades detectadas depois do momento da atualização são reavaliadas na próxima leitura da lista, uma vez por novidade.
+- Contraste do tema escuro no SEI e no dashboard.
+- Firefox 115 ESR: mínimo do desktop em 115.0.
+- Abertura do processo mais rápida, com cache imediato e atualização em segundo plano.
+
 ## [1.5.4] - 2026-11-09
 
 ### Corrigido

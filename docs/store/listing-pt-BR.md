@@ -45,6 +45,13 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Funciona em qualquer domínio e versão do SEI (3.x, 4.x e 5.x).
 • Ative apenas os sites que você usa, com opção de ativar automaticamente endereços que começam com "sei"; sem permissão global obrigatória.
 • Backup das configurações e regras para levar a outro computador.
+• **Kanban no dashboard**: arraste cartões entre colunas, reordene colunas, use rolagem por coluna e desfaça com Ctrl+Z.
+• **Editor de descrição WYSIWYG**: formate texto e links sem precisar saber Markdown.
+• **Anexos**: envie arquivos até 10MB, anexe por link, liste, abra e exclua.
+• **Compartilhe e clone**: copie link, clone cartões para outro quadro/lista, copie quadros e crie espelhos sincronizados.
+• **Espelho de cartão**: nome e descrição ficam sincronizados; ao excluir, escolha só este ou todos os espelhos.
+• **Fixe cartões** no topo das listas e grupos.
+• **Regras por etiqueta**: exija qualquer uma ou todas as etiquetas, combinadas com a lista.
 
 Privacidade: sem servidor próprio, sem telemetria e sem anúncios. As credenciais do Trello ficam apenas no seu navegador. O SEI Flow não salva dados de usuários fora do navegador. O uso é de responsabilidade exclusiva do usuário; o criador não tem ingerência sobre informações do SEI ou do Trello.
 
@@ -94,10 +101,10 @@ Integrar cartões do Trello a processos do SEI, permitindo criar, vincular, visu
 Os arquivos estão em `docs/store/screenshots-1280x800/` (gerados por `node scripts/store-screenshots.mjs`). A Chrome Web Store aceita até 5 imagens; a ordem recomendada é:
 
 1. `dashboard-1280x800.png` - painel inicial com métricas, total do quadro, listas na ordem do Trello e ordenação por lista.
-2. `dashboard-dark-1280x800.png` - o mesmo painel no modo escuro.
-3. `process-1280x800.png` - processo aberto com cartões, caminho do quadro/lista e ações.
-4. `rules-1280x800.png` - regras automáticas com contador, aplicar agora e desfazer.
-5. `list-1280x800.png` - cartões anexados à lista de processos, com etiquetas e destaque de novidade.
+2. `kanban-1280x800.png` - visão Kanban com colunas, cartões compactos e arraste.
+3. `dashboard-dark-1280x800.png` - o mesmo painel no modo escuro.
+4. `process-1280x800.png` - processo aberto com cartões, caminho do quadro/lista e ações.
+5. `rules-1280x800.png` - regras automáticas com contador, aplicar agora e desfazer.
 
 Imagens adicionais para documentação: `rules-dark-1280x800.png`, `filter-1280x800.png`, `create-dialog-1280x800.png` e `options-1280x800.png`.
 

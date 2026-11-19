@@ -88,6 +88,41 @@ describe('regras', () => {
     expect(ruleMatches(sei, { kind: 'moved', toListId: 'list-1' }, card)).toBe(false);
   });
 
+  it('exige etiquetas no gatilho com modo qualquer ou todas', () => {
+    const anyRule = rule({
+      trigger: { type: 'completed', labelIds: ['label-1', 'label-2'] },
+      actions: [{ type: 'moveToTop' }],
+    });
+    expect(
+      ruleMatches(anyRule, { kind: 'completed' }, { ...card, labels: [{ id: 'label-1' }] }),
+    ).toBe(true);
+    expect(
+      ruleMatches(anyRule, { kind: 'completed' }, { ...card, labels: [{ id: 'label-3' }] }),
+    ).toBe(false);
+
+    const allRule = rule({
+      trigger: { type: 'completed', labelIds: ['label-1', 'label-2'], labelMode: 'all' },
+      actions: [{ type: 'moveToTop' }],
+    });
+    expect(
+      ruleMatches(allRule, { kind: 'completed' }, { ...card, labels: [{ id: 'label-1' }] }),
+    ).toBe(false);
+    expect(
+      ruleMatches(allRule, { kind: 'completed' }, {
+        ...card,
+        labels: [{ id: 'label-1' }, { id: 'label-2' }],
+      }),
+    ).toBe(true);
+
+    expect(
+      ruleAppliesNow(allRule, {
+        ...card,
+        dueComplete: true,
+        labels: [{ id: 'label-1' }, { id: 'label-2' }],
+      }),
+    ).toBe(true);
+  });
+
   it('ignora regra desativada', () => {
     const disabled = rule({ enabled: false, trigger: { type: 'completed' } });
     expect(ruleMatches(disabled, { kind: 'completed' }, card)).toBe(false);
