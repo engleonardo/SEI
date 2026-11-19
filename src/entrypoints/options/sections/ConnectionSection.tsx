@@ -165,24 +165,6 @@ export function ConnectionSection({
             </>
           ) : (
             <>
-              <button
-                type="button"
-                className="sfo-btn sfo-btn--primary"
-                onClick={() => void saveConnection()}
-                disabled={busy || !appKey.trim() || !appToken.trim()}
-              >
-                {busy ? <Spinner /> : <Icon name="check" size={14} />}
-                Salvar credenciais
-              </button>
-              <button
-                type="button"
-                className="sfo-btn"
-                onClick={() => void testConnection()}
-                disabled={testing || !appKey.trim() || !appToken.trim()}
-              >
-                {testing ? <Spinner /> : <Icon name="refresh" size={14} />}
-                Testar conexão
-              </button>
               <span style={{ flex: 1 }} />
               {connected ? (
                 <StatusPill tone="success">
@@ -308,6 +290,27 @@ export function ConnectionSection({
                   O token fica apenas neste navegador. Use esta opção se preferir não usar o login.
                 </div>
               </div>
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+              <button
+                type="button"
+                className="sfo-btn sfo-btn--primary"
+                onClick={() => void saveConnection()}
+                disabled={busy || !appKey.trim() || !appToken.trim()}
+              >
+                {busy ? <Spinner /> : <Icon name="check" size={14} />}
+                Salvar credenciais
+              </button>
+              <button
+                type="button"
+                className="sfo-btn"
+                onClick={() => void testConnection()}
+                disabled={testing || !appKey.trim() || !appToken.trim()}
+              >
+                {testing ? <Spinner /> : <Icon name="refresh" size={14} />}
+                Testar conexão
+              </button>
             </div>
 
             {dirty && (

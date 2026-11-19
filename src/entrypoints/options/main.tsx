@@ -242,24 +242,6 @@ function App() {
 
         {notice && <div className={`sfo-alert sfo-alert--${notice.kind}`}>{notice.text}</div>}
 
-        {!connected && (
-          <div className="sfo-onboarding">
-            <span className="sfo-logo" style={{ width: 36, height: 36, borderRadius: 10 }}>
-              <Icon name="arrowRight" size={18} />
-            </span>
-            <div className="sfo-onboarding__body">
-              <p className="sfo-onboarding__title">Comece conectando o Trello</p>
-              <p className="sfo-onboarding__text">
-                Informe sua APP-KEY e gere um TOKEN. Depois escolha o quadro e a lista padrão e ative o site
-                do seu órgão.
-              </p>
-            </div>
-            <button type="button" className="sfo-btn sfo-btn--primary" onClick={() => setTab('connection')}>
-              Conectar Trello
-            </button>
-          </div>
-        )}
-
         {connected && (
           <SetupChecklist settings={settings} connected={connected} onGo={setTab} />
         )}
