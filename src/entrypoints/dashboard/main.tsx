@@ -267,11 +267,30 @@ function Dashboard() {
     if (settings) setThemePreference(settings.theme);
   }, [settings]);
 
-  useEffect(() => watchSettings((next) => setThemePreference(next.theme)), []);
+  useEffect(() => {
+    let timer: number | null = null;
+    const unwatch = watchSettings((next) => {
+      setThemePreference(next.theme);
+      setSettings((previous) => {
+        if (previous && previous.defaultBoardId !== next.defaultBoardId) {
+          defaultBoardApplied.current = false;
+        }
+        return next;
+      });
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = null;
+        void load(true, true);
+      }, 300);
+    });
+    return () => {
+      unwatch();
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [load]);
 
   // Atualização sem clique: ao voltar ao painel e quando o SEI avisa que mudou algo.
   useEffect(() => {
-    if (!connected) return;
     let timer: number | null = null;
     const refresh = () => {
       if (document.visibilityState !== 'visible') return;
@@ -293,7 +312,7 @@ function Dashboard() {
       unwatch();
       if (timer) window.clearTimeout(timer);
     };
-  }, [connected, load]);
+  }, [load]);
 
   useEffect(() => {
     if (defaultBoardApplied.current) return;
