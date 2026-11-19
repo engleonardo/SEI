@@ -148,22 +148,26 @@ function App() {
     }
   }, []);
 
-  const requestSitePermission = useCallback(async () => {
-    const granted = await requestBroadSiteAccess();
+  const activateSeiSites = useCallback(async () => {
+    const granted = (await hasBroadSiteAccess()) || (await requestBroadSiteAccess());
     setSitePermission(granted);
-    notify(
-      granted
-        ? {
-            kind: 'success',
-            text: 'Ativação automática liberada para os sites do SEI.',
-          }
-        : {
-            kind: 'warning',
-            text: 'Permissão não concedida. Você pode ativar um site específico em Sites do SEI.',
-          },
-    );
-    return granted;
-  }, [notify]);
+    if (!granted) {
+      notify({
+        kind: 'warning',
+        text: 'Permissão não concedida. Você pode ativar um site específico em Sites do SEI.',
+      });
+      return false;
+    }
+    if (settings && !settings.autoSeiHosts) {
+      const updated = await save({ autoSeiHosts: true });
+      setSettings(updated);
+    }
+    notify({
+      kind: 'success',
+      text: 'Sites do SEI ativados automaticamente.',
+    });
+    return true;
+  }, [notify, save, settings]);
 
   useEffect(() => {
     let active = true;
@@ -269,7 +273,7 @@ function App() {
             settings={settings}
             connected={connected}
             sitePermission={sitePermission}
-            onRequestSitePermission={requestSitePermission}
+            onActivateSites={activateSeiSites}
             onGo={setTab}
           />
         )}

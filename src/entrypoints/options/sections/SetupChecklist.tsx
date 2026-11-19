@@ -9,19 +9,18 @@ export function SetupChecklist({
   settings,
   connected,
   sitePermission,
-  onRequestSitePermission,
+  onActivateSites,
   onGo,
 }: {
   settings: Settings;
   connected: boolean;
   sitePermission: boolean | null;
-  onRequestSitePermission: () => Promise<boolean>;
+  onActivateSites: () => Promise<boolean>;
   onGo: (tab: 'connection' | 'destination' | 'sites') => void;
 }) {
   if (!connected) return null;
 
   const destinationDone = Boolean(settings.defaultBoardId && settings.defaultListId);
-  const autoNeedsPermission = settings.autoSeiHosts && sitePermission === false;
   const siteDone =
     settings.allSites ||
     (settings.autoSeiHosts && sitePermission === true) ||
@@ -39,13 +38,9 @@ export function SetupChecklist({
       id: 'sites' as const,
       label: 'Ativar o site do SEI',
       done: siteDone,
-      action: autoNeedsPermission ? 'Permitir acesso' : 'Ativar site',
+      action: 'Ativar site',
       run: () => {
-        if (autoNeedsPermission) {
-          void onRequestSitePermission();
-          return;
-        }
-        onGo('sites');
+        void onActivateSites();
       },
     },
   ];

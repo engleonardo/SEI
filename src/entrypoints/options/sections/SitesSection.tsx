@@ -114,16 +114,20 @@ export function SitesSection({
     }
   };
 
-  const grantBroad = async () => {
+  const activateSei = async () => {
     setBusy(true);
     try {
-      const granted = await requestBroadSiteAccess();
+      const granted = (await hasBroadSiteAccess()) || (await requestBroadSiteAccess());
       setBroadGranted(granted);
-      notify(
-        granted
-          ? { kind: 'success', text: 'Acesso aos sites do SEI liberado.' }
-          : { kind: 'error', text: 'Permissão não concedida.' },
-      );
+      if (!granted) {
+        notify({ kind: 'error', text: 'Permissão para ativar os sites do SEI não concedida.' });
+        return;
+      }
+      if (!settings.autoSeiHosts) {
+        const updated = await save({ autoSeiHosts: true });
+        applySettings(updated);
+      }
+      notify({ kind: 'success', text: 'Sites do SEI ativados automaticamente.' });
     } finally {
       setBusy(false);
     }
@@ -194,7 +198,7 @@ export function SitesSection({
             <StatusPill
               tone={
                 settings.allSites ||
-                settings.autoSeiHosts ||
+                (settings.autoSeiHosts && broadGranted === true) ||
                 settings.activatedOrigins.length > 0
                   ? 'success'
                   : 'warning'
@@ -203,12 +207,38 @@ export function SitesSection({
               {settings.allSites
                 ? 'Todos os sites'
                 : settings.autoSeiHosts
-                  ? 'Sites “sei” automáticos'
+                  ? broadGranted === true
+                    ? 'Sites “sei” automáticos'
+                    : 'Sites “sei” (falta permissão)'
                   : `${settings.activatedOrigins.length} site(s) ativado(s)`}
             </StatusPill>
           </>
         }
       >
+        {!settings.allSites && !(settings.autoSeiHosts && broadGranted === true) && (
+          <div className="sfo-onboarding">
+            <span className="sfo-logo" style={{ width: 36, height: 36, borderRadius: 10 }}>
+              <Icon name="check" size={18} />
+            </span>
+            <div className="sfo-onboarding__body">
+              <p className="sfo-onboarding__title">Ativar o SEI automaticamente</p>
+              <p className="sfo-onboarding__text">
+                Um clique libera o acesso e ativa qualquer site que comece com “sei”. Não precisa
+                cadastrar URL.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--primary"
+              onClick={() => void activateSei()}
+              disabled={busy}
+            >
+              {busy ? <Spinner /> : <Icon name="check" size={14} />}
+              Ativar site do SEI
+            </button>
+          </div>
+        )}
+
         <label className="sfo-toggle-row">
           <input
             type="checkbox"
@@ -246,28 +276,6 @@ export function SitesSection({
             </span>
           </span>
         </label>
-
-        {settings.autoSeiHosts && !settings.allSites && broadGranted === false && (
-          <div className="sfo-alert">
-            <Icon name="alert" size={16} />
-            <div style={{ flex: 1 }}>
-              <strong>Falta liberar o acesso aos sites do SEI.</strong>
-              <p style={{ margin: '4px 0 10px', color: 'var(--text-soft)', fontSize: 13 }}>
-                A ativação automática está ligada, mas o navegador ainda não deu permissão. Sem ela,
-                a interface não consegue aparecer no SEI.
-              </p>
-              <button
-                type="button"
-                className="sfo-btn sfo-btn--primary"
-                onClick={() => void grantBroad()}
-                disabled={busy}
-              >
-                {busy ? <Spinner /> : <Icon name="check" size={14} />}
-                Permitir acesso
-              </button>
-            </div>
-          </div>
-        )}
 
         <div className="sfo-field">
           <label htmlFor="sfo-add-origin">Adicionar site do SEI</label>
