@@ -13,6 +13,7 @@ import { DestinationSection } from './sections/DestinationSection';
 import { DiagnosticsSection } from './sections/DiagnosticsSection';
 import { PreferencesSection } from './sections/PreferencesSection';
 import { RulesSection } from './sections/RulesSection';
+import { SetupChecklist } from './sections/SetupChecklist';
 import { SitesSection } from './sections/SitesSection';
 import { Spinner, type Notice } from './sections/shared';
 import { setThemePreference } from '../../ui/theme';
@@ -108,8 +109,9 @@ function App() {
     }
   }, [settings, save, notify]);
 
-  const reloadBoards = useCallback(async () => {
+  const reloadBoards = useCallback(async (): Promise<Settings | null> => {
     try {
+      await callRpc('sync:config', { force: false }).catch(() => null);
       const current = await callRpc('settings:get', undefined);
       setSettings(current);
       const status = await callRpc('auth:status', undefined).catch(() => null);
@@ -119,14 +121,27 @@ function App() {
       setConnected(isConnected);
       if (!isConnected) {
         setBoards([]);
-        return;
+        return current;
       }
       const value = await callRpc('trello:boards', { fresh: true });
       setBoards(value);
+      return current;
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
+      return null;
     }
   }, [notify]);
+
+  const handleLoginComplete = useCallback((fresh: Settings | null) => {
+    if (!fresh) return;
+    if (!fresh.defaultBoardId || !fresh.defaultListId) {
+      setTab('destination');
+      return;
+    }
+    if (!fresh.allSites && fresh.activatedOrigins.length === 0) {
+      setTab('sites');
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -245,8 +260,18 @@ function App() {
           </div>
         )}
 
+        {connected && (
+          <SetupChecklist settings={settings} connected={connected} onGo={setTab} />
+        )}
+
         {tab === 'connection' && (
-          <ConnectionSection settings={settings} save={save} notify={notify} reloadBoards={reloadBoards} />
+          <ConnectionSection
+            settings={settings}
+            save={save}
+            notify={notify}
+            reloadBoards={reloadBoards}
+            onLoginComplete={handleLoginComplete}
+          />
         )}
 
         {tab === 'destination' && (

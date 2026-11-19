@@ -20,6 +20,7 @@ import type { LinkCandidate } from '../link/scan';
 import type { SettingsBackup } from '../storage/backup';
 import type { MirrorGroup } from '../storage/mirrors';
 import type { AuthStatus } from '../auth/session';
+import type { SyncResult } from '../sync/config';
 
 export interface RpcMap {
   'settings:get': { payload: undefined; result: Settings };
@@ -27,7 +28,8 @@ export interface RpcMap {
   'settings:test-connection': { payload: undefined; result: ConnectionInfo };
   'auth:status': { payload: undefined; result: AuthStatus };
   'auth:login': { payload: undefined; result: AuthStatus };
-  'auth:logout': { payload: undefined; result: AuthStatus };  'settings:clear-cache': { payload: undefined; result: { cleared: true } };
+  'auth:logout': { payload: undefined; result: AuthStatus };
+  'sync:config': { payload: { force?: boolean } | undefined; result: SyncResult };  'settings:clear-cache': { payload: undefined; result: { cleared: true } };
   'settings:export': {
     payload: { includeCredentials: boolean; includeRules?: boolean };
     result: SettingsBackup;

@@ -54,7 +54,7 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • **Fixe cartões** no topo das listas e grupos.
 • **Regras por etiqueta**: exija qualquer uma ou todas as etiquetas, combinadas com a lista.
 
-Privacidade: sem servidor próprio, sem telemetria e sem anúncios. As credenciais do Trello ficam apenas no seu navegador. O SEI Flow não salva dados de usuários fora do navegador. O uso é de responsabilidade exclusiva do usuário; o criador não tem ingerência sobre informações do SEI ou do Trello.
+Privacidade: sem servidor próprio, sem telemetria e sem anúncios. No login, os tokens do Trello ficam apenas no seu navegador. Regras e destino são sincronizados em um quadro privado na sua própria conta do Trello. O SEI Flow não salva dados de usuários fora do navegador. O uso é de responsabilidade exclusiva do usuário; o criador não tem ingerência sobre informações do SEI ou do Trello.
 
 Desenvolvido por Engenheiro Leonardo Almeida de Oliveira.
 

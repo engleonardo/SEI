@@ -15,19 +15,23 @@ O SEI Flow é uma extensão de navegador que integra o SEI ao Trello. Esta polí
 
 A extensão armazena localmente, em `chrome.storage.local` (ou equivalente no Firefox/Edge):
 
-1. **Credenciais do Trello**: APP-KEY e TOKEN informados por você.
+1. **Credenciais do Trello**: APP-KEY/TOKEN informados por você ou os tokens do login OAuth 2.0 (access e refresh), quando você escolhe “Entrar com Trello”.
 2. **Preferências**: quadro e lista padrão, tema, atualização automática, sites do SEI autorizados e opções de interface.
 3. **Cache**: cópias temporárias de quadros, listas, etiquetas e cartões para acelerar a interface.
 
 Esses dados permanecem no seu navegador. As credenciais são usadas exclusivamente para autenticar chamadas à API oficial do Trello (`https://api.trello.com`).
+
+Para manter as mesmas regras e o mesmo destino em Chrome, Edge e Firefox, a extensão grava um JSON com **regras e quadro/lista padrão** em um quadro privado chamado **“SEI Flow — Configurações (não excluir)”**, na sua própria conta do Trello. Tokens, sites autorizados e cache não são sincronizados. Se você apagar esse quadro, a extensão o recria na próxima sincronização.
 
 ## Permissões do navegador
 
 - **`storage`**: salvar credenciais, preferências e cache localmente.
 - **`scripting`**: injetar a interface do SEI Flow nas páginas do SEI que você autorizar.
 - **`activeTab`**: identificar a aba atual quando você clica no ícone da extensão, para oferecer a ativação do site correto no Painel SEI Flow.
+- **`identity`**: abrir a tela oficial de login do Trello (OAuth 2.0 com PKCE) quando você escolhe “Entrar com Trello”. Não lê a identidade do navegador nem de outros serviços.
 - **Permissão opcional de sites**: concedida por você, site a site, ou para todos os sites. Serve apenas para inserir a interface no SEI. Em páginas que não são do SEI, o script é encerrado sem alterar nada.
 - **`https://api.trello.com/*`**: necessário para ler e gravar cartões na sua conta do Trello.
+- **`https://auth.atlassian.com/*`**: necessário para trocar o código de autorização pelos tokens da sua própria sessão (login e renovação).
 
 ## Compartilhamento
 

@@ -595,6 +595,35 @@ a {
   color: var(--text-soft);
 }
 
+.sfo-setup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sfo-setup-list__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-soft);
+}
+
+.sfo-setup-list__item--done {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sfo-setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .sfo-list {
   display: flex;
   flex-direction: column;

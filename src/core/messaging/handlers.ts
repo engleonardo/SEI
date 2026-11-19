@@ -22,6 +22,7 @@ import { getLastRuleRun } from '../storage/rule-runs';
 import { clearRuleStats, getRuleStats } from '../storage/rule-stats';
 import { clearRuleLog, getRuleLog } from '../storage/rule-log';
 import { clearSyncSnapshot } from '../storage/sync';
+import { queueConfigSync, syncConfig } from '../sync/config';
 import { loadTrelloCredentials } from '../auth/credentials';
 import { logout, startLogin } from '../auth/oauth';
 import { readSession, writeAccount } from '../auth/session';
@@ -40,6 +41,14 @@ const handlers = {
     const next = await saveSettings(payload);
     if (previous.appKey !== next.appKey || previous.appToken !== next.appToken) {
       await cacheClear();
+    }
+    if (
+      'defaultBoardId' in payload ||
+      'defaultBoardName' in payload ||
+      'defaultListId' in payload ||
+      'defaultListName' in payload
+    ) {
+      queueConfigSync();
     }
     return next;
   },
@@ -65,6 +74,11 @@ const handlers = {
 
   'auth:login': async () => {
     const session = await startLogin();
+    try {
+      await syncConfig({ force: true });
+    } catch {
+      // Sincronização é best-effort: não impede o login.
+    }
     try {
       const info = await repository.testConnection();
       const updated = await writeAccount({
@@ -99,6 +113,8 @@ const handlers = {
     }
     return { connected: false, mode: 'none' as const };
   },
+
+  'sync:config': (payload) => syncConfig({ force: payload?.force }),
 
   'settings:clear-cache': async () => {
     await cacheClear();
@@ -268,7 +284,11 @@ const handlers = {
 
   'rules:list': () => getRules(),
 
-  'rules:save': ({ rules }) => saveRules(rules),
+  'rules:save': async ({ rules }) => {
+    const saved = await saveRules(rules);
+    queueConfigSync();
+    return saved;
+  },
 
   'rules:apply-now': ({ ruleId, dryRun }) => repository.applyRuleNow(ruleId, dryRun),
 

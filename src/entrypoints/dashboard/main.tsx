@@ -139,11 +139,15 @@ function Dashboard() {
       if (!quiet) setRefreshing(true);
       setError(null);
       try {
+        const auth = await callRpc('auth:status', undefined).catch(() => null);
+        if (auth?.connected) {
+          // Puxa regras/destino salvos em outro navegador (no máximo 1x por minuto).
+          await callRpc('sync:config', { force: false }).catch(() => null);
+        }
         const nextSettings = await callRpc('settings:get', undefined);
         if (seq !== loadSeq.current) return;
         setSettings(nextSettings);
 
-        const auth = await callRpc('auth:status', undefined).catch(() => null);
         const hasCredentials = auth
           ? auth.connected
           : Boolean(nextSettings.appKey && nextSettings.appToken);

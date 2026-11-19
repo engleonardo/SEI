@@ -13,7 +13,7 @@ export function DestinationSection({
 }: {
   settings: Settings;
   boards: TrelloBoard[];
-  reloadBoards: () => Promise<void>;
+  reloadBoards: () => Promise<Settings | null>;
   save: (patch: Partial<Settings>) => Promise<Settings>;
   notify: (notice: Notice) => void;
 }) {

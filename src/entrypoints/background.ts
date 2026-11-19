@@ -15,6 +15,7 @@ import { saveLastActionTab } from '../core/storage/last-tab';
 import { markSyncChanged } from '../core/storage/sync-tick';
 import { looksLikeSeiUrl } from '../core/sei/detect';
 import { registerAttachmentUploadPort } from '../core/attachments/upload-port';
+import { syncConfig } from '../core/sync/config';
 
 async function maybeInject(tabId: number, url: string): Promise<void> {
   if (tabId < 0 || !url) return;
@@ -48,6 +49,7 @@ async function onInstalled(details: { reason: string }): Promise<void> {
 }
 
 const DUE_ALARM = 'sei-flow:due-check';
+const CONFIG_ALARM = 'sei-flow:config-sync';
 const NOTIFICATION_ID = 'sei-flow:due';
 const LAST_NOTIFICATION_KEY = 'sei-flow:last-due-notification';
 
@@ -76,8 +78,9 @@ const SYNC_MUTATION_RPCS = new Set([
 async function setupAlarms(): Promise<void> {
   try {
     await browser.alarms.create(DUE_ALARM, { periodInMinutes: 60 });
+    await browser.alarms.create(CONFIG_ALARM, { periodInMinutes: 30 });
   } catch (error) {
-    console.debug('[SEI Flow] Falha ao criar alarme de prazos.', error);
+    console.debug('[SEI Flow] Falha ao criar alarmes.', error);
   }
 }
 
@@ -144,9 +147,14 @@ export default defineBackground(() => {
     void setupAlarms();
     void clearBadge();
     void injectIntoOpenTabs();
+    void syncConfig().catch(() => undefined);
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === CONFIG_ALARM) {
+      void syncConfig().catch(() => undefined);
+      return;
+    }
     if (alarm.name !== DUE_ALARM) return;
     void notifyDue();
   });

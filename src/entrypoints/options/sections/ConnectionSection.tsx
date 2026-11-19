@@ -10,11 +10,13 @@ export function ConnectionSection({
   save,
   notify,
   reloadBoards,
+  onLoginComplete,
 }: {
   settings: Settings;
   save: (patch: Partial<Settings>) => Promise<Settings>;
   notify: (notice: Notice) => void;
-  reloadBoards: () => Promise<void>;
+  reloadBoards: () => Promise<Settings | null>;
+  onLoginComplete?: (fresh: Settings | null) => void;
 }) {
   const [appKey, setAppKey] = useState(settings.appKey);
   const [appToken, setAppToken] = useState(settings.appToken);
@@ -71,7 +73,8 @@ export function ConnectionSection({
           ? `Conectado como ${status.account.fullName}.`
           : 'Login com o Trello concluído.',
       });
-      await reloadBoards();
+      const fresh = await reloadBoards();
+      onLoginComplete?.(fresh);
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
     } finally {
@@ -339,6 +342,11 @@ export function ConnectionSection({
             saem do navegador exceto para <code>api.trello.com</code>.
           </li>
           <li>Nenhum dado é vendido, compartilhado ou usado para publicidade.</li>
+          <li>
+            Para sincronizar entre navegadores, as regras e o destino são salvos em um quadro
+            privado <strong>“SEI Flow — Configurações”</strong> na sua própria conta do Trello.
+            Nenhum token é sincronizado.
+          </li>
           <li>
             Você pode revogar o acesso a qualquer momento no{' '}
             <a href="https://trello.com/app-key" target="_blank" rel="noreferrer">

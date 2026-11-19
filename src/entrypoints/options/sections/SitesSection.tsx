@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
 import type { Settings } from '../../../core/domain/types';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
@@ -25,6 +25,22 @@ export function SitesSection({
 }) {
   const [originInput, setOriginInput] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // Facilita a configuração: sugere a origem do último SEI aberto.
+  useEffect(() => {
+    if (originInput) return;
+    let active = true;
+    callRpc('activation:last-tab', undefined)
+      .then((tab) => {
+        if (!active || !tab?.url) return;
+        const origin = normalizeOrigin(tab.url);
+        if (origin) setOriginInput(origin);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [originInput]);
 
   const toggleAllSites = async () => {
     const next = !settings.allSites;
