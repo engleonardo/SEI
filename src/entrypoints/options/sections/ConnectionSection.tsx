@@ -3,7 +3,7 @@ import type { AuthStatus } from '../../../core/auth/session';
 import type { ConnectionInfo, Settings } from '../../../core/domain/types';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
 import { Icon } from '../../../ui/icons';
-import { ConfirmDialog, Modal } from '../../../ui/components/Modal';
+import { ConfirmDialog } from '../../../ui/components/Modal';
 import { SectionCard, Spinner, StatusPill, type Notice } from './shared';
 
 export function ConnectionSection({
@@ -26,8 +26,7 @@ export function ConnectionSection({
   const [authBusy, setAuthBusy] = useState(false);
   const [connection, setConnection] = useState<ConnectionInfo | null>(null);
   const [auth, setAuth] = useState<AuthStatus | null>(null);
-  const [logoutOpen, setLogoutOpen] = useState(false);
-  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);  const [confirmRemove, setConfirmRemove] = useState(false);
 
   useEffect(() => {
     setAppKey(settings.appKey);
@@ -87,19 +86,15 @@ export function ConnectionSection({
     }
   };
 
-  const logout = async (clearManual = false) => {
+  const logout = async () => {
     setAuthBusy(true);
     try {
-      const status = await callRpc('auth:logout', { clearManual });
+      // Sempre limpa o login e as credenciais manuais; regras/destino/preferências ficam.
+      const status = await callRpc('auth:logout', { clearManual: true });
       setAuth(status);
       setConnection(null);
       setLogoutOpen(false);
-      notify({
-        kind: 'success',
-        text: clearManual
-          ? 'Sessão encerrada e credenciais manuais removidas.'
-          : 'Sessão do Trello encerrada.',
-      });
+      notify({ kind: 'success', text: 'Sessão encerrada e credenciais removidas.' });
       await reloadBoards();
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
@@ -177,13 +172,7 @@ export function ConnectionSection({
               <button
                 type="button"
                 className="sfo-btn"
-                onClick={() => {
-                  if (settings.appKey && settings.appToken) {
-                    setLogoutOpen(true);
-                    return;
-                  }
-                  void logout(false);
-                }}
+                onClick={() => setLogoutOpen(true)}
                 disabled={authBusy}
               >
                 {authBusy ? <Spinner /> : <Icon name="close" size={14} />}
@@ -406,52 +395,15 @@ export function ConnectionSection({
       </SectionCard>
 
       {logoutOpen && (
-        <Modal
+        <ConfirmDialog
           title="Sair do Trello"
-          size="sm"
+          message="O login e as credenciais salvas neste navegador serão removidos. Suas regras, destino e preferências continuam salvos — ao entrar de novo, tudo estará configurado."
+          confirmLabel="Sair"
+          cancelLabel="Cancelar"
+          busy={authBusy}
+          onConfirm={() => void logout()}
           onClose={() => setLogoutOpen(false)}
-          footer={
-            <>
-              <button
-                type="button"
-                className="sf-btn"
-                onClick={() => setLogoutOpen(false)}
-                disabled={authBusy}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="sf-btn"
-                onClick={() => void logout(false)}
-                disabled={authBusy}
-              >
-                Sair só do login
-              </button>
-              <button
-                type="button"
-                className="sf-btn sf-btn--danger"
-                onClick={() => void logout(true)}
-                disabled={authBusy}
-              >
-                {authBusy ? <Spinner /> : <Icon name="trash" size={13} />}
-                Sair e remover tudo
-              </button>
-            </>
-          }
-        >
-          <p style={{ margin: 0, color: 'var(--text-soft)', fontSize: 13.5 }}>
-            O login será encerrado neste navegador. Escolha o que fazer com a APP-KEY/TOKEN manual:
-          </p>
-          <ul style={{ margin: '10px 0 0', paddingLeft: 18, color: 'var(--text-soft)', fontSize: 13 }}>
-            <li>
-              <strong>Sair só do login:</strong> mantém a APP-KEY/TOKEN manual, se existir.
-            </li>
-            <li>
-              <strong>Sair e remover tudo:</strong> apaga também a APP-KEY/TOKEN manual salva.
-            </li>
-          </ul>
-        </Modal>
+        />
       )}
 
       {confirmRemove && (
