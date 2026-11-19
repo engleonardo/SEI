@@ -65,6 +65,7 @@ function App() {
   const [tab, setTab] = useState<Tab>('connection');
   const [settings, setSettings] = useState<Settings | null>(null);
   const [boards, setBoards] = useState<TrelloBoard[]>([]);
+  const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice>(null);
   const noticeTimer = useRef<number | null>(null);
@@ -111,7 +112,12 @@ function App() {
     try {
       const current = await callRpc('settings:get', undefined);
       setSettings(current);
-      if (!current.appKey || !current.appToken) {
+      const status = await callRpc('auth:status', undefined).catch(() => null);
+      const isConnected = status
+        ? status.connected
+        : Boolean(current.appKey && current.appToken);
+      setConnected(isConnected);
+      if (!isConnected) {
         setBoards([]);
         return;
       }
@@ -221,7 +227,7 @@ function App() {
 
         {notice && <div className={`sfo-alert sfo-alert--${notice.kind}`}>{notice.text}</div>}
 
-        {!settings.appKey && (
+        {!connected && (
           <div className="sfo-onboarding">
             <span className="sfo-logo" style={{ width: 36, height: 36, borderRadius: 10 }}>
               <Icon name="arrowRight" size={18} />

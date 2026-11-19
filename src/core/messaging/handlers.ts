@@ -22,8 +22,11 @@ import { getLastRuleRun } from '../storage/rule-runs';
 import { clearRuleStats, getRuleStats } from '../storage/rule-stats';
 import { clearRuleLog, getRuleLog } from '../storage/rule-log';
 import { clearSyncSnapshot } from '../storage/sync';
+import { loadTrelloCredentials } from '../auth/credentials';
+import { logout, startLogin } from '../auth/oauth';
+import { readSession, writeAccount } from '../auth/session';
 
-const repository = new TrelloRepository();
+const repository = new TrelloRepository(loadTrelloCredentials);
 
 type HandlerMap = {
   [T in RpcType]: (payload: RpcMap[T]['payload']) => Promise<RpcMap[T]['result']>;
@@ -42,6 +45,60 @@ const handlers = {
   },
 
   'settings:test-connection': () => repository.testConnection(),
+
+  'auth:status': async () => {
+    const session = await readSession();
+    if (session) {
+      return {
+        connected: true,
+        mode: 'oauth' as const,
+        account: session.account,
+        expiresAt: session.expiresAt,
+      };
+    }
+    const settings = await getSettings();
+    if (settings.appKey && settings.appToken) {
+      return { connected: true, mode: 'token' as const };
+    }
+    return { connected: false, mode: 'none' as const };
+  },
+
+  'auth:login': async () => {
+    const session = await startLogin();
+    try {
+      const info = await repository.testConnection();
+      const updated = await writeAccount({
+        id: info.id,
+        username: info.username,
+        fullName: info.fullName,
+      });
+      if (updated) {
+        return {
+          connected: true,
+          mode: 'oauth' as const,
+          account: updated.account,
+          expiresAt: updated.expiresAt,
+        };
+      }
+    } catch {
+      // A sessão já foi salva; a conta é apenas informativa.
+    }
+    return {
+      connected: true,
+      mode: 'oauth' as const,
+      account: session.account,
+      expiresAt: session.expiresAt,
+    };
+  },
+
+  'auth:logout': async () => {
+    await logout();
+    const settings = await getSettings();
+    if (settings.appKey && settings.appToken) {
+      return { connected: true, mode: 'token' as const };
+    }
+    return { connected: false, mode: 'none' as const };
+  },
 
   'settings:clear-cache': async () => {
     await cacheClear();

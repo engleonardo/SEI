@@ -120,7 +120,9 @@ function Dashboard() {
   const undoRef = useRef<() => void>(() => undefined);
 
   const version = browser.runtime.getManifest().version;
-  const connected = Boolean(settings?.appKey && settings?.appToken);
+  const [connected, setConnected] = useState(
+    Boolean(settings?.appKey && settings?.appToken),
+  );
   const loadSeq = useRef(0);
   const defaultBoardApplied = useRef(false);
   const mirrorSynced = useRef(false);
@@ -136,10 +138,16 @@ function Dashboard() {
         if (seq !== loadSeq.current) return;
         setSettings(nextSettings);
 
+        const auth = await callRpc('auth:status', undefined).catch(() => null);
+        const hasCredentials = auth
+          ? auth.connected
+          : Boolean(nextSettings.appKey && nextSettings.appToken);
+        setConnected(hasCredentials);
+
         const [processRecords, nextLastTab, nextBoards] = await Promise.all([
           callRpc('processes:list', undefined),
           callRpc('activation:last-tab', undefined),
-          nextSettings.appKey && nextSettings.appToken
+          hasCredentials
             ? callRpc('trello:boards', { fresh: false }).catch(() => [] as TrelloBoard[])
             : Promise.resolve([] as TrelloBoard[]),
         ]);
@@ -152,7 +160,7 @@ function Dashboard() {
         setTrelloBoards(Array.isArray(nextBoards) ? nextBoards : []);
         setLastTab(nextLastTab);
 
-        if (nextSettings.appKey && nextSettings.appToken) {
+        if (hasCredentials) {
           // Na primeira carga, usa o quadro padrão direto para evitar uma busca
           // global por cartões vinculados antes de o filtro de quadro ser aplicado.
           const firstLoadBoardId = defaultBoardApplied.current ? '' : nextSettings.defaultBoardId;

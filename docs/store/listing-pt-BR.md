@@ -13,6 +13,7 @@ Gerencie cartões do Trello no SEI: crie, vincule, edite, automatize e mantenha 
 ```
 O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para você trabalhar sem alternar de aba.
 
+• Entre com sua conta do Trello (OAuth 2.0) em um clique, sem copiar chaves; a sessão fica apenas no seu navegador.
 • Crie cartões no Trello a partir de um processo do SEI, escolhendo etiquetas, quadro, lista, início e término.
 • Crie cartões também pelo painel, sem abrir o Trello.
 • Vincule cartões que já existem no Trello a um ou vários processos - inclusive em lote.

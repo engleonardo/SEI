@@ -11,13 +11,13 @@ export default defineConfig({
     default_locale: 'pt_BR',
     author: 'Engenheiro Leonardo Almeida de Oliveira',
     homepage_url: 'https://github.com/engleonardo/SEI',
-    permissions: ['storage', 'scripting', 'activeTab', 'alarms', 'notifications'],
+    permissions: ['storage', 'scripting', 'activeTab', 'alarms', 'notifications', 'identity'],
     // O Firefox 115 ainda usa optional_permissions para hosts opcionais;
     // optional_host_permissions só passou a existir no Firefox 128.
     ...(browser === 'firefox'
       ? { optional_permissions: ['*://*/*'] }
       : { optional_host_permissions: ['*://*/*'] }),
-    host_permissions: ['https://api.trello.com/*'],
+    host_permissions: ['https://api.trello.com/*', 'https://auth.atlassian.com/*'],
     web_accessible_resources: [
       {
         resources: ['icon-128.png'],

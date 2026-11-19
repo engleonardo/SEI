@@ -23,7 +23,19 @@ export function DestinationSection({
   const [loadingLists, setLoadingLists] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const connected = Boolean(settings.appKey && settings.appToken);
+  const [connected, setConnected] = useState(Boolean(settings.appKey && settings.appToken));
+
+  useEffect(() => {
+    let active = true;
+    callRpc('auth:status', undefined)
+      .then((status) => {
+        if (active) setConnected(status.connected);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [settings.appKey, settings.appToken]);
 
   useEffect(() => {
     if (!boardId && settings.defaultBoardId) setBoardId(settings.defaultBoardId);
