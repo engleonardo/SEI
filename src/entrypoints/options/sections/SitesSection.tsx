@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
 import type { Settings } from '../../../core/domain/types';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
+import {
+  hasBroadSiteAccess,
+  requestBroadSiteAccess,
+} from '../../../core/activation/permission';
 import { isSeiHost, normalizeOrigin, originPermissionPattern } from '../../../core/storage/settings';
 import { Icon } from '../../../ui/icons';
 import {
@@ -25,6 +29,17 @@ export function SitesSection({
 }) {
   const [originInput, setOriginInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [broadGranted, setBroadGranted] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    hasBroadSiteAccess().then((granted) => {
+      if (active) setBroadGranted(granted);
+    });
+    return () => {
+      active = false;
+    };
+  }, [settings.autoSeiHosts, settings.allSites]);
 
   // Facilita a configuração: sugere a origem do último SEI aberto.
   useEffect(() => {
@@ -47,7 +62,8 @@ export function SitesSection({
     setBusy(true);
     try {
       if (next) {
-        const granted = await browser.permissions.request({ origins: ['*://*/*'] });
+        const granted = await requestBroadSiteAccess();
+        setBroadGranted(granted);
         if (!granted) {
           notify({ kind: 'error', text: 'Permissão para todos os sites não concedida.' });
           return;
@@ -73,7 +89,8 @@ export function SitesSection({
     setBusy(true);
     try {
       if (next) {
-        const granted = await browser.permissions.request({ origins: ['*://*/*'] });
+        const granted = await requestBroadSiteAccess();
+        setBroadGranted(granted);
         if (!granted) {
           notify({
             kind: 'error',
@@ -97,8 +114,22 @@ export function SitesSection({
     }
   };
 
-  const addOrigin = async () => {
-    const raw = originInput.includes('://') ? originInput : `https://${originInput.trim()}`;
+  const grantBroad = async () => {
+    setBusy(true);
+    try {
+      const granted = await requestBroadSiteAccess();
+      setBroadGranted(granted);
+      notify(
+        granted
+          ? { kind: 'success', text: 'Acesso aos sites do SEI liberado.' }
+          : { kind: 'error', text: 'Permissão não concedida.' },
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addOrigin = async () => {    const raw = originInput.includes('://') ? originInput : `https://${originInput.trim()}`;
     const origin = normalizeOrigin(raw);
     if (!origin) {
       notify({ kind: 'error', text: 'Informe uma URL válida, começando com https:// ou http://.' });
@@ -215,6 +246,28 @@ export function SitesSection({
             </span>
           </span>
         </label>
+
+        {settings.autoSeiHosts && !settings.allSites && broadGranted === false && (
+          <div className="sfo-alert">
+            <Icon name="alert" size={16} />
+            <div style={{ flex: 1 }}>
+              <strong>Falta liberar o acesso aos sites do SEI.</strong>
+              <p style={{ margin: '4px 0 10px', color: 'var(--text-soft)', fontSize: 13 }}>
+                A ativação automática está ligada, mas o navegador ainda não deu permissão. Sem ela,
+                a interface não consegue aparecer no SEI.
+              </p>
+              <button
+                type="button"
+                className="sfo-btn sfo-btn--primary"
+                onClick={() => void grantBroad()}
+                disabled={busy}
+              >
+                {busy ? <Spinner /> : <Icon name="check" size={14} />}
+                Permitir acesso
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="sfo-field">
           <label htmlFor="sfo-add-origin">Adicionar site do SEI</label>

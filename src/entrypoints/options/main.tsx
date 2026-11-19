@@ -4,6 +4,7 @@ import { browser } from 'wxt/browser';
 import type { Settings, TrelloBoard } from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
 import { openDashboard } from '../../core/messaging/actions';
+import { hasBroadSiteAccess, requestBroadSiteAccess } from '../../core/activation/permission';
 import { watchSettings } from '../../core/storage/settings';
 import { BrandMark } from '../../ui/BrandMark';
 import { Icon, type IconName } from '../../ui/icons';
@@ -67,6 +68,7 @@ function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [boards, setBoards] = useState<TrelloBoard[]>([]);
   const [connected, setConnected] = useState(false);
+  const [sitePermission, setSitePermission] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice>(null);
   const noticeTimer = useRef<number | null>(null);
@@ -114,6 +116,7 @@ function App() {
       await callRpc('sync:config', { force: false }).catch(() => null);
       const current = await callRpc('settings:get', undefined);
       setSettings(current);
+      void hasBroadSiteAccess().then(setSitePermission);
       const status = await callRpc('auth:status', undefined).catch(() => null);
       const isConnected = status
         ? status.connected
@@ -132,16 +135,35 @@ function App() {
     }
   }, [notify]);
 
-  const handleLoginComplete = useCallback((fresh: Settings | null) => {
+  const handleLoginComplete = useCallback(async (fresh: Settings | null) => {
     if (!fresh) return;
     if (!fresh.defaultBoardId || !fresh.defaultListId) {
       setTab('destination');
       return;
     }
-    if (!fresh.allSites && !fresh.autoSeiHosts && fresh.activatedOrigins.length === 0) {
+    const autoOk = fresh.autoSeiHosts ? await hasBroadSiteAccess() : false;
+    if (fresh.autoSeiHosts) setSitePermission(autoOk);
+    if (!fresh.allSites && !autoOk && fresh.activatedOrigins.length === 0) {
       setTab('sites');
     }
   }, []);
+
+  const requestSitePermission = useCallback(async () => {
+    const granted = await requestBroadSiteAccess();
+    setSitePermission(granted);
+    notify(
+      granted
+        ? {
+            kind: 'success',
+            text: 'Ativação automática liberada para os sites do SEI.',
+          }
+        : {
+            kind: 'warning',
+            text: 'Permissão não concedida. Você pode ativar um site específico em Sites do SEI.',
+          },
+    );
+    return granted;
+  }, [notify]);
 
   useEffect(() => {
     let active = true;
@@ -243,7 +265,13 @@ function App() {
         {notice && <div className={`sfo-alert sfo-alert--${notice.kind}`}>{notice.text}</div>}
 
         {connected && (
-          <SetupChecklist settings={settings} connected={connected} onGo={setTab} />
+          <SetupChecklist
+            settings={settings}
+            connected={connected}
+            sitePermission={sitePermission}
+            onRequestSitePermission={requestSitePermission}
+            onGo={setTab}
+          />
         )}
 
         {tab === 'connection' && (

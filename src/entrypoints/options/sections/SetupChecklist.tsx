@@ -8,18 +8,23 @@ import { Icon } from '../../../ui/icons';
 export function SetupChecklist({
   settings,
   connected,
+  sitePermission,
+  onRequestSitePermission,
   onGo,
 }: {
   settings: Settings;
   connected: boolean;
+  sitePermission: boolean | null;
+  onRequestSitePermission: () => Promise<boolean>;
   onGo: (tab: 'connection' | 'destination' | 'sites') => void;
 }) {
   if (!connected) return null;
 
   const destinationDone = Boolean(settings.defaultBoardId && settings.defaultListId);
+  const autoNeedsPermission = settings.autoSeiHosts && sitePermission === false;
   const siteDone =
     settings.allSites ||
-    settings.autoSeiHosts ||
+    (settings.autoSeiHosts && sitePermission === true) ||
     settings.activatedOrigins.length > 0;
 
   const steps = [
@@ -28,12 +33,20 @@ export function SetupChecklist({
       label: 'Escolher o quadro e a lista padrão',
       done: destinationDone,
       action: 'Escolher destino',
+      run: () => onGo('destination'),
     },
     {
       id: 'sites' as const,
       label: 'Ativar o site do SEI',
       done: siteDone,
-      action: 'Ativar site',
+      action: autoNeedsPermission ? 'Permitir acesso' : 'Ativar site',
+      run: () => {
+        if (autoNeedsPermission) {
+          void onRequestSitePermission();
+          return;
+        }
+        onGo('sites');
+      },
     },
   ];
 
@@ -70,7 +83,7 @@ export function SetupChecklist({
             key={step.id}
             type="button"
             className="sfo-btn sfo-btn--primary"
-            onClick={() => onGo(step.id)}
+            onClick={step.run}
           >
             {step.action}
           </button>
