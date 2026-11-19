@@ -10,6 +10,7 @@ import { ConfirmDialog } from './Modal';
 import { InlineLocationPicker } from './InlineLocationPicker';
 import { ChecklistDialog } from './dialogs/ChecklistDialog';
 import { AttachmentsDialog } from './dialogs/AttachmentsDialog';
+import { ShareDialog } from './dialogs/ShareDialog';
 import { DueDialog } from './dialogs/DueDialog';
 import { LabelsDialog } from './dialogs/LabelsDialog';
 
@@ -29,7 +30,7 @@ export interface CardItemProps {
   onRemoved: (cardId: string) => void;
 }
 
-type DialogKind = 'due' | 'labels' | 'checklist' | 'attachments' | null;
+type DialogKind = 'due' | 'labels' | 'checklist' | 'attachments' | 'share' | null;
 
 export function CardItem({
   card,
@@ -488,6 +489,17 @@ export function CardItem({
             <button
               type="button"
               className="sf-btn sf-btn--ghost sf-btn--sm"
+              onClick={() => setDialog('share')}
+              disabled={busy}
+              aria-label="Compartilhar e clonar"
+              title="Compartilhar e clonar"
+            >
+              <Icon name="copy" size={14} />
+              {actionLabel('Compartilhar')}
+            </button>
+            <button
+              type="button"
+              className="sf-btn sf-btn--ghost sf-btn--sm"
               onClick={() => setDialog('due')}
               disabled={busy}
               aria-label="Prazo"
@@ -560,6 +572,7 @@ export function CardItem({
       {dialog === 'attachments' && (
         <AttachmentsDialog card={card} onClose={() => setDialog(null)} />
       )}
+      {dialog === 'share' && <ShareDialog card={card} onClose={() => setDialog(null)} />}
       {confirmUnlink && processNumber && (
         <ConfirmDialog
           title="Desvincular cartão"

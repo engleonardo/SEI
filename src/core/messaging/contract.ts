@@ -89,6 +89,8 @@ export interface RpcMap {
     payload: { cardId: string; attachmentId: string };
     result: undefined;
   };
+  'trello:copy-card': { payload: { cardId: string; listId: string }; result: TrelloCard };
+  'trello:copy-board': { payload: { boardId: string; name: string }; result: TrelloBoard };
   'trello:create-label': {
     payload: { boardId: string; name: string; color: string };
     result: TrelloLabel;

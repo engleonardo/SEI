@@ -11,6 +11,7 @@ import { InlineLocationPicker } from '../../ui/components/InlineLocationPicker';
 import { ConfirmDialog } from '../../ui/components/Modal';
 import { ChecklistDialog } from '../../ui/components/dialogs/ChecklistDialog';
 import { AttachmentsDialog } from '../../ui/components/dialogs/AttachmentsDialog';
+import { ShareDialog } from '../../ui/components/dialogs/ShareDialog';
 import { DueDialog } from '../../ui/components/dialogs/DueDialog';
 import { LabelsDialog } from '../../ui/components/dialogs/LabelsDialog';
 import { cardHasUnreadProcess, formatActivity, processRecordsFor, processTypesFor } from './model';
@@ -28,7 +29,7 @@ export interface DashboardCardProps {
   onTogglePin?: (cardId: string) => void;
 }
 
-type DialogKind = 'due' | 'labels' | 'checklist' | 'attachments' | null;
+type DialogKind = 'due' | 'labels' | 'checklist' | 'attachments' | 'share' | null;
 
 export function DashboardCard({
   card,
@@ -504,6 +505,17 @@ export function DashboardCard({
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
+              onClick={() => setDialog('share')}
+              disabled={busy}
+              title="Compartilhar e clonar"
+              aria-label="Compartilhar e clonar"
+            >
+              <Icon name="copy" size={13} />
+              <span className="sdo-card__action-label">Compartilhar</span>
+            </button>
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
               onClick={() => setDialog('due')}
               disabled={busy}
               title="Prazo"
@@ -565,6 +577,7 @@ export function DashboardCard({
       {dialog === 'attachments' && (
         <AttachmentsDialog card={card} onClose={() => setDialog(null)} />
       )}
+      {dialog === 'share' && <ShareDialog card={card} onClose={() => setDialog(null)} />}
       {confirmDelete && (
         <ConfirmDialog
           title="Excluir cartão"

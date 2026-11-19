@@ -102,6 +102,8 @@ const handlers = {
     await repository.deleteAttachment(cardId, attachmentId);
     return undefined;
   },
+  'trello:copy-card': ({ cardId, listId }) => repository.copyCard(cardId, listId),
+  'trello:copy-board': ({ boardId, name }) => repository.copyBoard(boardId, name),
   'trello:create-label': ({ boardId, name, color }) => repository.createLabel(boardId, name, color),
   'trello:add-label': ({ cardId, labelId }) => repository.addLabelToCard(cardId, labelId),
   'trello:remove-label': ({ cardId, labelId }) => repository.removeLabelFromCard(cardId, labelId),

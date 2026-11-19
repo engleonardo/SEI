@@ -83,6 +83,7 @@ async function stubDashboard(page: Page) {
                 listId?: string;
                 pos?: number;
                 url?: string;
+                name?: string;
               };
             },
             callback?: (response: unknown) => void,
@@ -133,6 +134,19 @@ async function stubDashboard(page: Page) {
                   date: '2026-11-18T12:00:00.000Z',
                   mimeType: null,
                   isUpload: false,
+                });
+                break;
+              case 'trello:copy-card':
+                response = ok({
+                  id: 'copy-1',
+                  name: 'Cópia',
+                  shortUrl: 'https://trello.com/c/copy',
+                });
+                break;
+              case 'trello:copy-board':
+                response = ok({
+                  id: 'board-copy',
+                  name: message.payload?.name ?? 'Cópia',
                 });
                 break;
               case 'trello:update-card':
@@ -355,6 +369,40 @@ test('kanban abre anexos e adiciona link', async ({ page }) => {
   await page.getByLabel('URL do anexo').fill('https://example.com/arquivo');
   await page.getByRole('button', { name: 'Anexar link' }).click();
   await expect(page.getByRole('dialog').getByRole('link', { name: 'Link' })).toBeVisible();
+});
+
+test('kanban abre compartilhar e clona cartão', async ({ page }) => {
+  await stubDashboard(page);
+  await openDashboard(page);
+
+  await page.getByRole('button', { name: 'Visão em quadro (Kanban)' }).click();
+  const card = page.locator('.sdo-kanban-card').filter({ hasText: 'Cartão A' }).first();
+  await card.getByRole('button', { name: 'Compartilhar e clonar' }).click();
+
+  await expect(
+    page.getByRole('dialog').getByRole('heading', { name: 'Clonar cartão' }),
+  ).toBeVisible();
+  const listSelect = page.getByRole('dialog').getByLabel('Lista de destino');
+  await listSelect.selectOption('list-b');
+  await page.getByRole('button', { name: 'Clonar cartão' }).click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          ((window as unknown as { __rpcCalls?: Array<{ rpc: string }> }).__rpcCalls ?? []).filter(
+            (call) => call.rpc === 'trello:copy-card',
+          ).length,
+      ),
+    )
+    .toBeGreaterThan(0);
+
+  const copyCall = await page.evaluate(
+    () =>
+      ((window as unknown as { __rpcCalls?: Array<{ rpc: string; payload?: { listId?: string } }> })
+        .__rpcCalls ?? []).find((call) => call.rpc === 'trello:copy-card'),
+  );
+  expect(copyCall?.payload?.listId).toBe('list-b');
 });
 
 test('kanban move cartão com o teclado', async ({ page }) => {  await stubDashboard(page);

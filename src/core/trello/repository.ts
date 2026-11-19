@@ -1297,6 +1297,30 @@ export class TrelloRepository {
     await this.client.delete(`/cards/${cardId}/attachments/${attachmentId}`);
   }
 
+  async copyCard(cardId: string, listId: string): Promise<TrelloCard> {
+    const raw = await this.client.post<TrelloCardApi>('/cards', {
+      idCardSource: cardId,
+      idList: listId,
+      keepFromSource: 'all',
+    });
+    await this.invalidateCardCaches();
+    await cacheDeleteByPrefix('boardcards:');
+    return toCard(raw);
+  }
+
+  async copyBoard(boardId: string, name: string): Promise<TrelloBoard> {
+    const board = await this.client.post<TrelloBoard>('/boards', {
+      name: name.trim(),
+      idBoardSource: boardId,
+      keepFromSource: 'cards',
+      prefs_permissionLevel: 'private',
+    });
+    await cacheDeleteByPrefix('boards');
+    await cacheDeleteByPrefix('lists:');
+    await cacheDeleteByPrefix('boardcards:');
+    return { id: board?.id ?? '', name: board?.name ?? name.trim() };
+  }
+
   async getChecklists(cardId: string, fresh = false): Promise<TrelloChecklist[]> {
     const key = `checklists:${cardId}`;
     const load = async () => {

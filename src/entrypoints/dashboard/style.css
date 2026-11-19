@@ -2818,9 +2818,51 @@
 }
 
 .sdo-card--kanban .sdo-card__meta {
-  margin-top: 5px;
-  gap: 4px 8px;
-  font-size: 10.5px;
+  margin-top: 4px;
+  gap: 2px 8px;
+  font-size: 10px;
+}
+
+.sdo-card--kanban .sdo-card__meta svg {
+  width: 10px;
+  height: 10px;
+}
+
+.sdo-card--kanban .sdo-meta-button {
+  gap: 3px;
+  font-size: 10px;
+}
+
+.sdo-card--kanban .sdo-process {
+  font-size: 10px;
+}
+
+.sdo-card--kanban .sdo-type {
+  max-width: 100%;
+  padding: 0 5px;
+  overflow: hidden;
+  font-size: 9.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sdo-card--kanban .sdo-pill {
+  padding: 1px 7px;
+  font-size: 10px;
+}
+
+.sdo-card--kanban .sdo-card__side {
+  gap: 3px;
+}
+
+.sdo-card--kanban .sdo-card__side .sfo-icon-btn {
+  width: 24px;
+  height: 24px;
+}
+
+.sdo-card--kanban .sdo-card__side .sfo-btn {
+  min-height: 22px;
+  padding: 0 4px;
 }
 
 .sdo-card--kanban .sdo-card__footer {
@@ -2836,15 +2878,6 @@
 
 .sdo-card--kanban .sdo-card__action-label {
   display: none;
-}
-
-.sdo-card--kanban .sdo-card__side {
-  gap: 4px;
-}
-
-.sdo-card--kanban .sdo-card__side .sfo-btn {
-  min-height: 26px;
-  padding: 0 6px;
 }
 
 .sdo-card--kanban .sdo-card__side-actions {
