@@ -10,12 +10,14 @@ export function DestinationSection({
   reloadBoards,
   save,
   notify,
+  onSaved,
 }: {
   settings: Settings;
   boards: TrelloBoard[];
   reloadBoards: () => Promise<Settings | null>;
   save: (patch: Partial<Settings>) => Promise<Settings>;
   notify: (notice: Notice) => void;
+  onSaved?: (settings: Settings) => void;
 }) {
   const [boardId, setBoardId] = useState(settings.defaultBoardId);
   const [listId, setListId] = useState(settings.defaultListId);
@@ -85,13 +87,14 @@ export function DestinationSection({
     if (!selectedBoard || !selectedList) return;
     setBusy(true);
     try {
-      await save({
+      const updated = await save({
         defaultBoardId: selectedBoard.id,
         defaultBoardName: selectedBoard.name,
         defaultListId: selectedList.id,
         defaultListName: selectedList.name,
       });
       notify({ kind: 'success', text: 'Quadro e lista padrão atualizados.' });
+      onSaved?.(updated);
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
     } finally {

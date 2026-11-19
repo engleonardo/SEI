@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
 import type { Settings, TrelloBoard, TrelloCard, TrelloLabel, TrelloList } from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
-import { openOptionsPage } from '../../core/messaging/actions';
+import { openOptions } from '../../core/messaging/actions';
 import type { LastActionTab } from '../../core/storage/last-tab';
 import type { ProcessCatalog, ProcessRecord } from '../../core/storage/processes';
 import { isOriginActivated, watchSettings } from '../../core/storage/settings';
@@ -327,6 +327,10 @@ function Dashboard() {
   }, [settings]);
 
   useEffect(() => {
+    if (!connected) {
+      setBoardLists([]);
+      return;
+    }
     const boardId = filters.boardId;
     if (!boardId) {
       setBoardLists([]);
@@ -343,7 +347,7 @@ function Dashboard() {
     return () => {
       active = false;
     };
-  }, [filters.boardId]);
+  }, [connected, filters.boardId]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -939,7 +943,7 @@ function Dashboard() {
                 <span className="sdo-status__dot" />
                 Site {hasActivatedSite ? 'ativado' : 'não ativado'}
               </span>
-              {settings?.defaultListName && (
+              {connected && settings?.defaultListName && (
                 <span className="sdo-status sdo-status--muted">
                   <Icon name="board" size={12} />
                   {settings.defaultBoardName} » {settings.defaultListName}
@@ -949,16 +953,17 @@ function Dashboard() {
           </div>
         </div>
         <div className="sdo-hero__actions">
-          <button
-            type="button"
-            className="sfo-btn sfo-btn--sm sfo-btn--primary"
-            onClick={() => openCreate()}
-            disabled={!connected}
-            title="Criar cartão no Trello sem abrir o Trello"
-          >
-            <Icon name="plus" size={14} />
-            Novo cartão
-          </button>
+          {connected && (
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm sfo-btn--primary"
+              onClick={() => openCreate()}
+              title="Criar cartão no Trello sem abrir o Trello"
+            >
+              <Icon name="plus" size={14} />
+              Novo cartão
+            </button>
+          )}
           {seiUrl ? (
             <a
               className="sfo-btn sfo-btn--sm"
@@ -981,26 +986,34 @@ function Dashboard() {
               SEI
             </button>
           )}
-          <a
-            className="sfo-btn sfo-btn--sm"
-            href={trelloUrl}
-            target="_blank"
-            rel="noreferrer"
-            title="Abrir o Trello"
-          >
-            <Icon name="board" size={14} />
-            Trello
-          </a>
+          {connected && (
+            <a
+              className="sfo-btn sfo-btn--sm"
+              href={trelloUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Abrir o Trello"
+            >
+              <Icon name="board" size={14} />
+              Trello
+            </a>
+          )}
+          {connected && (
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm"
+              onClick={() => void load(true)}
+              disabled={refreshing}
+            >
+              {refreshing ? <span className="sfo-spinner" /> : <Icon name="refresh" size={14} />}
+              Atualizar
+            </button>
+          )}
           <button
             type="button"
             className="sfo-btn sfo-btn--sm"
-            onClick={() => void load(true)}
-            disabled={refreshing}
+            onClick={() => void openOptions('connection')}
           >
-            {refreshing ? <span className="sfo-spinner" /> : <Icon name="refresh" size={14} />}
-            Atualizar
-          </button>
-          <button type="button" className="sfo-btn sfo-btn--sm" onClick={() => void openOptionsPage()}>
             <Icon name="settings" size={14} />
             Opções
           </button>
@@ -1034,14 +1047,14 @@ function Dashboard() {
           <Icon name="settings" size={16} />
           <div>
             <strong>Conecte sua conta do Trello.</strong>
-            <span>Informe a APP-KEY e o TOKEN para ver os cartões vinculados aos processos.</span>
+            <span>Entre com sua conta do Trello para ver seus quadros e cartões.</span>
           </div>
           <button
             type="button"
             className="sfo-btn sfo-btn--sm sfo-btn--primary"
-            onClick={() => void openOptionsPage()}
+            onClick={() => void openOptions('connection')}
           >
-            Conectar ao Trello
+            Conectar com Trello
           </button>
         </div>
       )}
@@ -1053,17 +1066,23 @@ function Dashboard() {
             <strong>Defina o destino padrão.</strong>
             <span>Escolha um quadro e uma lista para criar cartões diretamente pelo SEI.</span>
           </div>
-          <button type="button" className="sfo-btn sfo-btn--sm" onClick={() => void openOptionsPage()}>
+          <button
+            type="button"
+            className="sfo-btn sfo-btn--sm"
+            onClick={() => void openOptions('destination')}
+          >
             Abrir opções
           </button>
         </div>
       )}
 
-      {settings && !seiOriginActive && seiTab && (
+      {connected && settings && !seiOriginActive && seiTab && (
         <ActivationCard settings={settings} lastTab={seiTab} onChanged={setSettings} />
       )}
 
-      <section className="sdo-metrics" aria-label="Resumo dos cartões">
+      {connected && (
+        <>
+          <section className="sdo-metrics" aria-label="Resumo dos cartões">
         <button
           type="button"
           className={`sdo-metric sdo-metric--danger${filters.due === 'overdue' ? ' sdo-metric--active' : ''}`}
@@ -1531,6 +1550,8 @@ function Dashboard() {
             </div>
           </section>
         ))
+      )}
+        </>
       )}
 
       <footer className="sdo-footer">

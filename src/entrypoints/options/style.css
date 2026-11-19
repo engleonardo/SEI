@@ -45,7 +45,7 @@
 
 :root[data-sf-theme='dark'] .sfo-btn--primary,
 :root[data-sf-theme='dark'] .sfo-nav__badge {
-  color: #0d1420;
+  color: #0d1420 !important;
 }
 
 :root[data-sf-theme='dark'] {
@@ -251,6 +251,7 @@ a {
   flex-direction: column;
   gap: 18px;
   min-width: 0;
+  min-height: calc(100vh - 88px);
 }
 
 .sfo-page-head {
@@ -468,7 +469,7 @@ a {
 .sfo-btn--primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: #fff !important;
 }
 
 .sfo-btn--primary:hover:not(:disabled) {
@@ -1274,10 +1275,11 @@ a {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  margin-top: auto;
+  padding-top: 16px;
   color: var(--muted);
   font-size: 11.5px;
   text-align: center;
-  padding: 4px 0 0;
 }
 
 .sfo-spinner {

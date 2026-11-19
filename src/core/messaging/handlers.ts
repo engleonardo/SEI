@@ -22,6 +22,7 @@ import { getLastRuleRun } from '../storage/rule-runs';
 import { clearRuleStats, getRuleStats } from '../storage/rule-stats';
 import { clearRuleLog, getRuleLog } from '../storage/rule-log';
 import { clearSyncSnapshot } from '../storage/sync';
+import { setOptionsTarget } from '../storage/options-target';
 import { queueConfigSync, syncConfig } from '../sync/config';
 import { loadTrelloCredentials } from '../auth/credentials';
 import { logout, startLogin } from '../auth/oauth';
@@ -136,7 +137,8 @@ const handlers = {
     return result;
   },
 
-  'options:open': async () => {
+  'options:open': async (payload) => {
+    if (payload?.tab) await setOptionsTarget(payload.tab);
     if (typeof browser.runtime.openOptionsPage === 'function') {
       await browser.runtime.openOptionsPage();
       return undefined;

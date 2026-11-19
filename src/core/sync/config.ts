@@ -8,13 +8,20 @@ import { TrelloClient } from '../trello/client';
 /**
  * Sincronização de configurações entre navegadores usando o próprio Trello.
  *
- * O JSON fica em um quadro privado chamado "SEI Flow — Configurações", em
+ * O JSON fica em um quadro privado chamado "SEI Flow - Configurações", em
  * cartões `config:0`, `config:1`... (descrição em chunks). Assim o mesmo
  * usuário vê as mesmas regras e destino em Chrome, Edge e Firefox, sem backend.
  * Nenhum token é sincronizado.
  */
 
-export const CONFIG_BOARD_NAME = 'SEI Flow — Configurações (não excluir)';
+export const CONFIG_BOARD_NAME = 'SEI Flow - Configurações (não excluir)';
+
+const EM_DASH = String.fromCharCode(0x2014);
+
+const LEGACY_CONFIG_BOARD_NAMES = [
+  `SEI Flow ${EM_DASH} Configurações`,
+  `SEI Flow ${EM_DASH} Configurações (não excluir)`,
+];
 export const CONFIG_LIST_NAME = 'config';
 
 const CARD_PREFIX = 'config:';
@@ -68,7 +75,8 @@ const DESTINATION_KEYS = [
 ] as const;
 
 export function isConfigBoardName(name: string | undefined | null): boolean {
-  return (name ?? '').trim() === CONFIG_BOARD_NAME;
+  const value = (name ?? '').trim();
+  return value === CONFIG_BOARD_NAME || LEGACY_CONFIG_BOARD_NAMES.includes(value);
 }
 
 async function readMeta(): Promise<SyncMeta> {
@@ -97,7 +105,14 @@ async function findBoard(client: TrelloClient): Promise<BoardLite | null> {
     filter: 'all',
     fields: 'id,name',
   });
-  return (boards ?? []).find((board) => isConfigBoardName(board.name)) ?? null;
+  const found = (boards ?? []).find((board) => isConfigBoardName(board.name));
+  if (!found) return null;
+  if (found.name !== CONFIG_BOARD_NAME) {
+    // Migra o nome antigo (com travessão) para o novo padrão.
+    await client.put(`/boards/${found.id}`, { name: CONFIG_BOARD_NAME });
+    found.name = CONFIG_BOARD_NAME;
+  }
+  return found;
 }
 
 async function findList(client: TrelloClient, boardId: string): Promise<ListLite | null> {

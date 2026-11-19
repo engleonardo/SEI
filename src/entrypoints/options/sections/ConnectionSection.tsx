@@ -155,7 +155,7 @@ export function ConnectionSection({
     <>
       <SectionCard
         title="Conexão com o Trello"
-        subtitle="Entre com sua conta do Trello. A sessão fica apenas neste navegador."
+        subtitle="Conecte sua conta do Trello. A sessão fica apenas neste navegador."
         icon="settings"
         footer={
           oauth ? (
@@ -219,7 +219,7 @@ export function ConnectionSection({
           <div className="sfo-alert">
             <Icon name="info" size={16} />
             <div style={{ flex: 1 }}>
-              <strong>Entrar com o Trello (recomendado)</strong>
+              <strong>Conectar com o Trello (recomendado)</strong>
               <p style={{ margin: '4px 0 10px', color: 'var(--text-soft)', fontSize: 13 }}>
                 Abre a tela oficial do Trello e autoriza somente a sua conta. Você pode revogar o
                 acesso quando quiser nas configurações do Trello.
@@ -231,7 +231,7 @@ export function ConnectionSection({
                 disabled={authBusy}
               >
                 {authBusy ? <Spinner /> : <Icon name="external" size={14} />}
-                Entrar com Trello
+                Conectar com Trello
               </button>
               {manual && (
                 <div className="sfo-hint" style={{ marginTop: 8 }}>
@@ -381,7 +381,7 @@ export function ConnectionSection({
           <li>Nenhum dado é vendido, compartilhado ou usado para publicidade.</li>
           <li>
             Para sincronizar entre navegadores, as regras e o destino são salvos em um quadro
-            privado <strong>“SEI Flow — Configurações”</strong> na sua própria conta do Trello.
+            privado <strong>“SEI Flow - Configurações”</strong> na sua própria conta do Trello.
             Nenhum token é sincronizado.
           </li>
           <li>
@@ -397,7 +397,7 @@ export function ConnectionSection({
       {logoutOpen && (
         <ConfirmDialog
           title="Sair do Trello"
-          message="O login e as credenciais salvas neste navegador serão removidos. Suas regras, destino e preferências continuam salvos — ao entrar de novo, tudo estará configurado."
+          message="O login e as credenciais salvas neste navegador serão removidos. Suas regras, destino e preferências continuam salvos. Ao entrar de novo, tudo estará configurado."
           confirmLabel="Sair"
           cancelLabel="Cancelar"
           busy={authBusy}

@@ -6,6 +6,7 @@ import { callRpc, errorMessage } from '../../core/messaging/client';
 import { openDashboard } from '../../core/messaging/actions';
 import { hasBroadSiteAccess, requestBroadSiteAccess } from '../../core/activation/permission';
 import { watchSettings } from '../../core/storage/settings';
+import { takeOptionsTarget, watchOptionsTarget } from '../../core/storage/options-target';
 import { BrandMark } from '../../ui/BrandMark';
 import { Icon, type IconName } from '../../ui/icons';
 import { ConnectionSection } from './sections/ConnectionSection';
@@ -135,18 +136,24 @@ function App() {
     }
   }, [notify]);
 
-  const handleLoginComplete = useCallback(async (fresh: Settings | null) => {
-    if (!fresh) return;
-    if (!fresh.defaultBoardId || !fresh.defaultListId) {
-      setTab('destination');
-      return;
-    }
-    const autoOk = fresh.autoSeiHosts ? await hasBroadSiteAccess() : false;
-    if (fresh.autoSeiHosts) setSitePermission(autoOk);
-    if (!fresh.allSites && !autoOk && fresh.activatedOrigins.length === 0) {
-      setTab('sites');
-    }
-  }, []);
+  const goToNextStep = useCallback(
+    async (fresh?: Settings | null) => {
+      const current = fresh ?? settings;
+      if (!current) return;
+      if (!current.defaultBoardId || !current.defaultListId) {
+        setTab('destination');
+        return;
+      }
+      const autoOk = current.autoSeiHosts ? await hasBroadSiteAccess() : false;
+      if (current.autoSeiHosts) setSitePermission(autoOk);
+      if (!current.allSites && !autoOk && current.activatedOrigins.length === 0) {
+        setTab('sites');
+        return;
+      }
+      await openDashboard();
+    },
+    [settings],
+  );
 
   const activateSeiSites = useCallback(async () => {
     const granted = (await hasBroadSiteAccess()) || (await requestBroadSiteAccess());
@@ -158,16 +165,34 @@ function App() {
       });
       return false;
     }
+    let next = settings;
     if (settings && !settings.autoSeiHosts) {
-      const updated = await save({ autoSeiHosts: true });
-      setSettings(updated);
+      next = await save({ autoSeiHosts: true });
+      setSettings(next);
     }
     notify({
       kind: 'success',
       text: 'Sites do SEI ativados automaticamente.',
     });
+    await goToNextStep(next);
     return true;
-  }, [notify, save, settings]);
+  }, [goToNextStep, notify, save, settings]);
+
+  useEffect(() => {
+    let active = true;
+    void takeOptionsTarget().then((target) => {
+      if (active && target && TABS.some((item) => item.id === target)) {
+        setTab(target as Tab);
+      }
+    });
+    const unwatch = watchOptionsTarget((target) => {
+      if (TABS.some((item) => item.id === target)) setTab(target as Tab);
+    });
+    return () => {
+      active = false;
+      unwatch();
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -284,7 +309,7 @@ function App() {
             save={save}
             notify={notify}
             reloadBoards={reloadBoards}
-            onLoginComplete={handleLoginComplete}
+            onLoginComplete={goToNextStep}
           />
         )}
 
@@ -295,13 +320,20 @@ function App() {
             reloadBoards={reloadBoards}
             save={save}
             notify={notify}
+            onSaved={(next) => void goToNextStep(next)}
           />
         )}
 
         {tab === 'rules' && <RulesSection boards={boards} notify={notify} />}
 
         {tab === 'sites' && (
-          <SitesSection settings={settings} applySettings={applySettings} save={save} notify={notify} />
+          <SitesSection
+            settings={settings}
+            applySettings={applySettings}
+            save={save}
+            notify={notify}
+            onActivated={(next) => void goToNextStep(next)}
+          />
         )}
 
         {tab === 'preferences' && <PreferencesSection settings={settings} save={save} notify={notify} />}

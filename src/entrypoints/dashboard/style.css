@@ -1,5 +1,8 @@
 .sdo-page {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
   max-width: 1280px;
   margin: 0 auto;
   padding: 26px 22px 20px;
@@ -1931,8 +1934,8 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 12px;
-  padding-top: 8px;
+  margin-top: auto;
+  padding-top: 16px;
   border-top: 1px solid rgba(219, 228, 238, 0.8);
   color: var(--muted);
   font-size: 11.5px;

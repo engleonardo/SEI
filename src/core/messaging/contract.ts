@@ -38,7 +38,7 @@ export interface RpcMap {
     payload: { data: unknown; importRules?: boolean };
     result: { rules: number; settings: Settings };
   };
-  'options:open': { payload: undefined; result: undefined };
+  'options:open': { payload: { tab?: string } | undefined; result: undefined };
   'dashboard:open': { payload: undefined; result: undefined };
   'trello:boards': { payload: { fresh?: boolean } | undefined; result: TrelloBoard[] };
   'trello:lists': { payload: { boardId: string; fresh?: boolean }; result: TrelloList[] };

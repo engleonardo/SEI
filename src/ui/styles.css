@@ -58,7 +58,7 @@
 }
 
 :host([data-sf-theme='dark']) .sf-btn--primary {
-  color: #0d1420;
+  color: #0d1420 !important;
 }
 
 :host([data-sf-theme='dark']) select {
@@ -153,7 +153,7 @@
 .sf-btn--primary {
   background: var(--sf-accent);
   border-color: var(--sf-accent);
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 .sf-btn--primary:hover:not(:disabled) {

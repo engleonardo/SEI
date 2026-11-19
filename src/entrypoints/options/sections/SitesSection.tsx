@@ -21,11 +21,13 @@ export function SitesSection({
   applySettings,
   save,
   notify,
+  onActivated,
 }: {
   settings: Settings;
   applySettings: (settings: Settings) => void;
   save: (patch: Partial<Settings>) => Promise<Settings>;
   notify: (notice: Notice) => void;
+  onActivated?: (settings: Settings) => void;
 }) {
   const [originInput, setOriginInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -123,11 +125,13 @@ export function SitesSection({
         notify({ kind: 'error', text: 'Permissão para ativar os sites do SEI não concedida.' });
         return;
       }
+      let next = settings;
       if (!settings.autoSeiHosts) {
-        const updated = await save({ autoSeiHosts: true });
-        applySettings(updated);
+        next = await save({ autoSeiHosts: true });
+        applySettings(next);
       }
       notify({ kind: 'success', text: 'Sites do SEI ativados automaticamente.' });
+      onActivated?.(next);
     } finally {
       setBusy(false);
     }
