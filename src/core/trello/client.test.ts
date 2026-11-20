@@ -40,6 +40,36 @@ describe('TrelloClient', () => {
     expect(body.get('desc')).toBe('linha 1\nlinha 2');
   });
 
+  it('usa Bearer no GET quando há accessToken, sem key/token na URL', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"ok":true}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new TrelloClient(async () => ({ accessToken: 'oauth-token' }));
+    await client.get('/members/me', { fields: 'id' });
+
+    const [url, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    const parsed = new URL(String(url));
+    expect(parsed.searchParams.get('key')).toBeNull();
+    expect(parsed.searchParams.get('token')).toBeNull();
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer oauth-token');
+  });
+
+  it('usa Bearer no POST sem expor token no corpo', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"id":"card"}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new TrelloClient(async () => ({ accessToken: 'oauth-token' }));
+    await client.post('/cards', { name: 'Teste' });
+
+    const [url, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(String(url)).not.toContain('oauth-token');
+    const body = new URLSearchParams(String(init.body));
+    expect(body.get('key')).toBeNull();
+    expect(body.get('token')).toBeNull();
+    expect(body.get('name')).toBe('Teste');
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer oauth-token');
+  });
+
   it('mapeia 401 para erro de autenticação sem retry', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('invalid token', { status: 401 }));
     vi.stubGlobal('fetch', fetchMock);

@@ -87,9 +87,10 @@ test('extensão carrega, injeta no SEI e abre opções/dashboard', async () => {
     await dashboard.goto(`chrome-extension://${extensionId}/dashboard.html`);
     await expect(dashboard.getByRole('heading', { name: /Painel SEI Flow/ })).toBeVisible();
     await expect(dashboard.getByText('Gestão eficiente de processos, prazos, etiquetas e cartões.')).toBeVisible();
+    await expect(dashboard.getByText('Conecte sua conta do Trello.')).toBeVisible();
+    await expect(dashboard.getByRole('button', { name: 'Conectar com Trello' })).toBeVisible();
+    await expect(dashboard.getByRole('button', { name: 'Novo cartão' })).toHaveCount(0);
     await expect(dashboard.getByText('Desenvolvido por Engenheiro Leonardo Almeida de Oliveira')).toBeVisible();
-    await dashboard.getByRole('button', { name: /^Filtros/ }).click();
-    await expect(dashboard.getByText('Etiquetas', { exact: true })).toBeVisible();
 
     // Abrir o painel de novo reaproveita a aba existente em vez de criar outra.
     const dashboardsBefore = context

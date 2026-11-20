@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
 import type { Settings } from '../../../core/domain/types';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
+import {
+  hasBroadSiteAccess,
+  requestBroadSiteAccess,
+} from '../../../core/activation/permission';
 import { isSeiHost, normalizeOrigin, originPermissionPattern } from '../../../core/storage/settings';
 import { Icon } from '../../../ui/icons';
 import {
@@ -17,21 +21,51 @@ export function SitesSection({
   applySettings,
   save,
   notify,
+  onActivated,
 }: {
   settings: Settings;
   applySettings: (settings: Settings) => void;
   save: (patch: Partial<Settings>) => Promise<Settings>;
   notify: (notice: Notice) => void;
+  onActivated?: (settings: Settings) => void;
 }) {
   const [originInput, setOriginInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [broadGranted, setBroadGranted] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    hasBroadSiteAccess().then((granted) => {
+      if (active) setBroadGranted(granted);
+    });
+    return () => {
+      active = false;
+    };
+  }, [settings.autoSeiHosts, settings.allSites]);
+
+  // Facilita a configuração: sugere a origem do último SEI aberto.
+  useEffect(() => {
+    if (originInput) return;
+    let active = true;
+    callRpc('activation:last-tab', undefined)
+      .then((tab) => {
+        if (!active || !tab?.url) return;
+        const origin = normalizeOrigin(tab.url);
+        if (origin) setOriginInput(origin);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [originInput]);
 
   const toggleAllSites = async () => {
     const next = !settings.allSites;
     setBusy(true);
     try {
       if (next) {
-        const granted = await browser.permissions.request({ origins: ['*://*/*'] });
+        const granted = await requestBroadSiteAccess();
+        setBroadGranted(granted);
         if (!granted) {
           notify({ kind: 'error', text: 'Permissão para todos os sites não concedida.' });
           return;
@@ -57,7 +91,8 @@ export function SitesSection({
     setBusy(true);
     try {
       if (next) {
-        const granted = await browser.permissions.request({ origins: ['*://*/*'] });
+        const granted = await requestBroadSiteAccess();
+        setBroadGranted(granted);
         if (!granted) {
           notify({
             kind: 'error',
@@ -81,8 +116,28 @@ export function SitesSection({
     }
   };
 
-  const addOrigin = async () => {
-    const raw = originInput.includes('://') ? originInput : `https://${originInput.trim()}`;
+  const activateSei = async () => {
+    setBusy(true);
+    try {
+      const granted = (await hasBroadSiteAccess()) || (await requestBroadSiteAccess());
+      setBroadGranted(granted);
+      if (!granted) {
+        notify({ kind: 'error', text: 'Permissão para ativar os sites do SEI não concedida.' });
+        return;
+      }
+      let next = settings;
+      if (!settings.autoSeiHosts) {
+        next = await save({ autoSeiHosts: true });
+        applySettings(next);
+      }
+      notify({ kind: 'success', text: 'Sites do SEI ativados automaticamente.' });
+      onActivated?.(next);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addOrigin = async () => {    const raw = originInput.includes('://') ? originInput : `https://${originInput.trim()}`;
     const origin = normalizeOrigin(raw);
     if (!origin) {
       notify({ kind: 'error', text: 'Informe uma URL válida, começando com https:// ou http://.' });
@@ -147,7 +202,7 @@ export function SitesSection({
             <StatusPill
               tone={
                 settings.allSites ||
-                settings.autoSeiHosts ||
+                (settings.autoSeiHosts && broadGranted === true) ||
                 settings.activatedOrigins.length > 0
                   ? 'success'
                   : 'warning'
@@ -156,12 +211,38 @@ export function SitesSection({
               {settings.allSites
                 ? 'Todos os sites'
                 : settings.autoSeiHosts
-                  ? 'Sites “sei” automáticos'
+                  ? broadGranted === true
+                    ? 'Sites “sei” automáticos'
+                    : 'Sites “sei” (falta permissão)'
                   : `${settings.activatedOrigins.length} site(s) ativado(s)`}
             </StatusPill>
           </>
         }
       >
+        {!settings.allSites && !(settings.autoSeiHosts && broadGranted === true) && (
+          <div className="sfo-onboarding">
+            <span className="sfo-logo" style={{ width: 36, height: 36, borderRadius: 10 }}>
+              <Icon name="check" size={18} />
+            </span>
+            <div className="sfo-onboarding__body">
+              <p className="sfo-onboarding__title">Ativar o SEI automaticamente</p>
+              <p className="sfo-onboarding__text">
+                Um clique libera o acesso e ativa qualquer site que comece com “sei”. Não precisa
+                cadastrar URL.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--primary"
+              onClick={() => void activateSei()}
+              disabled={busy}
+            >
+              {busy ? <Spinner /> : <Icon name="check" size={14} />}
+              Ativar site do SEI
+            </button>
+          </div>
+        )}
+
         <label className="sfo-toggle-row">
           <input
             type="checkbox"

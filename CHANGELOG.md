@@ -3,6 +3,34 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.6.0] - 2026-11-20
+
+### Adicionado
+
+- **Login com o Trello (OAuth 2.0 + PKCE)**: botão **Conectar com Trello** nas Opções, sem backend e sem client secret. Os tokens ficam apenas no navegador e são renovados automaticamente.
+- **Sincronização entre navegadores**: regras e destino (quadro/lista padrão) são salvos em um quadro privado na própria conta do Trello e aparecem em Chrome, Edge e Firefox.
+- **Checklist de configuração pós-login**: conecta, escolhe destino e ativa o site, levando automaticamente ao próximo passo e ao dashboard quando tudo estiver pronto.
+- **Logout completo**: confirmação que encerra a sessão, apaga as credenciais manuais e limpa os dados locais, voltando para a tela de Conexão. As regras e o destino voltam no próximo login pela sincronização.
+- **Conta conectada no dashboard**: o selo do Trello mostra o nome do usuário logado.
+- **Ativação automática de sites “sei”** por padrão, com um único botão **Ativar site do SEI**.
+
+### Alterado
+
+- **Compartilhar e clonar** redesenhado em abas **Link / Duplicar / Quadro**, com destino único para clonar ou espelhar e menos texto.
+- Botões primários com **texto legível** nos temas claro e escuro.
+- **Rodapé** no fim da página, separado do conteúdo.
+- Dashboard desconectado **sem dados do usuário anterior**; apenas o convite para conectar.
+- Ao sair, a página de Opções volta para **Conexão** e o dashboard limpa filtros e cartões.
+- O modo **APP-KEY/TOKEN manual** virou alternativa secundária, dentro de um bloco recolhido.
+- Remoção dos travessões da interface e renomeação do quadro de configuração para **“SEI Flow - Configurações (não excluir)”**.
+
+### Corrigido
+
+- Dashboard atualiza sozinho ao voltar ou quando a configuração muda.
+- A sincronização não bloqueia mais o login nem o painel e não roda em duplicidade.
+- O botão **Conectar com Trello** abre as Opções diretamente na seção **Conexão**, mesmo com a aba já aberta em outra seção.
+- O quadro de configuração não aparece mais na lista de quadros/destinos do app.
+
 ## [1.5.5] - 2026-11-18
 
 ### Adicionado

@@ -13,6 +13,9 @@ Gerencie cartões do Trello no SEI: crie, vincule, edite, automatize e mantenha 
 ```
 O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para você trabalhar sem alternar de aba.
 
+• Entre com sua conta do Trello (OAuth 2.0) em um clique, sem copiar chaves; a sessão fica apenas no seu navegador.
+• Sincronize regras e destino entre navegadores pela sua conta do Trello: as mesmas configurações em Chrome, Edge e Firefox.
+• Saia quando quiser: o logout apaga os dados locais e volta para a tela de conexão; ao entrar de novo, a sincronização restaura as regras e o destino.
 • Crie cartões no Trello a partir de um processo do SEI, escolhendo etiquetas, quadro, lista, início e término.
 • Crie cartões também pelo painel, sem abrir o Trello.
 • Vincule cartões que já existem no Trello a um ou vários processos - inclusive em lote.
@@ -53,7 +56,7 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • **Fixe cartões** no topo das listas e grupos.
 • **Regras por etiqueta**: exija qualquer uma ou todas as etiquetas, combinadas com a lista.
 
-Privacidade: sem servidor próprio, sem telemetria e sem anúncios. As credenciais do Trello ficam apenas no seu navegador. O SEI Flow não salva dados de usuários fora do navegador. O uso é de responsabilidade exclusiva do usuário; o criador não tem ingerência sobre informações do SEI ou do Trello.
+Privacidade: sem servidor próprio, sem telemetria e sem anúncios. No login, os tokens do Trello ficam apenas no seu navegador. Regras e destino são sincronizados em um quadro privado na sua própria conta do Trello. O SEI Flow não salva dados de usuários fora do navegador. O uso é de responsabilidade exclusiva do usuário; o criador não tem ingerência sobre informações do SEI ou do Trello.
 
 Desenvolvido por Engenheiro Leonardo Almeida de Oliveira.
 
@@ -80,19 +83,22 @@ Integrar cartões do Trello a processos do SEI, permitindo criar, vincular, visu
 
 ## Justificativa de permissões
 
-- **`storage`**: salvar localmente a APP-KEY/TOKEN do Trello, preferências, sites autorizados e cache de cartões. Nenhum dado é enviado ao criador.
+- **`storage`**: salvar localmente as credenciais do Trello (login OAuth ou APP-KEY/TOKEN), preferências, sites autorizados e cache de cartões. Nenhum dado é enviado ao criador.
 - **`scripting`**: injetar a interface do SEI Flow nas páginas do SEI que o usuário autorizou.
 - **`activeTab`**: identificar a aba atual quando o usuário clica no ícone, para oferecer a ativação do site correto no painel inicial.
 - **`alarms`**: verificar periodicamente prazos e processos atualizados para manter as notificações.
 - **`notifications`**: avisar o usuário, uma vez por dia, sobre cartões atrasados ou vencendo hoje.
+- **`identity`**: abrir a tela oficial de login do Trello (OAuth 2.0 com PKCE) quando o usuário escolhe “Conectar com Trello”. Não lê a identidade do navegador nem de outros serviços.
 - **`https://api.trello.com/*`**: ler e gravar cartões, etiquetas, checklists e prazos na conta do próprio usuário.
+- **`https://auth.atlassian.com/*`**: trocar o código de autorização do Trello pelos tokens da própria sessão do usuário (login e renovação), sem client secret.
 - **Permissão opcional de host (`*://*/*`)**: ativar o SEI Flow em instalações do SEI de qualquer órgão/domínio. É solicitada em tempo de execução, por gesto do usuário; o script encerra sem alterar páginas que não sejam do SEI. A mesma permissão permite a opção de ativar automaticamente apenas endereços cujo host começa com "sei".
 
 ## Práticas de dados (Chrome Web Store)
 
 - O SEI Flow não envia dados ao desenvolvedor e não mantém servidor próprio.
-- Credenciais e preferências ficam em `chrome.storage.local`.
-- Para funcionar, as credenciais e os dados dos cartões são processados no navegador e transmitidos apenas à API do Trello, por ação do usuário.
+- Credenciais (login OAuth ou APP-KEY/TOKEN), preferências e cache ficam em `chrome.storage.local`.
+- Regras e destino padrão são sincronizados em um quadro privado na conta do próprio usuário no Trello.
+- Para funcionar, as credenciais e os dados dos cartões são processados no navegador e transmitidos apenas à API do Trello e ao login do Atlassian, por ação do usuário.
 - Não há analytics, anúncios, venda ou compartilhamento de dados.
 - O uso é de responsabilidade exclusiva do usuário; o criador não tem ingerência sobre informações do SEI/Trello.
 
@@ -106,7 +112,7 @@ Os arquivos estão em `docs/store/screenshots-1280x800/` (gerados por `node scri
 4. `process-1280x800.png` - processo aberto com cartões, caminho do quadro/lista e ações.
 5. `rules-1280x800.png` - regras automáticas com contador, aplicar agora e desfazer.
 
-Imagens adicionais para documentação: `rules-dark-1280x800.png`, `filter-1280x800.png`, `create-dialog-1280x800.png` e `options-1280x800.png`.
+Imagens adicionais para documentação: `rules-dark-1280x800.png`, `filter-1280x800.png`, `create-dialog-1280x800.png` e `options-1280x800.png` (Opções → Conexão, com login OAuth, conta conectada e alternativa manual recolhida).
 
 Para regerar: `npm run build` e depois `node scripts/store-screenshots.mjs`. As capturas usam dados fictícios.
 

@@ -10,12 +10,14 @@ export function DestinationSection({
   reloadBoards,
   save,
   notify,
+  onSaved,
 }: {
   settings: Settings;
   boards: TrelloBoard[];
-  reloadBoards: () => Promise<void>;
+  reloadBoards: () => Promise<Settings | null>;
   save: (patch: Partial<Settings>) => Promise<Settings>;
   notify: (notice: Notice) => void;
+  onSaved?: (settings: Settings) => void;
 }) {
   const [boardId, setBoardId] = useState(settings.defaultBoardId);
   const [listId, setListId] = useState(settings.defaultListId);
@@ -23,7 +25,19 @@ export function DestinationSection({
   const [loadingLists, setLoadingLists] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const connected = Boolean(settings.appKey && settings.appToken);
+  const [connected, setConnected] = useState(Boolean(settings.appKey && settings.appToken));
+
+  useEffect(() => {
+    let active = true;
+    callRpc('auth:status', undefined)
+      .then((status) => {
+        if (active) setConnected(status.connected);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [settings.appKey, settings.appToken]);
 
   useEffect(() => {
     if (!boardId && settings.defaultBoardId) setBoardId(settings.defaultBoardId);
@@ -73,13 +87,14 @@ export function DestinationSection({
     if (!selectedBoard || !selectedList) return;
     setBusy(true);
     try {
-      await save({
+      const updated = await save({
         defaultBoardId: selectedBoard.id,
         defaultBoardName: selectedBoard.name,
         defaultListId: selectedList.id,
         defaultListName: selectedList.name,
       });
       notify({ kind: 'success', text: 'Quadro e lista padrão atualizados.' });
+      onSaved?.(updated);
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
     } finally {

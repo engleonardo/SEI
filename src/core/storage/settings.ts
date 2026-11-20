@@ -11,7 +11,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultListName: '',
   activatedOrigins: [],
   allSites: false,
-  autoSeiHosts: false,
+  autoSeiHosts: true,
   theme: 'light',
   compact: true,
   notificationsEnabled: true,
@@ -32,7 +32,7 @@ function sanitize(value: Partial<Settings> | null | undefined): Settings {
           ),
         ]
       : [],
-    autoSeiHosts: value?.autoSeiHosts === true,
+    autoSeiHosts: value?.autoSeiHosts !== false,
     autoRefreshMinutes:
       typeof value?.autoRefreshMinutes === 'number' && value.autoRefreshMinutes >= 0
         ? value.autoRefreshMinutes

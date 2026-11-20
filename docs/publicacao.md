@@ -72,12 +72,14 @@ O SEI Flow é um projeto independente, sem afiliação ao Trello/Atlassian ou ao
 
 Copie e adapte no formulário de revisão:
 
-- **`storage`**: salvar localmente a APP-KEY/TOKEN do Trello, o quadro/lista padrão, as preferências e o cache de cartões. Nenhum dado sai do navegador.
+- **`storage`**: salvar localmente as credenciais do Trello (login OAuth ou APP-KEY/TOKEN), o quadro/lista padrão, as preferências e o cache de cartões. Nenhum dado sai do navegador.
 - **`scripting`**: injetar a interface do SEI Flow nas páginas do SEI que o usuário autorizou explicitamente.
 - **`activeTab`**: identificar a URL da aba atual quando o usuário clica no ícone, para oferecer a ativação do site correto no painel inicial.
 - **`alarms`**: verificar periodicamente prazos e processos atualizados para manter badge e notificações.
 - **`notifications`**: avisar uma vez por dia sobre cartões atrasados ou vencendo hoje.
+- **`identity`**: abrir a tela oficial de login do Trello (OAuth 2.0 com PKCE) quando o usuário escolhe “Entrar com Trello”. Não lê a identidade do navegador nem de outros serviços.
 - **`https://api.trello.com/*`**: ler e gravar cartões, etiquetas, checklists e prazos na conta do Trello do próprio usuário, usando as credenciais fornecidas por ele.
+- **`https://auth.atlassian.com/*`**: trocar o código de autorização do Trello pelos tokens da própria sessão do usuário (troca e renovação, sem client secret).
 - **Permissão opcional de host (`*://*/*`)**: permitir que o usuário ative o SEI Flow em instalações do SEI de qualquer órgão/domínio. A permissão é solicitada em tempo de execução, por gesto do usuário, e o script encerra sem alterar páginas que não sejam do SEI.
 
 ### Single purpose

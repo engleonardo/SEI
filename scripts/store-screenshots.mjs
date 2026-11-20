@@ -32,7 +32,7 @@ const settings = {
   defaultListName: 'Em andamento',
   activatedOrigins: ['http://sei.test'],
   allSites: false,
-  autoSeiHosts: false,
+  autoSeiHosts: true,
   theme: 'light',
   compact: true,
   notificationsEnabled: true,
@@ -274,6 +274,18 @@ function pageStub({
           case 'settings:get':
             response = ok(settingsData);
             break;
+          case 'auth:status':
+            response = ok({
+              connected: true,
+              mode: 'oauth',
+              account: {
+                id: 'member-1',
+                username: 'leonardo',
+                fullName: 'Leonardo Almeida de Oliveira',
+              },
+              expiresAt: Date.now() + 3_600_000,
+            });
+            break;
           case 'settings:save':
             settingsData = { ...settingsData, ...(message.payload ?? {}) };
             response = ok(settingsData);
@@ -503,8 +515,8 @@ await shootPage({
   await page.waitForTimeout(900);
   await page.screenshot({ path: join(OUT, 'backup-1280x800.png') });
 
-  await page.getByRole('button', { name: 'Diagnóstico' }).click();
-  await page.waitForTimeout(600);
+  await page.getByRole('button', { name: 'Conexão' }).click();
+  await page.waitForTimeout(900);
   await page.screenshot({ path: join(OUT, 'options-1280x800.png') });
   await browser.close();
 }

@@ -12,6 +12,7 @@ export interface LastActionTab {
 type SessionArea = {
   get: (keys: string | string[]) => Promise<Record<string, unknown>>;
   set: (items: Record<string, unknown>) => Promise<void>;
+  remove?: (keys: string | string[]) => Promise<void>;
 };
 
 function sessionArea(): SessionArea | null {
@@ -85,3 +86,10 @@ export async function getLastActionTab(): Promise<LastActionTab | null> {
   if (fromSession) return fromSession;
   return read(browser.storage.local);
 }
+
+export async function clearLastActionTab(): Promise<void> {
+  const session = sessionArea();
+  if (session?.remove) await session.remove(LAST_TAB_KEY);
+  else await browser.storage.local.remove(LAST_TAB_KEY);
+}
+

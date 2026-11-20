@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import { loadTrelloCredentials } from '../auth/credentials';
 import { TrelloRepository } from '../trello/repository';
 
 const PORT_NAME = 'sei-flow-attachment';
@@ -39,7 +40,7 @@ function errorMessage(error: unknown): string {
  * runtime.sendMessage e não guarda o arquivo no storage.
  */
 export function registerAttachmentUploadPort(): void {
-  const repository = new TrelloRepository();
+  const repository = new TrelloRepository(loadTrelloCredentials);
 
   browser.runtime.onConnect.addListener((port) => {
     if (port.name !== PORT_NAME) return;

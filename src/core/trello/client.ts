@@ -26,8 +26,10 @@ export class TrelloError extends Error {
 }
 
 export interface TrelloCredentials {
-  key: string;
-  token: string;
+  key?: string;
+  token?: string;
+  /** Token OAuth 2.0 (Bearer). Quando presente, tem prioridade sobre key/token. */
+  accessToken?: string;
 }
 
 export type QueryParams = Record<string, string | number | boolean | null | undefined>;
@@ -78,6 +80,14 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function hasCredentials(credentials: TrelloCredentials): boolean {
+  return Boolean(credentials.accessToken || (credentials.key && credentials.token));
+}
+
+function authHeaders(credentials: TrelloCredentials): Record<string, string> {
+  return credentials.accessToken ? { Authorization: `Bearer ${credentials.accessToken}` } : {};
+}
+
 export class TrelloClient {
   private readonly credentials: () => Promise<TrelloCredentials>;
   private readonly inFlight = new Map<string, Promise<unknown>>();
@@ -116,16 +126,18 @@ export class TrelloClient {
     file: { bytes: Uint8Array; name: string; mimeType: string },
   ): Promise<T> {
     const credentials = await this.credentials();
-    if (!credentials.key || !credentials.token) {
+    if (!hasCredentials(credentials)) {
       throw new TrelloError(
         'not_configured',
-        'Configure a APP-KEY e o TOKEN do Trello nas opções da extensão.',
+        'Entre com o Trello ou configure a APP-KEY e o TOKEN nas opções da extensão.',
       );
     }
 
     const url = new URL(`${API_BASE}${path}`);
-    url.searchParams.set('key', credentials.key);
-    url.searchParams.set('token', credentials.token);
+    if (!credentials.accessToken) {
+      url.searchParams.set('key', credentials.key ?? '');
+      url.searchParams.set('token', credentials.token ?? '');
+    }
 
     const form = new FormData();
     form.append('file', new Blob([file.bytes as BlobPart], { type: file.mimeType }), file.name);
@@ -138,6 +150,7 @@ export class TrelloClient {
       const response = await fetch(url, {
         method: 'POST',
         body: form,
+        headers: authHeaders(credentials),
         signal: controller.signal,
         credentials: 'omit',
       });
@@ -173,10 +186,10 @@ export class TrelloClient {
     body?: QueryParams,
   ): Promise<T> {
     const credentials = await this.credentials();
-    if (!credentials.key || !credentials.token) {
+    if (!hasCredentials(credentials)) {
       throw new TrelloError(
         'not_configured',
-        'Configure a APP-KEY e o TOKEN do Trello nas opções da extensão.',
+        'Entre com o Trello ou configure a APP-KEY e o TOKEN nas opções da extensão.',
       );
     }
 
@@ -194,22 +207,34 @@ export class TrelloClient {
       try {
         let response: Response;
         if (method === 'GET' || method === 'DELETE') {
-          url.searchParams.set('key', credentials.key);
-          url.searchParams.set('token', credentials.token);
-          response = await fetch(url, { method, signal: controller.signal, credentials: 'omit' });
+          if (!credentials.accessToken) {
+            url.searchParams.set('key', credentials.key ?? '');
+            url.searchParams.set('token', credentials.token ?? '');
+          }
+          response = await fetch(url, {
+            method,
+            signal: controller.signal,
+            credentials: 'omit',
+            headers: authHeaders(credentials),
+          });
         } else {
           const form = new URLSearchParams();
           for (const [name, value] of Object.entries(body ?? {})) {
             if (value !== undefined && value !== null) form.set(name, String(value));
           }
-          form.set('key', credentials.key);
-          form.set('token', credentials.token);
+          if (!credentials.accessToken) {
+            form.set('key', credentials.key ?? '');
+            form.set('token', credentials.token ?? '');
+          }
           response = await fetch(url, {
             method,
             body: form,
             signal: controller.signal,
             credentials: 'omit',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              ...authHeaders(credentials),
+            },
           });
         }
 

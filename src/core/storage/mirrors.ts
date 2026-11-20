@@ -114,3 +114,8 @@ export async function removeMirrorGroup(groupId: string): Promise<void> {
   const groups = await listMirrorGroups();
   await save(groups.filter((group) => group.id !== groupId));
 }
+
+export async function clearMirrors(): Promise<void> {
+  await browser.storage.local.remove(MIRRORS_KEY);
+}
+

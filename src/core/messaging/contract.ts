@@ -19,12 +19,17 @@ import type { RuleLogEntry } from '../storage/rule-log';
 import type { LinkCandidate } from '../link/scan';
 import type { SettingsBackup } from '../storage/backup';
 import type { MirrorGroup } from '../storage/mirrors';
+import type { AuthStatus } from '../auth/session';
+import type { SyncResult } from '../sync/config';
 
 export interface RpcMap {
   'settings:get': { payload: undefined; result: Settings };
   'settings:save': { payload: Partial<Settings>; result: Settings };
   'settings:test-connection': { payload: undefined; result: ConnectionInfo };
-  'settings:clear-cache': { payload: undefined; result: { cleared: true } };
+  'auth:status': { payload: undefined; result: AuthStatus };
+  'auth:login': { payload: undefined; result: AuthStatus };
+  'auth:logout': { payload: { clearManual?: boolean } | undefined; result: AuthStatus };
+  'sync:config': { payload: { force?: boolean } | undefined; result: SyncResult };  'settings:clear-cache': { payload: undefined; result: { cleared: true } };
   'settings:export': {
     payload: { includeCredentials: boolean; includeRules?: boolean };
     result: SettingsBackup;
@@ -33,7 +38,7 @@ export interface RpcMap {
     payload: { data: unknown; importRules?: boolean };
     result: { rules: number; settings: Settings };
   };
-  'options:open': { payload: undefined; result: undefined };
+  'options:open': { payload: { tab?: string } | undefined; result: undefined };
   'dashboard:open': { payload: undefined; result: undefined };
   'trello:boards': { payload: { fresh?: boolean } | undefined; result: TrelloBoard[] };
   'trello:lists': { payload: { boardId: string; fresh?: boolean }; result: TrelloList[] };

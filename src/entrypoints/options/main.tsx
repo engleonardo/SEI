@@ -4,7 +4,9 @@ import { browser } from 'wxt/browser';
 import type { Settings, TrelloBoard } from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
 import { openDashboard } from '../../core/messaging/actions';
+import { hasBroadSiteAccess, requestBroadSiteAccess } from '../../core/activation/permission';
 import { watchSettings } from '../../core/storage/settings';
+import { takeOptionsTarget, watchOptionsTarget } from '../../core/storage/options-target';
 import { BrandMark } from '../../ui/BrandMark';
 import { Icon, type IconName } from '../../ui/icons';
 import { ConnectionSection } from './sections/ConnectionSection';
@@ -13,6 +15,7 @@ import { DestinationSection } from './sections/DestinationSection';
 import { DiagnosticsSection } from './sections/DiagnosticsSection';
 import { PreferencesSection } from './sections/PreferencesSection';
 import { RulesSection } from './sections/RulesSection';
+import { SetupChecklist } from './sections/SetupChecklist';
 import { SitesSection } from './sections/SitesSection';
 import { Spinner, type Notice } from './sections/shared';
 import { setThemePreference } from '../../ui/theme';
@@ -65,6 +68,8 @@ function App() {
   const [tab, setTab] = useState<Tab>('connection');
   const [settings, setSettings] = useState<Settings | null>(null);
   const [boards, setBoards] = useState<TrelloBoard[]>([]);
+  const [connected, setConnected] = useState(false);
+  const [sitePermission, setSitePermission] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice>(null);
   const noticeTimer = useRef<number | null>(null);
@@ -107,20 +112,87 @@ function App() {
     }
   }, [settings, save, notify]);
 
-  const reloadBoards = useCallback(async () => {
+  const reloadBoards = useCallback(async (): Promise<Settings | null> => {
     try {
+      void callRpc('sync:config', { force: false }).catch(() => null);
       const current = await callRpc('settings:get', undefined);
       setSettings(current);
-      if (!current.appKey || !current.appToken) {
+      void hasBroadSiteAccess().then(setSitePermission);
+      const status = await callRpc('auth:status', undefined).catch(() => null);
+      const isConnected = status
+        ? status.connected
+        : Boolean(current.appKey && current.appToken);
+      setConnected(isConnected);
+      if (!isConnected) {
         setBoards([]);
-        return;
+        return current;
       }
       const value = await callRpc('trello:boards', { fresh: true });
       setBoards(value);
+      return current;
     } catch (cause) {
       notify({ kind: 'error', text: errorMessage(cause) });
+      return null;
     }
   }, [notify]);
+
+  const goToNextStep = useCallback(
+    async (fresh?: Settings | null) => {
+      const current = fresh ?? settings;
+      if (!current) return;
+      if (!current.defaultBoardId || !current.defaultListId) {
+        setTab('destination');
+        return;
+      }
+      const autoOk = current.autoSeiHosts ? await hasBroadSiteAccess() : false;
+      if (current.autoSeiHosts) setSitePermission(autoOk);
+      if (!current.allSites && !autoOk && current.activatedOrigins.length === 0) {
+        setTab('sites');
+        return;
+      }
+      await openDashboard();
+    },
+    [settings],
+  );
+
+  const activateSeiSites = useCallback(async () => {
+    const granted = (await hasBroadSiteAccess()) || (await requestBroadSiteAccess());
+    setSitePermission(granted);
+    if (!granted) {
+      notify({
+        kind: 'warning',
+        text: 'Permissão não concedida. Você pode ativar um site específico em Sites do SEI.',
+      });
+      return false;
+    }
+    let next = settings;
+    if (settings && !settings.autoSeiHosts) {
+      next = await save({ autoSeiHosts: true });
+      setSettings(next);
+    }
+    notify({
+      kind: 'success',
+      text: 'Sites do SEI ativados automaticamente.',
+    });
+    await goToNextStep(next);
+    return true;
+  }, [goToNextStep, notify, save, settings]);
+
+  useEffect(() => {
+    let active = true;
+    void takeOptionsTarget().then((target) => {
+      if (active && target && TABS.some((item) => item.id === target)) {
+        setTab(target as Tab);
+      }
+    });
+    const unwatch = watchOptionsTarget((target) => {
+      if (TABS.some((item) => item.id === target)) setTab(target as Tab);
+    });
+    return () => {
+      active = false;
+      unwatch();
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -221,26 +293,25 @@ function App() {
 
         {notice && <div className={`sfo-alert sfo-alert--${notice.kind}`}>{notice.text}</div>}
 
-        {!settings.appKey && (
-          <div className="sfo-onboarding">
-            <span className="sfo-logo" style={{ width: 36, height: 36, borderRadius: 10 }}>
-              <Icon name="arrowRight" size={18} />
-            </span>
-            <div className="sfo-onboarding__body">
-              <p className="sfo-onboarding__title">Comece conectando o Trello</p>
-              <p className="sfo-onboarding__text">
-                Informe sua APP-KEY e gere um TOKEN. Depois escolha o quadro e a lista padrão e ative o site
-                do seu órgão.
-              </p>
-            </div>
-            <button type="button" className="sfo-btn sfo-btn--primary" onClick={() => setTab('connection')}>
-              Conectar Trello
-            </button>
-          </div>
+        {connected && (
+          <SetupChecklist
+            settings={settings}
+            connected={connected}
+            sitePermission={sitePermission}
+            onActivateSites={activateSeiSites}
+            onGo={setTab}
+          />
         )}
 
         {tab === 'connection' && (
-          <ConnectionSection settings={settings} save={save} notify={notify} reloadBoards={reloadBoards} />
+          <ConnectionSection
+            settings={settings}
+            save={save}
+            notify={notify}
+            reloadBoards={reloadBoards}
+            onLoginComplete={goToNextStep}
+            onLoggedOut={() => setTab('connection')}
+          />
         )}
 
         {tab === 'destination' && (
@@ -250,13 +321,20 @@ function App() {
             reloadBoards={reloadBoards}
             save={save}
             notify={notify}
+            onSaved={(next) => void goToNextStep(next)}
           />
         )}
 
         {tab === 'rules' && <RulesSection boards={boards} notify={notify} />}
 
         {tab === 'sites' && (
-          <SitesSection settings={settings} applySettings={applySettings} save={save} notify={notify} />
+          <SitesSection
+            settings={settings}
+            applySettings={applySettings}
+            save={save}
+            notify={notify}
+            onActivated={(next) => void goToNextStep(next)}
+          />
         )}
 
         {tab === 'preferences' && <PreferencesSection settings={settings} save={save} notify={notify} />}

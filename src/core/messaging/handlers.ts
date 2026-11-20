@@ -13,17 +13,38 @@ import {
   removeActivatedOrigin,
   saveSettings,
 } from '../storage/settings';
-import { getLastActionTab } from '../storage/last-tab';
+import { getLastActionTab, clearLastActionTab } from '../storage/last-tab';
 import { exportBackup, importBackup } from '../storage/backup';
-import { listProcessRecords, markSeiRulesHandled, upsertProcessRecords } from '../storage/processes';
-import { getMirrorGroup } from '../storage/mirrors';
-import { getRules, saveRules } from '../storage/rules';
-import { getLastRuleRun } from '../storage/rule-runs';
+import {
+  clearProcesses,
+  listProcessRecords,
+  markSeiRulesHandled,
+  upsertProcessRecords,
+} from '../storage/processes';
+import { clearMirrors, getMirrorGroup } from '../storage/mirrors';
+import { clearRules, getRules, saveRules } from '../storage/rules';
+import { clearRuleRuns, getLastRuleRun } from '../storage/rule-runs';
 import { clearRuleStats, getRuleStats } from '../storage/rule-stats';
 import { clearRuleLog, getRuleLog } from '../storage/rule-log';
+import { clearPins } from '../storage/pins';
 import { clearSyncSnapshot } from '../storage/sync';
+import { markSyncChanged } from '../storage/sync-tick';
+import { setOptionsTarget } from '../storage/options-target';
+import {
+  backupLocalConfig,
+  cancelConfigSync,
+  clearConfigSyncMeta,
+  clearLocalConfigBackup,
+  pushConfigNow,
+  queueConfigSync,
+  restoreLocalConfig,
+  syncConfig,
+} from '../sync/config';
+import { loadTrelloCredentials } from '../auth/credentials';
+import { logout, startLogin } from '../auth/oauth';
+import { readSession, writeAccount } from '../auth/session';
 
-const repository = new TrelloRepository();
+const repository = new TrelloRepository(loadTrelloCredentials);
 
 type HandlerMap = {
   [T in RpcType]: (payload: RpcMap[T]['payload']) => Promise<RpcMap[T]['result']>;
@@ -38,10 +59,119 @@ const handlers = {
     if (previous.appKey !== next.appKey || previous.appToken !== next.appToken) {
       await cacheClear();
     }
+    if (
+      'defaultBoardId' in payload ||
+      'defaultBoardName' in payload ||
+      'defaultListId' in payload ||
+      'defaultListName' in payload
+    ) {
+      queueConfigSync();
+    }
     return next;
   },
 
   'settings:test-connection': () => repository.testConnection(),
+
+  'auth:status': async () => {
+    const session = await readSession();
+    if (session) {
+      return {
+        connected: true,
+        mode: 'oauth' as const,
+        account: session.account,
+        expiresAt: session.expiresAt,
+      };
+    }
+    const settings = await getSettings();
+    if (settings.appKey && settings.appToken) {
+      return { connected: true, mode: 'token' as const };
+    }
+    return { connected: false, mode: 'none' as const };
+  },
+
+  'auth:login': async () => {
+    const session = await startLogin();
+    let account = session.account;
+    try {
+      const info = await repository.testConnection();
+      const updated = await writeAccount({
+        id: info.id,
+        username: info.username,
+        fullName: info.fullName,
+      });
+      if (updated?.account) account = updated.account;
+    } catch {
+      // A sessão já foi salva; a conta é apenas informativa.
+    }
+
+    // Se o logout anterior não conseguiu subir a configuração, recupera a cópia
+    // local apenas quando a conta é a mesma.
+    try {
+      await restoreLocalConfig(account?.id);
+    } catch {
+      // backup é best-effort
+    }
+
+    // Dá uma chance ao sync, mas não deixa o login preso se o Trello demorar.
+    await Promise.race([
+      syncConfig({ force: true }),
+      new Promise<void>((resolve) => setTimeout(resolve, 4_000)),
+    ]).catch(() => undefined);
+
+    return {
+      connected: true,
+      mode: 'oauth' as const,
+      account,
+      expiresAt: session.expiresAt,
+    };
+  },
+
+  'auth:logout': async (payload) => {
+    let backupFailed = false;
+    if (payload?.clearManual) {
+      // Salva o estado mais recente no quadro de configuração antes de limpar.
+      cancelConfigSync();
+      const session = await readSession();
+      try {
+        await pushConfigNow();
+        await clearLocalConfigBackup();
+      } catch {
+        // Sem o push, guarda uma cópia local para recuperar no próximo login.
+        backupFailed = true;
+        await backupLocalConfig(session?.account?.id);
+      }
+    }
+    await logout();
+    if (payload?.clearManual) {
+      await saveSettings({
+        appKey: '',
+        appToken: '',
+        defaultBoardId: '',
+        defaultBoardName: '',
+        defaultListId: '',
+        defaultListName: '',
+      });
+      await cacheClear();
+      await clearRules();
+      await clearRuleStats();
+      await clearRuleLog();
+      await clearRuleRuns();
+      await clearProcesses();
+      await clearMirrors();
+      await clearPins();
+      await clearLastActionTab();
+      await clearSyncSnapshot();
+      await clearConfigSyncMeta();
+      await markSyncChanged();
+    }
+    const settings = await getSettings();
+    if (settings.appKey && settings.appToken) {
+      return { connected: true, mode: 'token' as const };
+    }
+    return { connected: false, mode: 'none' as const, backupFailed };
+  },
+
+  'sync:config': (payload) => syncConfig({ force: payload?.force }),
 
   'settings:clear-cache': async () => {
     await cacheClear();
@@ -59,7 +189,8 @@ const handlers = {
     return result;
   },
 
-  'options:open': async () => {
+  'options:open': async (payload) => {
+    if (payload?.tab) await setOptionsTarget(payload.tab);
     if (typeof browser.runtime.openOptionsPage === 'function') {
       await browser.runtime.openOptionsPage();
       return undefined;
@@ -211,7 +342,11 @@ const handlers = {
 
   'rules:list': () => getRules(),
 
-  'rules:save': ({ rules }) => saveRules(rules),
+  'rules:save': async ({ rules }) => {
+    const saved = await saveRules(rules);
+    queueConfigSync();
+    return saved;
+  },
 
   'rules:apply-now': ({ ruleId, dryRun }) => repository.applyRuleNow(ruleId, dryRun),
 

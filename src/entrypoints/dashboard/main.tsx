@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
 import type { Settings, TrelloBoard, TrelloCard, TrelloLabel, TrelloList } from '../../core/domain/types';
 import { callRpc, errorMessage } from '../../core/messaging/client';
-import { openOptionsPage } from '../../core/messaging/actions';
+import { openOptions } from '../../core/messaging/actions';
 import type { LastActionTab } from '../../core/storage/last-tab';
 import type { ProcessCatalog, ProcessRecord } from '../../core/storage/processes';
 import { isOriginActivated, watchSettings } from '../../core/storage/settings';
@@ -120,10 +120,18 @@ function Dashboard() {
   const undoRef = useRef<() => void>(() => undefined);
 
   const version = browser.runtime.getManifest().version;
-  const connected = Boolean(settings?.appKey && settings?.appToken);
+  const [connected, setConnected] = useState(
+    Boolean(settings?.appKey && settings?.appToken),
+  );
+  const [authAccount, setAuthAccount] = useState<{
+    fullName: string;
+    username: string;
+  } | null>(null);
+  const [authMode, setAuthMode] = useState<'oauth' | 'token' | 'none' | null>(null);
   const loadSeq = useRef(0);
   const defaultBoardApplied = useRef(false);
   const mirrorSynced = useRef(false);
+  const skipNextLoad = useRef(false);
 
   const load = useCallback(
     async (silent = false, quiet = false) => {
@@ -132,14 +140,32 @@ function Dashboard() {
       if (!quiet) setRefreshing(true);
       setError(null);
       try {
+        const auth = await callRpc('auth:status', undefined).catch(() => null);
+        if (auth?.connected) {
+          // Puxa regras/destino em segundo plano; não bloqueia o painel.
+          void callRpc('sync:config', { force: false }).catch(() => null);
+        }
         const nextSettings = await callRpc('settings:get', undefined);
         if (seq !== loadSeq.current) return;
         setSettings(nextSettings);
 
+        const hasCredentials = auth
+          ? auth.connected
+          : Boolean(nextSettings.appKey && nextSettings.appToken);
+        setConnected(hasCredentials);
+        setAuthMode(
+          auth?.mode ?? (nextSettings.appKey && nextSettings.appToken ? 'token' : 'none'),
+        );
+        setAuthAccount(
+          auth?.account
+            ? { fullName: auth.account.fullName, username: auth.account.username }
+            : null,
+        );
+
         const [processRecords, nextLastTab, nextBoards] = await Promise.all([
           callRpc('processes:list', undefined),
           callRpc('activation:last-tab', undefined),
-          nextSettings.appKey && nextSettings.appToken
+          hasCredentials
             ? callRpc('trello:boards', { fresh: false }).catch(() => [] as TrelloBoard[])
             : Promise.resolve([] as TrelloBoard[]),
         ]);
@@ -152,7 +178,7 @@ function Dashboard() {
         setTrelloBoards(Array.isArray(nextBoards) ? nextBoards : []);
         setLastTab(nextLastTab);
 
-        if (nextSettings.appKey && nextSettings.appToken) {
+        if (hasCredentials) {
           // Na primeira carga, usa o quadro padrão direto para evitar uma busca
           // global por cartões vinculados antes de o filtro de quadro ser aplicado.
           const firstLoadBoardId = defaultBoardApplied.current ? '' : nextSettings.defaultBoardId;
@@ -225,8 +251,22 @@ function Dashboard() {
   );
 
   useEffect(() => {
+    if (skipNextLoad.current) {
+      skipNextLoad.current = false;
+      return;
+    }
     void load();
   }, [load]);
+
+  // Ao desconectar, não deixa filtros/quadro do usuário anterior no painel.
+  useEffect(() => {
+    if (loading || connected) return;
+    skipNextLoad.current = true;
+    setShowFilters(false);
+    setFilters(DEFAULT_FILTERS);
+    saveFilters(DEFAULT_FILTERS);
+    defaultBoardApplied.current = false;
+  }, [connected, loading]);
 
   useEffect(() => {
     if (!connected || mirrorSynced.current) return;
@@ -242,11 +282,30 @@ function Dashboard() {
     if (settings) setThemePreference(settings.theme);
   }, [settings]);
 
-  useEffect(() => watchSettings((next) => setThemePreference(next.theme)), []);
+  useEffect(() => {
+    let timer: number | null = null;
+    const unwatch = watchSettings((next) => {
+      setThemePreference(next.theme);
+      setSettings((previous) => {
+        if (previous && previous.defaultBoardId !== next.defaultBoardId) {
+          defaultBoardApplied.current = false;
+        }
+        return next;
+      });
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = null;
+        void load(true, true);
+      }, 300);
+    });
+    return () => {
+      unwatch();
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [load]);
 
   // Atualização sem clique: ao voltar ao painel e quando o SEI avisa que mudou algo.
   useEffect(() => {
-    if (!connected) return;
     let timer: number | null = null;
     const refresh = () => {
       if (document.visibilityState !== 'visible') return;
@@ -268,7 +327,7 @@ function Dashboard() {
       unwatch();
       if (timer) window.clearTimeout(timer);
     };
-  }, [connected, load]);
+  }, [load]);
 
   useEffect(() => {
     if (defaultBoardApplied.current) return;
@@ -283,6 +342,10 @@ function Dashboard() {
   }, [settings]);
 
   useEffect(() => {
+    if (!connected) {
+      setBoardLists([]);
+      return;
+    }
     const boardId = filters.boardId;
     if (!boardId) {
       setBoardLists([]);
@@ -299,7 +362,7 @@ function Dashboard() {
     return () => {
       active = false;
     };
-  }, [filters.boardId]);
+  }, [connected, filters.boardId]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -864,9 +927,23 @@ function Dashboard() {
             </div>
             <p>Gestão eficiente de processos, prazos, etiquetas e cartões.</p>
             <div className="sdo-hero__status">
-              <span className={`sdo-status ${connected ? 'sdo-status--on' : 'sdo-status--off'}`}>
+              <span
+                className={`sdo-status ${connected ? 'sdo-status--on' : 'sdo-status--off'}`}
+                title={
+                  authAccount
+                    ? `Conectado como ${authAccount.fullName} (@${authAccount.username})`
+                    : undefined
+                }
+              >
                 <span className="sdo-status__dot" />
-                Trello {connected ? 'conectado' : 'não conectado'}
+                <span className="sdo-status__label">
+                  Trello {connected ? 'conectado' : 'não conectado'}
+                  {connected && authAccount
+                    ? ` · ${authAccount.fullName}`
+                    : connected && authMode === 'token'
+                      ? ' · manual'
+                      : ''}
+                </span>
               </span>
               <span
                 className={`sdo-status ${hasActivatedSite ? 'sdo-status--on' : 'sdo-status--off'}`}
@@ -881,7 +958,7 @@ function Dashboard() {
                 <span className="sdo-status__dot" />
                 Site {hasActivatedSite ? 'ativado' : 'não ativado'}
               </span>
-              {settings?.defaultListName && (
+              {connected && settings?.defaultListName && (
                 <span className="sdo-status sdo-status--muted">
                   <Icon name="board" size={12} />
                   {settings.defaultBoardName} » {settings.defaultListName}
@@ -891,16 +968,17 @@ function Dashboard() {
           </div>
         </div>
         <div className="sdo-hero__actions">
-          <button
-            type="button"
-            className="sfo-btn sfo-btn--sm sfo-btn--primary"
-            onClick={() => openCreate()}
-            disabled={!connected}
-            title="Criar cartão no Trello sem abrir o Trello"
-          >
-            <Icon name="plus" size={14} />
-            Novo cartão
-          </button>
+          {connected && (
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm sfo-btn--primary"
+              onClick={() => openCreate()}
+              title="Criar cartão no Trello sem abrir o Trello"
+            >
+              <Icon name="plus" size={14} />
+              Novo cartão
+            </button>
+          )}
           {seiUrl ? (
             <a
               className="sfo-btn sfo-btn--sm"
@@ -923,26 +1001,34 @@ function Dashboard() {
               SEI
             </button>
           )}
-          <a
-            className="sfo-btn sfo-btn--sm"
-            href={trelloUrl}
-            target="_blank"
-            rel="noreferrer"
-            title="Abrir o Trello"
-          >
-            <Icon name="board" size={14} />
-            Trello
-          </a>
+          {connected && (
+            <a
+              className="sfo-btn sfo-btn--sm"
+              href={trelloUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Abrir o Trello"
+            >
+              <Icon name="board" size={14} />
+              Trello
+            </a>
+          )}
+          {connected && (
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm"
+              onClick={() => void load(true)}
+              disabled={refreshing}
+            >
+              {refreshing ? <span className="sfo-spinner" /> : <Icon name="refresh" size={14} />}
+              Atualizar
+            </button>
+          )}
           <button
             type="button"
             className="sfo-btn sfo-btn--sm"
-            onClick={() => void load(true)}
-            disabled={refreshing}
+            onClick={() => void openOptions('connection')}
           >
-            {refreshing ? <span className="sfo-spinner" /> : <Icon name="refresh" size={14} />}
-            Atualizar
-          </button>
-          <button type="button" className="sfo-btn sfo-btn--sm" onClick={() => void openOptionsPage()}>
             <Icon name="settings" size={14} />
             Opções
           </button>
@@ -976,14 +1062,14 @@ function Dashboard() {
           <Icon name="settings" size={16} />
           <div>
             <strong>Conecte sua conta do Trello.</strong>
-            <span>Informe a APP-KEY e o TOKEN para ver os cartões vinculados aos processos.</span>
+            <span>Entre com sua conta do Trello para ver seus quadros e cartões.</span>
           </div>
           <button
             type="button"
             className="sfo-btn sfo-btn--sm sfo-btn--primary"
-            onClick={() => void openOptionsPage()}
+            onClick={() => void openOptions('connection')}
           >
-            Conectar ao Trello
+            Conectar com Trello
           </button>
         </div>
       )}
@@ -995,17 +1081,23 @@ function Dashboard() {
             <strong>Defina o destino padrão.</strong>
             <span>Escolha um quadro e uma lista para criar cartões diretamente pelo SEI.</span>
           </div>
-          <button type="button" className="sfo-btn sfo-btn--sm" onClick={() => void openOptionsPage()}>
+          <button
+            type="button"
+            className="sfo-btn sfo-btn--sm"
+            onClick={() => void openOptions('destination')}
+          >
             Abrir opções
           </button>
         </div>
       )}
 
-      {settings && !seiOriginActive && seiTab && (
+      {connected && settings && !seiOriginActive && seiTab && (
         <ActivationCard settings={settings} lastTab={seiTab} onChanged={setSettings} />
       )}
 
-      <section className="sdo-metrics" aria-label="Resumo dos cartões">
+      {connected && (
+        <>
+          <section className="sdo-metrics" aria-label="Resumo dos cartões">
         <button
           type="button"
           className={`sdo-metric sdo-metric--danger${filters.due === 'overdue' ? ' sdo-metric--active' : ''}`}
@@ -1473,6 +1565,8 @@ function Dashboard() {
             </div>
           </section>
         ))
+      )}
+        </>
       )}
 
       <footer className="sdo-footer">

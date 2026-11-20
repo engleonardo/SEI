@@ -4,6 +4,10 @@ export async function openOptionsPage(): Promise<void> {
   await callRpc('options:open', undefined);
 }
 
+export async function openOptions(tab: string): Promise<void> {
+  await callRpc('options:open', { tab });
+}
+
 export async function openDashboard(): Promise<void> {
   await callRpc('dashboard:open', undefined);
 }

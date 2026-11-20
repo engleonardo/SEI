@@ -55,6 +55,7 @@ import {
   type MirrorGroup,
 } from '../storage/mirrors';
 import { mapLimit } from '../utils/async';
+import { isConfigBoardName } from '../sync/config';
 import { CACHE_TTL, cacheDelete, cacheDeleteByPrefix, cacheGet, cacheGetOrSet, cacheSet } from './cache';
 import { TrelloClient, TrelloError, type TrelloCredentials } from './client';
 import { toCard, toCards } from './normalize';
@@ -109,6 +110,7 @@ export class TrelloRepository {
       });
       return (response ?? [])
         .filter((board) => Boolean(board?.id && board?.name))
+        .filter((board) => !isConfigBoardName(board.name))
         .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
     };
     if (fresh) {
