@@ -96,7 +96,14 @@ export function ConnectionSection({
       setAuth(status);
       setConnection(null);
       setLogoutOpen(false);
-      notify({ kind: 'success', text: 'Sessão encerrada e dados locais removidos.' });
+      notify(
+        status.backupFailed
+          ? {
+              kind: 'warning',
+              text: 'Sessão encerrada. Não foi possível salvar a configuração no Trello; ela foi guardada neste navegador e volta no próximo login.',
+            }
+          : { kind: 'success', text: 'Sessão encerrada e dados locais removidos.' },
+      );
       await reloadBoards();
       onLoggedOut?.();
     } catch (cause) {

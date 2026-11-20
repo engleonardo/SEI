@@ -27,6 +27,8 @@ export interface AuthStatus {
   mode: 'oauth' | 'token' | 'none';
   account?: OAuthAccount;
   expiresAt?: number;
+  /** O push final do logout falhou; a configuração foi guardada localmente. */
+  backupFailed?: boolean;
 }
 
 const SESSION_KEY = 'sei-flow:oauth:v1';

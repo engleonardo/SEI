@@ -27,6 +27,8 @@ export const CONFIG_LIST_NAME = 'config';
 const CARD_PREFIX = 'config:';
 const CHUNK_SIZE = 10_000;
 const META_KEY = 'sei-flow:sync:config:v1';
+const DIRTY_KEY = 'sei-flow:sync:config-dirty:v1';
+const BACKUP_KEY = 'sei-flow:sync:config-backup:v1';
 const MIN_INTERVAL_MS = 60_000;
 
 interface SyncMeta {
@@ -98,6 +100,19 @@ async function readMeta(): Promise<SyncMeta> {
 
 async function writeMeta(meta: SyncMeta): Promise<void> {
   await browser.storage.local.set({ [META_KEY]: meta });
+}
+
+async function readDirty(): Promise<boolean> {
+  const stored = await browser.storage.local.get(DIRTY_KEY);
+  return stored?.[DIRTY_KEY] === true;
+}
+
+async function markDirty(): Promise<void> {
+  await browser.storage.local.set({ [DIRTY_KEY]: true });
+}
+
+async function clearDirty(): Promise<void> {
+  await browser.storage.local.remove(DIRTY_KEY);
 }
 
 async function findBoard(client: TrelloClient): Promise<BoardLite | null> {
@@ -224,6 +239,57 @@ function isDefaultSeed(rules: RemoteConfig['rules']): boolean {
   return rule.name === 'Nova regra' && !rule.enabled && !rule.boardId;
 }
 
+interface ConfigBackup {
+  owner?: string;
+  at: number;
+  rules: unknown;
+  settings: Partial<Settings>;
+}
+
+/**
+ * Salva uma cópia local antes do logout, caso o push final falhe (offline).
+ * Fica fora das chaves ativas, então a interface não mostra resquício.
+ */
+export async function backupLocalConfig(owner?: string): Promise<void> {
+  const snapshot = await localSnapshot();
+  const backup: ConfigBackup = {
+    owner,
+    at: Date.now(),
+    rules: snapshot.rules,
+    settings: snapshot.settings ?? {},
+  };
+  await browser.storage.local.set({ [BACKUP_KEY]: backup });
+}
+
+/**
+ * Restaura a cópia local apenas para o mesmo dono. Se for de outra conta,
+ * descarta para não vazar configuração entre usuários.
+ */
+export async function restoreLocalConfig(owner?: string): Promise<boolean> {
+  const stored = await browser.storage.local.get(BACKUP_KEY);
+  const backup = stored?.[BACKUP_KEY] as Partial<ConfigBackup> | undefined;
+  if (!backup) return false;
+  if (!owner) return false;
+  if (backup.owner !== owner) {
+    await browser.storage.local.remove(BACKUP_KEY);
+    return false;
+  }
+  await saveRules(Array.isArray(backup.rules) ? backup.rules : []);
+  const patch: Partial<Settings> = {};
+  for (const key of DESTINATION_KEYS) {
+    const value = backup.settings?.[key];
+    if (typeof value === 'string') patch[key] = value;
+  }
+  if (Object.keys(patch).length > 0) await saveSettings(patch);
+  await browser.storage.local.remove(BACKUP_KEY);
+  await markDirty();
+  return true;
+}
+
+export async function clearLocalConfigBackup(): Promise<void> {
+  await browser.storage.local.remove(BACKUP_KEY);
+}
+
 function isMeaningful(config: RemoteConfig): boolean {
   if (isDefaultSeed(config.rules)) return false;
   if (Array.isArray(config.rules) && config.rules.length > 0) return true;
@@ -250,14 +316,27 @@ async function pushConfig(client: TrelloClient): Promise<SyncResult> {
     lastAttemptAt: Date.now(),
   });
   pendingPush = false;
+  await clearDirty();
   return { pulled: false, pushed: true, updatedAt: snapshot.updatedAt };
 }
 
+let syncChain: Promise<unknown> = Promise.resolve();
+
+function enqueue<T>(task: () => Promise<T>): Promise<T> {
+  const run = syncChain.then(task, task);
+  syncChain = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
 /** Envia o estado local agora (usado após salvar regras/destino). */
-export async function pushConfigNow(): Promise<SyncResult> {
-  if (syncInFlight) await syncInFlight.catch(() => undefined);
-  const client = new TrelloClient(loadTrelloCredentials);
-  return pushConfig(client);
+export function pushConfigNow(): Promise<SyncResult> {
+  return enqueue(async () => {
+    const client = new TrelloClient(loadTrelloCredentials);
+    return pushConfig(client);
+  });
 }
 
 /**
@@ -272,7 +351,9 @@ async function runSync(options: { force?: boolean } = {}): Promise<SyncResult> {
   }
 
   const meta = await readMeta();
+  const dirty = await readDirty();
   const now = Date.now();
+  if (dirty) return pushConfig(client);
   if (!options.force && meta.lastAttemptAt && now - meta.lastAttemptAt < MIN_INTERVAL_MS) {
     return { pulled: false, pushed: false, skipped: true, updatedAt: meta.updatedAt };
   }
@@ -305,15 +386,9 @@ async function runSync(options: { force?: boolean } = {}): Promise<SyncResult> {
   return { pulled: false, pushed: false, updatedAt: config.updatedAt };
 }
 
-let syncInFlight: Promise<SyncResult> | null = null;
-
-/** Evita duas sincronizações concorrentes (login + painel + alarme). */
+/** Serializa sync/push (login, painel, alarme e logout) para não corromper o quadro. */
 export function syncConfig(options: { force?: boolean } = {}): Promise<SyncResult> {
-  if (syncInFlight) return syncInFlight;
-  syncInFlight = runSync(options).finally(() => {
-    syncInFlight = null;
-  });
-  return syncInFlight;
+  return enqueue(() => runSync(options));
 }
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -322,6 +397,7 @@ let pendingPush = false;
 /** Agenda um push depois de mudanças em regras/destino (debounce). */
 export function queueConfigSync(): void {
   pendingPush = true;
+  void markDirty().catch(() => undefined);
   if (pushTimer) clearTimeout(pushTimer);
   pushTimer = setTimeout(() => {
     pushTimer = null;
@@ -340,5 +416,5 @@ export function cancelConfigSync(): void {
 
 /** Esquece a última sincronização para o próximo login puxar do Trello. */
 export async function clearConfigSyncMeta(): Promise<void> {
-  await browser.storage.local.remove(META_KEY);
+  await browser.storage.local.remove([META_KEY, DIRTY_KEY]);
 }

@@ -31,10 +31,13 @@ import { clearSyncSnapshot } from '../storage/sync';
 import { markSyncChanged } from '../storage/sync-tick';
 import { setOptionsTarget } from '../storage/options-target';
 import {
+  backupLocalConfig,
   cancelConfigSync,
   clearConfigSyncMeta,
+  clearLocalConfigBackup,
   pushConfigNow,
   queueConfigSync,
+  restoreLocalConfig,
   syncConfig,
 } from '../sync/config';
 import { loadTrelloCredentials } from '../auth/credentials';
@@ -88,11 +91,7 @@ const handlers = {
 
   'auth:login': async () => {
     const session = await startLogin();
-    // Dá uma chance ao sync, mas não deixa o login preso se o Trello demorar.
-    await Promise.race([
-      syncConfig({ force: true }),
-      new Promise<void>((resolve) => setTimeout(resolve, 4_000)),
-    ]).catch(() => undefined);
+    let account = session.account;
     try {
       const info = await repository.testConnection();
       const updated = await writeAccount({
@@ -100,30 +99,47 @@ const handlers = {
         username: info.username,
         fullName: info.fullName,
       });
-      if (updated) {
-        return {
-          connected: true,
-          mode: 'oauth' as const,
-          account: updated.account,
-          expiresAt: updated.expiresAt,
-        };
-      }
+      if (updated?.account) account = updated.account;
     } catch {
       // A sessão já foi salva; a conta é apenas informativa.
     }
+
+    // Se o logout anterior não conseguiu subir a configuração, recupera a cópia
+    // local apenas quando a conta é a mesma.
+    try {
+      await restoreLocalConfig(account?.id);
+    } catch {
+      // backup é best-effort
+    }
+
+    // Dá uma chance ao sync, mas não deixa o login preso se o Trello demorar.
+    await Promise.race([
+      syncConfig({ force: true }),
+      new Promise<void>((resolve) => setTimeout(resolve, 4_000)),
+    ]).catch(() => undefined);
+
     return {
       connected: true,
       mode: 'oauth' as const,
-      account: session.account,
+      account,
       expiresAt: session.expiresAt,
     };
   },
 
   'auth:logout': async (payload) => {
+    let backupFailed = false;
     if (payload?.clearManual) {
       // Salva o estado mais recente no quadro de configuração antes de limpar.
       cancelConfigSync();
-      await pushConfigNow().catch(() => undefined);
+      const session = await readSession();
+      try {
+        await pushConfigNow();
+        await clearLocalConfigBackup();
+      } catch {
+        // Sem o push, guarda uma cópia local para recuperar no próximo login.
+        backupFailed = true;
+        await backupLocalConfig(session?.account?.id);
+      }
     }
     await logout();
     if (payload?.clearManual) {
@@ -152,7 +168,7 @@ const handlers = {
     if (settings.appKey && settings.appToken) {
       return { connected: true, mode: 'token' as const };
     }
-    return { connected: false, mode: 'none' as const };
+    return { connected: false, mode: 'none' as const, backupFailed };
   },
 
   'sync:config': (payload) => syncConfig({ force: payload?.force }),
