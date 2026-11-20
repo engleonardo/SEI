@@ -68,6 +68,16 @@ Privacidade: sem servidor próprio, sem telemetria e sem anúncios. Suas credenc
 O SEI Flow é um projeto independente, sem afiliação ao Trello/Atlassian ou ao SEI. Licença MIT.
 ```
 
+## Atualização 1.6.0 (login OAuth e sincronização)
+
+Guias específicos por loja, com os textos prontos para colar:
+
+- **Chrome Web Store:** `docs/store/chrome-1.6.0.md` (inclui a justificativa de host que libera o envio).
+- **Firefox (AMO):** `docs/store/firefox-1.6.0.md`.
+- **Microsoft Edge:** `docs/store/edge-1.6.0.md`.
+
+> A 1.6.0 adiciona a permissão `identity`, o host `https://auth.atlassian.com/*` e a sincronização em quadro privado no Trello. As justificativas acima refletem isso.
+
 ## Justificativa de permissões (Chrome Web Store)
 
 Copie e adapte no formulário de revisão:
