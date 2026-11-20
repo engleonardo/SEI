@@ -21,7 +21,7 @@ A extensão armazena localmente, em `chrome.storage.local` (ou equivalente no Fi
 
 Esses dados permanecem no seu navegador. As credenciais são usadas exclusivamente para autenticar chamadas à API oficial do Trello (`https://api.trello.com`).
 
-Para manter as mesmas regras e o mesmo destino em Chrome, Edge e Firefox, a extensão grava um JSON com **regras e quadro/lista padrão** em um quadro privado chamado **“SEI Flow — Configurações (não excluir)”**, na sua própria conta do Trello. Tokens, sites autorizados e cache não são sincronizados. Se você apagar esse quadro, a extensão o recria na próxima sincronização.
+Para manter as mesmas regras e o mesmo destino em Chrome, Edge e Firefox, a extensão grava um JSON com **regras e quadro/lista padrão** em um quadro privado chamado **“SEI Flow - Configurações (não excluir)”**, na sua própria conta do Trello. Tokens, sites autorizados e cache não são sincronizados. Se você apagar esse quadro, a extensão o recria na próxima sincronização.
 
 ## Permissões do navegador
 
@@ -40,6 +40,7 @@ Não compartilhamos dados com terceiros. A única comunicação externa é com a
 ## Retenção e exclusão
 
 - Você pode remover as credenciais e preferências limpando os dados da extensão nas configurações do navegador.
+- Ao usar **Sair**, o login, as credenciais manuais e os dados locais (regras, destino, cache, catálogo de processos, espelhos e fixados) são apagados deste navegador. As regras e o destino permanecem no quadro privado da sua conta do Trello e voltam no próximo login.
 - O cache pode ser limpo em **Opções → Diagnóstico → Limpar cache local**.
 - Para revogar o acesso ao Trello, remova o token em [trello.com/app-key](https://trello.com/app-key).
 
