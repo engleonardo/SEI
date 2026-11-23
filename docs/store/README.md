@@ -15,7 +15,7 @@
 - [ ] Ícone 128×128 correto (`public/icon-128.png`).
 - [ ] Screenshots 1280×800 em `docs/store/screenshots-1280x800/`.
 - [ ] Banner 440×280 em `docs/store/banner-440x280.png` (opcional, para destaque).
-- [ ] Política de privacidade publicada e acessível em https://github.com/engleonardo/SEI/blob/main/PRIVACY.md.
+- [ ] Política de privacidade publicada e acessível em https://engleonardo.github.io/SEI/privacy.html.
 - [ ] Descrição e justificativas de permissão copiadas de `docs/store/listing-pt-BR.md`.
 - [ ] Testar o zip em um perfil limpo do Chrome antes de enviar.
 

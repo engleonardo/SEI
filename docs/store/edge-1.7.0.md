@@ -23,7 +23,7 @@ Confirme a versão **1.7.0**.
 - Nome: `SEI Flow`
 - Resumo/descrição: `docs/store/listing-pt-BR.md`.
 - Categoria: Productivity.
-- Privacidade: `https://github.com/engleonardo/SEI/blob/main/PRIVACY.md`.
+- Privacidade: `https://engleonardo.github.io/SEI/privacy.html`.
 - Screenshots: `dashboard`, `options`, `destination`, `kanban`, `rules` (1280x800).
 - Notas da versão: `docs/store/release-notes-1.7.0.md`.
 

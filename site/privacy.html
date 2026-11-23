@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="index, follow" />
+    <meta
+      name="description"
+      content="Política de Privacidade do SEI Flow: sem servidor próprio, sem telemetria e sem compartilhamento de dados."
+    />
+    <title>Política de Privacidade — SEI Flow</title>
+    <link rel="stylesheet" href="./privacy.css" />
+  </head>
+  <body>
+    <main class="page">
+      <span class="brand">SEI Flow</span>
+      <h1>Política de Privacidade</h1>
+      <p class="updated">Última atualização: 23 de novembro de 2026</p>
+
+      <p>
+        O SEI Flow é uma extensão de navegador que integra o SEI ao Trello. Esta política descreve
+        quais dados a extensão trata e como eles são usados.
+      </p>
+
+      <ul class="summary">
+        <li>Não coletamos dados pessoais.</li>
+        <li>Não temos servidor próprio.</li>
+        <li>Não vendemos, alugamos ou compartilhamos dados com terceiros.</li>
+        <li>Não usamos telemetria, analytics ou publicidade.</li>
+      </ul>
+
+      <h2>Dados armazenados no navegador</h2>
+      <p>
+        A extensão armazena localmente, em <code>storage.local</code> (ou equivalente no
+        Firefox/Edge):
+      </p>
+      <ol>
+        <li>
+          <strong>Credenciais do Trello</strong>: APP-KEY/TOKEN informados por você ou os tokens do
+          login OAuth 2.0 (access e refresh), quando você escolhe “Conectar com Trello”.
+        </li>
+        <li>
+          <strong>Preferências</strong>: quadro e lista padrão, tema, atualização automática, sites
+          do SEI autorizados e opções de interface.
+        </li>
+        <li>
+          <strong>Cache</strong>: cópias temporárias de quadros, listas, etiquetas e cartões para
+          acelerar a interface.
+        </li>
+      </ol>
+      <p>
+        Esses dados permanecem no seu navegador. As credenciais são usadas exclusivamente para
+        autenticar chamadas à API oficial do Trello (<code>https://api.trello.com</code>).
+      </p>
+      <p>
+        Para manter as mesmas regras e o mesmo destino em Chrome, Edge e Firefox, a extensão grava
+        um JSON com <strong>regras e quadro/lista padrão</strong> em um quadro privado chamado
+        <strong>“SEI Flow - Configurações (não excluir)”</strong>, na sua própria conta do Trello.
+        Tokens, sites autorizados e cache não são sincronizados. Se você apagar esse quadro, a
+        extensão o recria na próxima sincronização.
+      </p>
+
+      <h2>Login e página de callback</h2>
+      <p>
+        O login usa OAuth 2.0 com PKCE, sem client secret. A autorização abre em uma aba do Trello e
+        é concluída pela página
+        <code>https://engleonardo.github.io/SEI/oauth-callback.html</code>. Um content script
+        restrito a essa página lê apenas o código e o estado do OAuth e os entrega à extensão; ele
+        não acessa outras páginas e não envia dados a terceiros. A troca do código pelos tokens
+        acontece dentro da extensão, no seu navegador.
+      </p>
+
+      <h2>Permissões do navegador</h2>
+      <ul>
+        <li><strong><code>storage</code></strong>: salvar credenciais, preferências e cache localmente.</li>
+        <li>
+          <strong><code>scripting</code></strong>: injetar a interface do SEI Flow nas páginas do SEI
+          que você autorizar.
+        </li>
+        <li>
+          <strong><code>activeTab</code></strong>: identificar a aba atual quando você clica no
+          ícone da extensão, para oferecer a ativação do site correto no Painel SEI Flow.
+        </li>
+        <li>
+          <strong><code>https://engleonardo.github.io/SEI/oauth-callback.html</code></strong>:
+          página de callback do login. O content script roda somente nessa página.
+        </li>
+        <li>
+          <strong>Permissão opcional de sites</strong>: concedida por você, site a site, ou para
+          todos os sites. Serve apenas para inserir a interface no SEI. Em páginas que não são do
+          SEI, o script é encerrado sem alterar nada.
+        </li>
+        <li>
+          <strong><code>https://api.trello.com/*</code></strong>: ler e gravar cartões, etiquetas,
+          checklists, anexos, prazos e quadros na sua conta do Trello.
+        </li>
+        <li>
+          <strong><code>https://auth.atlassian.com/*</code></strong>: trocar o código de autorização
+          pelos tokens da sua própria sessão (login e renovação).
+        </li>
+      </ul>
+
+      <h2>Compartilhamento</h2>
+      <p>
+        Não compartilhamos dados com terceiros. A única comunicação externa é com a API do Trello e
+        com o endpoint de login da Atlassian, usando as credenciais que você forneceu, para as
+        operações que você solicita (listar quadros, criar/editar cartões, etiquetas, checklists,
+        anexos e prazos).
+      </p>
+
+      <h2>Retenção e exclusão</h2>
+      <ul>
+        <li>
+          Você pode remover as credenciais e preferências limpando os dados da extensão nas
+          configurações do navegador.
+        </li>
+        <li>
+          Ao usar <strong>Sair</strong>, o login, as credenciais manuais e os dados locais (regras,
+          destino, cache, catálogo de processos, espelhos e fixados) são apagados deste navegador.
+          As regras e o destino permanecem no quadro privado da sua conta do Trello e voltam no
+          próximo login.
+        </li>
+        <li>
+          O cache pode ser limpo em <strong>Opções → Diagnóstico → Limpar cache local</strong>.
+        </li>
+        <li>
+          Para revogar o acesso ao Trello, remova o token em
+          <a href="https://trello.com/app-key" rel="noreferrer">trello.com/app-key</a>.
+        </li>
+      </ul>
+
+      <h2>Segurança</h2>
+      <ul>
+        <li>Nenhum token é enviado para servidores nossos (não temos servidores).</li>
+        <li>Nenhum token é registrado em logs da extensão.</li>
+        <li>A interface é isolada em Shadow DOM para não interferir no SEI.</li>
+      </ul>
+
+      <h2>Uso e responsabilidade</h2>
+      <p>
+        O SEI Flow é uma ferramenta de apoio. Ele <strong>não salva dados de usuários em servidores
+        do criador</strong> e não tem ingerência sobre o conteúdo do SEI ou do Trello.
+      </p>
+      <p>
+        Os dados de processos, documentos, cartões e informações pessoais pertencem aos sistemas SEI
+        e Trello e às instituições responsáveis por eles.
+        <strong>O uso da extensão é de responsabilidade exclusiva do usuário.</strong> O criador não
+        controla, valida, corrige ou se responsabiliza por informações inseridas, exibidas,
+        alteradas ou armazenadas nesses sistemas, nem por decisões administrativas, jurídicas ou de
+        qualquer natureza tomadas com base nelas.
+      </p>
+
+      <h2>Crianças</h2>
+      <p>
+        A extensão é destinada a servidores públicos e profissionais que usam SEI e Trello. Não é
+        direcionada a crianças.
+      </p>
+
+      <h2>Alterações</h2>
+      <p>
+        Mudanças nesta política serão publicadas nesta página e refletidas na data de atualização
+        acima. O histórico do repositório também registra as alterações.
+      </p>
+
+      <h2>Contato</h2>
+      <p>
+        Abra uma issue em
+        <a href="https://github.com/engleonardo/SEI/issues" rel="noreferrer">
+          github.com/engleonardo/SEI/issues
+        </a>.
+      </p>
+
+      <hr />
+
+      <h1 lang="en">Privacy Policy (English)</h1>
+      <p class="updated" lang="en">Last updated: November 23, 2026</p>
+      <p lang="en">
+        SEI Flow is a browser extension that integrates SEI with Trello. It does
+        <strong>not</strong> collect personal data, has <strong>no backend</strong>, and does
+        <strong>not</strong> sell or share data. Trello APP-KEY/TOKEN, preferences, and temporary
+        cache are stored locally in the browser and used only to call the official Trello API
+        (<code>https://api.trello.com</code>). The OAuth login opens the Trello authorization page in
+        a tab and completes on the static callback page; a content script restricted to that page
+        reads only the OAuth code/state and hands it to the extension. Host permissions are optional
+        and granted by the user per site or for all sites; the injected script exits on pages that
+        are not SEI. To revoke access, remove the token at
+        <a href="https://trello.com/app-key" rel="noreferrer">trello.com/app-key</a> or clear the
+        extension data in your browser. Contact: GitHub issues.
+      </p>
+
+      <p class="footer">
+        SEI Flow · projeto independente · licença MIT · não afiliado ao Trello ou ao SEI.
+      </p>
+    </main>
+  </body>
+</html>

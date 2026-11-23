@@ -72,7 +72,7 @@ https://engleonardo.github.io/SEI/oauth-callback.html - página de callback do l
 - ☑ Conteúdo do site
 - ☐ Demais categorias
 - As três declarações de rodapé marcadas.
-- Política: `https://github.com/engleonardo/SEI/blob/main/PRIVACY.md`
+- Política: `https://engleonardo.github.io/SEI/privacy.html`
 
 Clique em **Salvar rascunho**.
 
