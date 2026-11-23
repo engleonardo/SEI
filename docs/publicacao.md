@@ -63,7 +63,7 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Ative apenas os sites que você usa; sem permissão global obrigatória.
 • Tema claro/escuro e interface isolada do CSS do SEI.
 
-Privacidade: sem servidor próprio, sem telemetria e sem anúncios. Suas credenciais do Trello ficam apenas no seu navegador. Saiba mais: https://github.com/engleonardo/SEI/blob/main/PRIVACY.md
+Privacidade: sem servidor próprio, sem telemetria e sem anúncios. Suas credenciais do Trello ficam apenas no seu navegador. Saiba mais: https://engleonardo.github.io/SEI/privacy.html
 
 O SEI Flow é um projeto independente, sem afiliação ao Trello/Atlassian ou ao SEI. Licença MIT.
 ```

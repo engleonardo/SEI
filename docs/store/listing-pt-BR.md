@@ -62,7 +62,7 @@ Privacidade: sem servidor próprio, sem telemetria e sem anúncios. No login, os
 
 Desenvolvido por Engenheiro Leonardo Almeida de Oliveira.
 
-Saiba mais: https://github.com/engleonardo/SEI/blob/main/PRIVACY.md
+Saiba mais: https://engleonardo.github.io/SEI/privacy.html
 ```
 
 ## Categoria
@@ -77,7 +77,7 @@ Português (Brasil)
 
 - Página inicial: https://github.com/engleonardo/SEI
 - Suporte: https://github.com/engleonardo/SEI/issues
-- Política de privacidade: https://github.com/engleonardo/SEI/blob/main/PRIVACY.md
+- Política de privacidade: https://engleonardo.github.io/SEI/privacy.html
 
 ## Single purpose
 

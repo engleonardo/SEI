@@ -370,7 +370,7 @@ function App() {
           </a>
           <a
             className="sfo-link"
-            href="https://github.com/engleonardo/SEI/blob/main/PRIVACY.md"
+            href="https://engleonardo.github.io/SEI/privacy.html"
             target="_blank"
             rel="noreferrer"
           >

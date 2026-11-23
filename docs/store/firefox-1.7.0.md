@@ -32,7 +32,7 @@ Não é preciso cadastrar URL `extensions.allizom.org` por instalação. Se voc�
 - Nome: `SEI Flow`
 - Resumo/descrição: `docs/store/listing-pt-BR.md`.
 - Categoria: Productivity.
-- Política de privacidade: `https://github.com/engleonardo/SEI/blob/main/PRIVACY.md`.
+- Política de privacidade: `https://engleonardo.github.io/SEI/privacy.html`.
 - Screenshots: use as de `docs/store/screenshots-1280x800/`, incluindo `options-1280x800.png` e `destination-1280x800.png`.
 - Notas da versão: `docs/store/release-notes-1.7.0.md`.
 
