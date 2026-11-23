@@ -2928,6 +2928,10 @@
   font-size: 12.5px;
 }
 
+.sdo-card--kanban .sdo-card__main {
+  min-width: 0;
+}
+
 .sdo-card--kanban .sdo-card__desc {
   margin-top: 5px;
   font-size: 11.5px;
