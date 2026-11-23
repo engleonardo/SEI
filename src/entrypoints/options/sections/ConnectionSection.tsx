@@ -347,16 +347,18 @@ export function ConnectionSection({
                   {authBusy ? <Spinner /> : <Icon name="external" size={14} />}
                   Conectar com Trello
                 </button>
-                <button
-                  type="button"
-                  className="sfo-btn"
-                  onClick={() => void continueWithoutTrello()}
-                  disabled={busy || authBusy}
-                  title="Usar a extensão sem conectar o Trello"
-                >
-                  <Icon name="arrowRight" size={14} />
-                  Continuar sem Trello
-                </button>
+                {!connected && (
+                  <button
+                    type="button"
+                    className="sfo-btn"
+                    onClick={() => void continueWithoutTrello()}
+                    disabled={busy || authBusy}
+                    title="Usar a extensão sem conectar o Trello"
+                  >
+                    <Icon name="arrowRight" size={14} />
+                    Continuar sem Trello
+                  </button>
+                )}
               </div>
               {manual && (
                 <div className="sfo-hint" style={{ marginTop: 8 }}>
