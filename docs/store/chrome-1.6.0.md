@@ -1,8 +1,6 @@
 # Chrome Web Store - atualização 1.6.0
 
-> Situação: a 1.5.5 está publicada; o pacote 1.6.0 foi **enviado**, mas a publicação foi recusada pelo Developer Dashboard.
-> O motivo mais comum é a justificativa de permissão de host incompleta (a nova permissão `identity` e o host `https://auth.atlassian.com/*`).
-> Não é preciso reenviar o zip se o pacote 1.6.0 já aparece em **Pacote**.
+> Situação: a **1.6.0 está publicada** na Chrome Web Store. A 1.7.0 é uma atualização normal (novo pacote, mesma ficha).
 
 ## 1. Corrigir a página Privacidade
 

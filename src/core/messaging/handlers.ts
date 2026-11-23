@@ -41,12 +41,7 @@ import {
   syncConfig,
 } from '../sync/config';
 import { loadTrelloCredentials } from '../auth/credentials';
-import {
-  clearOAuthResult,
-  readOAuthResult,
-  startLoginTab,
-  logout,
-} from '../auth/oauth';
+import { clearOAuthResult, readOAuthResult, startLoginTab, logout } from '../auth/oauth';
 import { readSession } from '../auth/session';
 
 const repository = new TrelloRepository(loadTrelloCredentials);
@@ -78,21 +73,22 @@ const handlers = {
   'settings:test-connection': () => repository.testConnection(),
 
   'auth:status': async () => {
-    const result = await readOAuthResult();
-    const error =
-      result && !result.ok && Date.now() - result.at < 10 * 60_000
-        ? (result.error ?? 'Falha no login com o Trello.')
-        : undefined;
     const session = await readSession();
     if (session) {
+      // Uma sessão válida vence qualquer resultado antigo de login em outra aba
+      // (por exemplo, um código já usado que gerou erro antes de outra tentativa).
       return {
         connected: true,
         mode: 'oauth' as const,
         account: session.account,
         expiresAt: session.expiresAt,
-        error,
       };
     }
+    const result = await readOAuthResult();
+    const error =
+      result && !result.ok && Date.now() - result.at < 10 * 60_000
+        ? (result.error ?? 'Falha no login com o Trello.')
+        : undefined;
     const settings = await getSettings();
     if (settings.appKey && settings.appToken) {
       return { connected: true, mode: 'token' as const, error };
@@ -205,8 +201,7 @@ const handlers = {
   'trello:card': ({ cardId }) => repository.getCard(cardId),
   'trello:cards-for-process': ({ processNumber, fresh }) =>
     repository.getCardsForProcess(processNumber, fresh),
-  'trello:cards-for-process-cache': ({ processNumber }) =>
-    repository.getCachedCardsForProcess(processNumber),
+  'trello:cards-for-process-cache': ({ processNumber }) => repository.getCachedCardsForProcess(processNumber),
   'trello:all-linked-cards': (payload) => repository.getAllLinkedCards(payload?.fresh),
   'trello:search-cards': ({ query }) => repository.searchCardsByName(query),
   'trello:unlinked-candidates': ({ boardId }) => repository.findUnlinkedCandidates(boardId),
@@ -245,8 +240,7 @@ const handlers = {
   'trello:unlink-card': ({ cardId, processNumber }) => repository.unlinkCard(cardId, processNumber),
   'trello:board-labels': ({ boardId, fresh }) => repository.getBoardLabels(boardId, fresh),
   'trello:attachments': ({ cardId }) => repository.getAttachments(cardId),
-  'trello:add-attachment-url': ({ cardId, url, name }) =>
-    repository.addAttachmentUrl(cardId, url, name),
+  'trello:add-attachment-url': ({ cardId, url, name }) => repository.addAttachmentUrl(cardId, url, name),
   'trello:delete-attachment': async ({ cardId, attachmentId }) => {
     await repository.deleteAttachment(cardId, attachmentId);
     return undefined;

@@ -149,74 +149,54 @@ export function DestinationSection({
 
   return (
     <>
-    <SectionCard
-      title="Quadro e lista padrão"
-      subtitle="Destino principal dos cartões criados a partir do SEI. Você ainda pode mover cada cartão individualmente."
-      icon="board"
-      footer={
-        <>
-          <button
-            type="button"
-            className="sfo-btn sfo-btn--primary"
-            onClick={() => void saveDestination()}
-            disabled={busy || !selectedBoard || !selectedList || !dirty}
-          >
-            {busy ? <Spinner /> : <Icon name="check" size={14} />}
-            Salvar destino
-          </button>
-          <button type="button" className="sfo-btn" onClick={() => void reloadBoards()} disabled={busy}>
-            <Icon name="refresh" size={14} />
-            Atualizar quadros
-          </button>
-          <span style={{ flex: 1 }} />
-          {configured ? (
-            <StatusPill tone="success">
-              <Icon name="check" size={11} />
-              {settings.defaultBoardName} / {settings.defaultListName}
-            </StatusPill>
-          ) : (
-            <StatusPill tone="warning">
-              <Icon name="alert" size={11} />
-              Não configurado
-            </StatusPill>
-          )}
-        </>
-      }
-    >
-      {!connected && (
-        <div className="sfo-alert sfo-alert--warning">
-          <Icon name="alert" size={16} />
-          <div>Conecte o Trello na aba “Conexão” para carregar seus quadros.</div>
-        </div>
-      )}
-
-      {connected && boards.length === 0 && (
-        <EmptyState>
-          Nenhum quadro aberto encontrado. Verifique as credenciais e clique em “Atualizar
-          quadros”.
-        </EmptyState>
-      )}
-
-      {connected && boards.length > 0 && (
-        <div className="sfo-grid-2">
-          <div className="sfo-field">
-            <label htmlFor="sfo-board">Quadro padrão</label>
-            <select
-              id="sfo-board"
-              className="sfo-select"
-              value={boardId}
-              onChange={(event) => {
-                setBoardId(event.target.value);
-                setListId('');
-              }}
+      <SectionCard
+        title="Quadro e lista padrão"
+        subtitle="Destino principal dos cartões criados a partir do SEI. Você ainda pode mover cada cartão individualmente."
+        icon="board"
+        footer={
+          <>
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--primary"
+              onClick={() => void saveDestination()}
+              disabled={busy || !selectedBoard || !selectedList || !dirty}
             >
-              {boards.map((board) => (
-                <option key={board.id} value={board.id}>
-                  {board.name}
-                </option>
-              ))}
-            </select>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+              {busy ? <Spinner /> : <Icon name="check" size={14} />}
+              Salvar destino
+            </button>
+            <button type="button" className="sfo-btn" onClick={() => void reloadBoards()} disabled={busy}>
+              <Icon name="refresh" size={14} />
+              Atualizar quadros
+            </button>
+            <span style={{ flex: 1 }} />
+            {configured ? (
+              <StatusPill tone="success">
+                <Icon name="check" size={11} />
+                {settings.defaultBoardName} / {settings.defaultListName}
+              </StatusPill>
+            ) : (
+              <StatusPill tone="warning">
+                <Icon name="alert" size={11} />
+                Não configurado
+              </StatusPill>
+            )}
+          </>
+        }
+      >
+        {!connected && (
+          <div className="sfo-alert sfo-alert--warning">
+            <Icon name="alert" size={16} />
+            <div>Conecte o Trello na aba “Conexão” para carregar seus quadros.</div>
+          </div>
+        )}
+
+        {connected && boards.length === 0 && (
+          <>
+            <EmptyState>
+              Nenhum quadro aberto encontrado. Crie um quadro agora ou verifique as credenciais e clique em
+              “Atualizar quadros”.
+            </EmptyState>
+            <div className="sfo-actions">
               <button
                 type="button"
                 className="sfo-btn sfo-btn--sm"
@@ -229,53 +209,95 @@ export function DestinationSection({
               <button
                 type="button"
                 className="sfo-btn sfo-btn--sm"
-                onClick={openRenameBoard}
-                disabled={busy || boardBusy || !selectedBoard}
+                onClick={() => void reloadBoards()}
+                disabled={busy}
               >
-                <Icon name="edit" size={13} />
-                Renomear
+                <Icon name="refresh" size={13} />
+                Atualizar quadros
               </button>
             </div>
-          </div>
+          </>
+        )}
 
-          <div className="sfo-field">
-            <label htmlFor="sfo-list">Lista padrão</label>
-            <select
-              id="sfo-list"
-              className="sfo-select"
-              value={listId}
-              onChange={(event) => setListId(event.target.value)}
-              disabled={loadingLists || lists.length === 0}
-            >
-              {lists.length === 0 && <option value="">Nenhuma lista aberta</option>}
-              {lists.map((list) => (
-                <option key={list.id} value={list.id}>
-                  {list.name}
-                </option>
-              ))}
-            </select>
-            {loadingLists && (
-              <span className="sfo-hint" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Spinner /> Carregando listas…
-              </span>
-            )}
-            {!loadingLists && lists.length === 0 && boardId && (
-              <span className="sfo-hint">
-                Crie uma lista aberta neste quadro no Trello e clique em “Atualizar quadros”.
-              </span>
-            )}
-          </div>
-        </div>
-      )}
+        {connected && boards.length > 0 && (
+          <div className="sfo-grid-2">
+            <div className="sfo-field">
+              <label htmlFor="sfo-board">Quadro padrão</label>
+              <select
+                id="sfo-board"
+                className="sfo-select"
+                value={boardId}
+                onChange={(event) => {
+                  setBoardId(event.target.value);
+                  setListId('');
+                }}
+              >
+                {boards.map((board) => (
+                  <option key={board.id} value={board.id}>
+                    {board.name}
+                  </option>
+                ))}
+              </select>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                <button
+                  type="button"
+                  className="sfo-btn sfo-btn--sm"
+                  onClick={openCreateBoard}
+                  disabled={busy || boardBusy}
+                >
+                  <Icon name="plus" size={13} />
+                  Novo quadro
+                </button>
+                <button
+                  type="button"
+                  className="sfo-btn sfo-btn--sm"
+                  onClick={openRenameBoard}
+                  disabled={busy || boardBusy || !selectedBoard}
+                >
+                  <Icon name="edit" size={13} />
+                  Renomear
+                </button>
+              </div>
+            </div>
 
-      {configured && (
-        <div className="sfo-hint">
-          Cartões criados pelo SEI entram em <strong>{settings.defaultBoardName}</strong> /{' '}
-          <strong>{settings.defaultListName}</strong>. O vínculo com o processo é gravado na
-          descrição como <code>SEI &lt;número&gt;</code>.
-        </div>
-      )}
-    </SectionCard>
+            <div className="sfo-field">
+              <label htmlFor="sfo-list">Lista padrão</label>
+              <select
+                id="sfo-list"
+                className="sfo-select"
+                value={listId}
+                onChange={(event) => setListId(event.target.value)}
+                disabled={loadingLists || lists.length === 0}
+              >
+                {lists.length === 0 && <option value="">Nenhuma lista aberta</option>}
+                {lists.map((list) => (
+                  <option key={list.id} value={list.id}>
+                    {list.name}
+                  </option>
+                ))}
+              </select>
+              {loadingLists && (
+                <span className="sfo-hint" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Spinner /> Carregando listas…
+                </span>
+              )}
+              {!loadingLists && lists.length === 0 && boardId && (
+                <span className="sfo-hint">
+                  Crie uma lista aberta neste quadro no Trello e clique em “Atualizar quadros”.
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {configured && (
+          <div className="sfo-hint">
+            Cartões criados pelo SEI entram em <strong>{settings.defaultBoardName}</strong> /{' '}
+            <strong>{settings.defaultListName}</strong>. O vínculo com o processo é gravado na descrição como{' '}
+            <code>SEI &lt;número&gt;</code>.
+          </div>
+        )}
+      </SectionCard>
       {boardDialog && (
         <Modal
           title={boardDialog === 'create' ? 'Novo quadro' : 'Renomear quadro'}

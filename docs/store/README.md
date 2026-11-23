@@ -1,5 +1,9 @@
 # Publicação na Chrome Web Store - checklist
 
+> **Ordem obrigatória da 1.7.0:** merge da branch na `main` (deploy do GitHub Pages) → conferir a página de callback ao vivo → tag `v1.7.0` → Release → lojas.
+>
+> A tag dispara o workflow **Release** e, quando ele termina, o **publish-store.yml**, que envia **e publica** no Chrome e na AMO automaticamente se os segredos estiverem configurados (nesta máquina eles estão: `CWS_*`, `AMO_*` e `EDGE_*`). Não crie a tag antes de a página de callback estar no ar.
+
 ## Antes de enviar
 
 - [ ] Conta de desenvolvedor paga e verificada no Chrome Web Store.

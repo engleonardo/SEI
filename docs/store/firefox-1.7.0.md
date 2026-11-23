@@ -2,6 +2,12 @@
 
 > A 1.7.0 corrige o login no Firefox: a autorização abre em uma aba e a **página de callback** entrega o código por um content script. Não existe mais URL de retorno por instalação.
 > A permissão `identity` foi removida.
+>
+> **Antes de enviar:** a página `https://engleonardo.github.io/SEI/oauth-callback.html` precisa estar publicada com o `oauth-callback.js` novo (modo `m: 'page'`). Isso acontece ao mergear a branch na `main` (workflow **Pages**). Sem esse deploy, o login conclui pelo content script, mas a aba mostra erro antes de fechar.
+>
+> **Firefox 127+:** o Firefox 127 em diante concede as permissões de host de `content_scripts` na instalação. No Firefox 115–126 o usuário pode precisar liberar o site da página de callback no painel de extensões para o content script rodar. Se quiser eliminar essa dúvida, suba `strict_min_version` para `128.0`.
+>
+> **Atualização:** a 1.7.0 adiciona esse host como permissão nova. O Firefox pode pedir aprovação (e desativar até aceitar) para quem já tem a 1.6.0.
 
 ## 1. Pacote
 
@@ -56,4 +62,4 @@ The extension does not collect or transmit data to the developer. Data is exchan
 
 Salve a página, confirme a 1.7.0 e acompanhe o e-mail da Mozilla.
 
-> A página de callback já está publicada e aceita o modo usado pela 1.7.0; o mesmo cadastro serve para todos os usuários.
+> A página de callback precisa estar publicada antes da 1.7.0 ser enviada (veja o aviso no topo). O mesmo cadastro de redirect serve para todos os usuários.

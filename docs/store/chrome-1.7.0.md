@@ -1,7 +1,9 @@
 # Chrome Web Store - atualização 1.7.0
 
 > A 1.7.0 **remove a permissão `identity`** e muda o login: a autorização abre em uma aba e a página de callback entrega o código por um content script restrito a ela.
-> O pacote 1.7.0 substitui o rascunho 1.6.0.
+> O pacote 1.7.0 substitui a 1.6.0 publicada.
+>
+> **Atenção (atualização de quem já tem a 1.6.0):** a 1.7.0 adiciona o host `https://engleonardo.github.io/SEI/oauth-callback.html` em `content_scripts.matches`. O Chrome trata isso como nova permissão de host e **desativa a extensão para os usuários atuais até eles aceitarem** ("Ler e alterar seus dados em engleonardo.github.io"). Remover `identity` não desativa. Avise no release notes e no aviso interno; o usuário precisa reativar uma vez.
 
 ## 1. Pacote
 

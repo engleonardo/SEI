@@ -1,6 +1,10 @@
 # Microsoft Edge Add-ons - atualização 1.7.0
 
 > A 1.7.0 remove a permissão `identity` e usa a página de callback do OAuth (content script restrito). O pacote é enviado manualmente.
+>
+> **Antes de enviar:** a página de callback nova precisa estar publicada no GitHub Pages (merge na `main` → workflow Pages).
+>
+> **Atualização:** a 1.7.0 adiciona o host da página de callback em `content_scripts`. No Edge, como no Chrome, isso conta como nova permissão de host: a certificação precisa refletir isso e os usuários atuais podem precisar aceitar a permissão depois da atualização.
 
 ## 1. Pacote
 

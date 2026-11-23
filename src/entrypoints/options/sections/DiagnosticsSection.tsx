@@ -29,7 +29,11 @@ export function DiagnosticsSection({
   const [confirmLink, setConfirmLink] = useState(false);
   const manifest = browser.runtime.getManifest();
   const permissions = [...(manifest.permissions ?? []), ...(manifest.host_permissions ?? [])];
-  const optional = manifest.optional_host_permissions ?? [];
+  const optional = [
+    ...(manifest.optional_host_permissions ?? []),
+    // O Firefox declara hosts opcionais em `optional_permissions`.
+    ...(manifest.optional_permissions ?? []),
+  ];
 
   const clearCache = async () => {
     setBusy(true);
@@ -209,8 +213,8 @@ export function DiagnosticsSection({
           </dd>
         </dl>
         <p className="sfo-hint" style={{ margin: '10px 0 0' }}>
-          O login abre a autorização do Trello em uma aba e conclui pela página de callback. Não é
-          preciso cadastrar URL por navegador ou por instalação.
+          O login abre a autorização do Trello em uma aba e conclui pela página de callback. Não é preciso
+          cadastrar URL por navegador ou por instalação.
         </p>
       </CollapsibleCard>
 

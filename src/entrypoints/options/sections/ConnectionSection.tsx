@@ -28,7 +28,8 @@ export function ConnectionSection({
   const [authBusy, setAuthBusy] = useState(false);
   const [connection, setConnection] = useState<ConnectionInfo | null>(null);
   const [auth, setAuth] = useState<AuthStatus | null>(null);
-  const [logoutOpen, setLogoutOpen] = useState(false);  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   useEffect(() => {
     setAppKey(settings.appKey);
@@ -77,25 +78,21 @@ export function ConnectionSection({
       while (Date.now() - started < 3 * 60_000) {
         await new Promise((resolve) => window.setTimeout(resolve, 1_000));
         const current = await callRpc('auth:status', undefined);
-        if (current.error) throw new Error(current.error);
         if (current.connected && current.mode === 'oauth') {
           status = current;
           break;
         }
+        if (current.error) throw new Error(current.error);
       }
 
       if (!status) {
-        throw new Error(
-          'Tempo esgotado. Conclua a autorização na aba do Trello e tente novamente.',
-        );
+        throw new Error('Tempo esgotado. Conclua a autorização na aba do Trello e tente novamente.');
       }
 
       setAuth(status);
       notify({
         kind: 'success',
-        text: status.account
-          ? `Conectado como ${status.account.fullName}.`
-          : 'Login com o Trello concluído.',
+        text: status.account ? `Conectado como ${status.account.fullName}.` : 'Login com o Trello concluído.',
       });
 
       await callRpc('auth:finish', undefined).catch(() => null);
@@ -237,12 +234,10 @@ export function ConnectionSection({
           <div className="sfo-alert sfo-alert--success">
             <Icon name="check" size={16} />
             <div style={{ flex: 1 }}>
-              <strong>
-                Conectado{auth?.account ? ` como ${auth.account.fullName}` : ' com o Trello'}.
-              </strong>
+              <strong>Conectado{auth?.account ? ` como ${auth.account.fullName}` : ' com o Trello'}.</strong>
               <div className="sfo-hint" style={{ marginTop: 4 }}>
-                A renovação do acesso é automática. Use <strong>Sair</strong> para encerrar a sessão
-                neste navegador.
+                A renovação do acesso é automática. Use <strong>Sair</strong> para encerrar a sessão neste
+                navegador.
               </div>
             </div>
           </div>
@@ -252,8 +247,8 @@ export function ConnectionSection({
             <div style={{ flex: 1 }}>
               <strong>Conectar com o Trello (recomendado)</strong>
               <p style={{ margin: '4px 0 10px', color: 'var(--text-soft)', fontSize: 13 }}>
-                Abre a tela oficial do Trello e autoriza somente a sua conta. Você pode revogar o
-                acesso quando quiser nas configurações do Trello.
+                Abre a tela oficial do Trello e autoriza somente a sua conta. Você pode revogar o acesso
+                quando quiser nas configurações do Trello.
               </p>
               <button
                 type="button"
@@ -274,9 +269,7 @@ export function ConnectionSection({
         )}
 
         <details style={{ marginTop: 12 }}>
-          <summary
-            style={{ cursor: 'pointer', fontWeight: 700, color: 'var(--text-soft)', fontSize: 13 }}
-          >
+          <summary style={{ cursor: 'pointer', fontWeight: 700, color: 'var(--text-soft)', fontSize: 13 }}>
             Usar APP-KEY/TOKEN manual (alternativa)
           </summary>
           <div style={{ marginTop: 12 }}>
@@ -322,8 +315,8 @@ export function ConnectionSection({
                   </li>
                   <li>Clique em “Autorizar no Trello” e aprove o acesso do SEI Flow.</li>
                   <li>
-                    O Trello exibirá um <strong>TOKEN</strong>. Copie, cole no campo acima e clique
-                    em “Testar conexão”.
+                    O Trello exibirá um <strong>TOKEN</strong>. Copie, cole no campo acima e clique em “Testar
+                    conexão”.
                   </li>
                 </ol>
                 <button
@@ -406,14 +399,14 @@ export function ConnectionSection({
             <code>api.trello.com</code> e para o próprio Trello/Atlassian durante a autenticação.
           </li>
           <li>
-            No modo manual, a APP-KEY e o TOKEN também ficam em <code>storage.local</code> e nunca
-            saem do navegador exceto para <code>api.trello.com</code>.
+            No modo manual, a APP-KEY e o TOKEN também ficam em <code>storage.local</code> e nunca saem do
+            navegador exceto para <code>api.trello.com</code>.
           </li>
           <li>Nenhum dado é vendido, compartilhado ou usado para publicidade.</li>
           <li>
-            Para sincronizar entre navegadores, as regras e o destino são salvos em um quadro
-            privado <strong>“SEI Flow - Configurações”</strong> na sua própria conta do Trello.
-            Nenhum token é sincronizado.
+            Para sincronizar entre navegadores, as regras e o destino são salvos em um quadro privado{' '}
+            <strong>“SEI Flow - Configurações”</strong> na sua própria conta do Trello. Nenhum token é
+            sincronizado.
           </li>
           <li>
             Você pode revogar o acesso a qualquer momento no{' '}
