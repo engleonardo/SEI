@@ -1904,81 +1904,73 @@
   color: #fff;
 }
 
-.sdo-list-card-wrap {
-  position: relative;
-  min-width: 0;
+.sdo-lists__new-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
 }
 
-.sdo-list-card-wrap .sdo-list-card {
-  width: 100%;
-}
-
-.sdo-list-card__edit {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
+.sdo-lists__new {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 7px;
+  background: transparent;
   color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
   cursor: pointer;
-  opacity: 0.55;
-  transition: opacity 0.15s ease;
 }
 
-.sdo-list-card-wrap:hover .sdo-list-card__edit,
-.sdo-list-card__edit:focus-visible {
-  opacity: 1;
-}
-
-.sdo-list-card__edit:hover {
+.sdo-lists__new:hover {
   border-color: var(--accent);
+  background: var(--surface);
   color: var(--accent);
 }
 
-.sdo-list-card--editing {
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  gap: 8px;
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  background: var(--surface);
-}
-
-.sdo-list-card--editing .sdo-list-card__body {
-  width: 100%;
-}
-
-.sdo-list-card__edit-actions {
+.sdo-lists__new-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-}
-
-.sdo-list-card--add {
+  align-items: center;
   justify-content: center;
-  border-style: dashed;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.sdo-kanban-footer {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+
+.sdo-kanban-newlist {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
   background: transparent;
-  box-shadow: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-.sdo-list-card--add:hover {
+.sdo-kanban-newlist:hover {
   border-color: var(--accent);
-}
-
-.sdo-list-card--add .sdo-list-card__icon {
-  background: var(--accent-soft);
+  background: var(--surface);
   color: var(--accent);
 }
 
-.sdo-list-card--add .sdo-list-card__name {
-  color: var(--accent);
+.sdo-kanban-newlist-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 
 .sdo-kanban-column__title-input {
@@ -1993,15 +1985,6 @@
   font-size: 13px;
   font-weight: 800;
   text-transform: none;
-}
-
-.sdo-kanban-column.sdo-kanban-column--add {
-  flex: 0 0 190px;
-  min-width: 170px;
-  max-width: 210px;
-  justify-content: center;
-  border-style: dashed;
-  background: transparent;
 }
 
 .sdo-pill {

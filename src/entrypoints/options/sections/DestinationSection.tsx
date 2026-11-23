@@ -41,7 +41,7 @@ export function DestinationSection({
     return () => {
       active = false;
     };
-  }, [settings.appKey, settings.appToken]);
+  }, [settings.appKey, settings.appToken, settings.skipTrello]);
 
   useEffect(() => {
     if (!boardId && settings.defaultBoardId) setBoardId(settings.defaultBoardId);

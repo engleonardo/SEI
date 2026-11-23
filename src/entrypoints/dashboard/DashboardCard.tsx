@@ -5,7 +5,6 @@ import type { ProcessCatalog } from '../../core/storage/processes';
 import { Icon } from '../../ui/icons';
 import { CardDescription } from '../../ui/components/CardDescription';
 import { DescriptionEditor } from '../../ui/components/DescriptionEditor';
-import { Modal } from '../../ui/components/Modal';
 import { showToast } from '../../ui/toast';
 import { classNames, formatDue, labelColorHex, labelTextColor, locationLabel } from '../../ui/utils';
 import { InlineLocationPicker } from '../../ui/components/InlineLocationPicker';
@@ -52,7 +51,7 @@ export function DashboardCard({
   const [descDraft, setDescDraft] = useState(card.description);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [viewOpen, setViewOpen] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
 
   const due = formatDue(card.due, card.dueComplete);
   const unread = cardHasUnreadProcess(card, catalog);
@@ -329,7 +328,7 @@ export function DashboardCard({
               }}
               title="Editar descrição"
             >
-              <CardDescription text={card.description} compact />
+              <CardDescription text={card.description} compact={!descExpanded} />
             </div>
           ) : (
             <button
@@ -433,10 +432,14 @@ export function DashboardCard({
             {card.description && (
               <button
                 type="button"
-                className="sfo-btn sfo-btn--sm sfo-btn--ghost"
-                onClick={() => setViewOpen(true)}
-                title="Ver descrição sem editar"
-                aria-label="Ver descrição"
+                className={classNames(
+                  'sfo-btn sfo-btn--sm sfo-btn--ghost',
+                  descExpanded && 'sfo-icon-btn--pinned',
+                )}
+                onClick={() => setDescExpanded((current) => !current)}
+                aria-pressed={descExpanded}
+                title={descExpanded ? 'Recolher descrição' : 'Expandir descrição'}
+                aria-label={descExpanded ? 'Recolher descrição' : 'Expandir descrição'}
               >
                 <Icon name="eye" size={13} />
               </button>
@@ -584,21 +587,6 @@ export function DashboardCard({
             for (const id of ids) onRemoved(id);
           }}
         />
-      )}
-
-      {viewOpen && (
-        <Modal
-          title={card.name}
-          subtitle="Descrição do cartão"
-          onClose={() => setViewOpen(false)}
-          footer={
-            <button type="button" className="sf-btn" onClick={() => setViewOpen(false)}>
-              Fechar
-            </button>
-          }
-        >
-          <CardDescription text={card.description} />
-        </Modal>
       )}
     </>
   );

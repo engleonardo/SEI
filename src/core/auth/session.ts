@@ -24,7 +24,7 @@ export interface OAuthPending {
 
 export interface AuthStatus {
   connected: boolean;
-  mode: 'oauth' | 'token' | 'none';
+  mode: 'oauth' | 'token' | 'demo' | 'none';
   account?: OAuthAccount;
   expiresAt?: number;
   /** O push final do logout falhou; a configuração foi guardada localmente. */

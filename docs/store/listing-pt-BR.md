@@ -39,8 +39,8 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Atualização automática do painel ao voltar para a aba/janela e quando o SEI sinaliza mudanças, sem polling contínuo.
 • Atalhos **SEI** e **Trello** no cabeçalho para abrir os dois sistemas rapidamente.
 • As listas aparecem na mesma ordem do Trello, com contagem de cartões.
-• Crie e renomeie listas direto no dashboard: lápis ao lado do nome e “Nova lista” no fim.
-• Visualize a descrição do cartão com o olho, sem abrir o editor.
+• Crie e renomeie listas direto no dashboard: “Nova lista” discreto no rodapé e duplo clique no nome da coluna do Kanban.
+• Visualize a descrição do cartão com o olho, expandindo no próprio cartão, sem abrir o editor.
 • O ícone de anexo fica destacado quando o cartão tem anexos.
 • Filtre por etiqueta (inclusive clicando na etiqueta do cartão), tipo de processo, prazo, quadro, lista, vínculo com o SEI, atualização no Trello e atualização no SEI.
 • Filtro "Sem vínculo" para localizar cartões que ainda não estão ligados a um processo.
@@ -54,7 +54,7 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Funciona em qualquer domínio e versão do SEI (3.x, 4.x e 5.x).
 • Ative apenas os sites que você usa, com opção de ativar automaticamente endereços que começam com "sei"; sem permissão global obrigatória.
 • Backup das configurações e regras para levar a outro computador.
-• Continue sem conectar o Trello quando quiser: a extensão abre normalmente e os quadros/cartões ficam vazios até você conectar.
+• Continue sem conectar o Trello: a extensão abre com quadros e cartões de exemplo salvos localmente, para experimentar sem conta.
 • **Kanban no dashboard**: arraste cartões entre colunas, reordene colunas, use rolagem por coluna e desfaça com Ctrl+Z.
 • **Editor de descrição WYSIWYG**: formate texto e links sem precisar saber Markdown.
 • **Anexos**: envie arquivos até 10MB, anexe por link, liste, abra e exclua.

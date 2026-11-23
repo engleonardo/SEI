@@ -23,15 +23,18 @@ import type { RuleStats } from '../../../core/storage/rule-stats';
 import type { RuleLogEntry } from '../../../core/storage/rule-log';
 import { watchSyncChanges } from '../../../core/storage/sync-tick';
 import { Icon } from '../../../ui/icons';
+import { labelColorHex, labelTextColor } from '../../../ui/utils';
 import { ConfirmDialog, Modal } from '../../../ui/components/Modal';
 import { SectionCard, Spinner, StatusPill, type Notice } from './shared';
 
 export function RulesSection({
   boards,
   notify,
+  demoMode = false,
 }: {
   boards: TrelloBoard[];
   notify: (notice: Notice) => void;
+  demoMode?: boolean;
 }) {
   const [rules, setRules] = useState<Rule[]>([]);
   const [activeBoardId, setActiveBoardId] = useState('');
@@ -162,6 +165,10 @@ export function RulesSection({
   );
 
   const syncNow = async () => {
+    if (demoMode) {
+      notify({ kind: 'info', text: 'Indisponível no modo sem Trello.' });
+      return;
+    }
     setSyncing(true);
     try {
       const result = await callRpc('sync:config', { force: true });
@@ -486,6 +493,10 @@ export function RulesSection({
   };
 
   const applyNow = async (rule: Rule) => {
+    if (demoMode) {
+      notify({ kind: 'info', text: 'Indisponível no modo sem Trello.' });
+      return;
+    }
     const issue = ruleIssue(rule);
     if (issue) {
       notify({ kind: 'error', text: issue });
@@ -676,15 +687,20 @@ export function RulesSection({
             </select>
           </div>
           <span className="sfo-hint sfo-rules-board__hint">
-            As listas e etiquetas de cada regra são deste quadro. Use “Copiar regras” para levar automações
-            para outro quadro.
+            {demoMode
+              ? 'Modo sem Trello: as listas e etiquetas são de exemplo; aplicar regras fica indisponível.'
+              : 'As listas e etiquetas de cada regra são deste quadro. Use “Copiar regras” para levar automações para outro quadro.'}
           </span>
           <button
             type="button"
             className="sfo-btn sfo-btn--sm"
             onClick={() => void syncNow()}
-            disabled={syncing}
-            title="Buscar as regras salvas na sua conta do Trello"
+            disabled={syncing || demoMode}
+            title={
+              demoMode
+                ? 'Indisponível no modo sem Trello'
+                : 'Buscar as regras salvas na sua conta do Trello'
+            }
           >
             {syncing ? <Spinner /> : <Icon name="refresh" size={13} />}
             Sincronizar agora
@@ -862,11 +878,16 @@ export function RulesSection({
                               className={`sfo-rule__label-chip${
                                 selected ? ' sfo-rule__label-chip--active' : ''
                               }`}
+                              style={{
+                                backgroundColor: labelColorHex(label.color),
+                                color: labelTextColor(label.color),
+                              }}
                             >
                               <input
                                 type="checkbox"
                                 checked={selected}
                                 onChange={() => toggleConditionLabel(rule, label.id)}
+                                style={{ accentColor: labelTextColor(label.color) }}
                               />
                               {label.name || label.color || 'Etiqueta'}
                             </label>
@@ -1047,8 +1068,12 @@ export function RulesSection({
                           type="button"
                           className="sfo-btn sfo-btn--sm"
                           onClick={() => void applyNow(rule)}
-                          disabled={busyRule === rule.id || Boolean(issue)}
-                          title="Aplicar esta regra apenas nos cartões que já estão na condição do gatilho"
+                          disabled={busyRule === rule.id || Boolean(issue) || demoMode}
+                          title={
+                            demoMode
+                              ? 'Indisponível no modo sem Trello'
+                              : 'Aplicar esta regra apenas nos cartões que já estão na condição do gatilho'
+                          }
                         >
                           {busyRule === rule.id ? <Spinner /> : <Icon name="refresh" size={13} />}
                           Aplicar agora

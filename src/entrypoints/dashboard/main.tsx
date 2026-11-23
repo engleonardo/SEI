@@ -117,8 +117,6 @@ function Dashboard() {
     }
   });
   const [moveHistory, setMoveHistory] = useState<MoveHistoryEntry[]>([]);
-  const [editingListId, setEditingListId] = useState<string | null>(null);
-  const [editingListName, setEditingListName] = useState('');
   const [addingList, setAddingList] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [listBusy, setListBusy] = useState(false);
@@ -130,7 +128,7 @@ function Dashboard() {
     fullName: string;
     username: string;
   } | null>(null);
-  const [authMode, setAuthMode] = useState<'oauth' | 'token' | 'none' | null>(null);
+  const [authMode, setAuthMode] = useState<'oauth' | 'token' | 'demo' | 'none' | null>(null);
   const loadSeq = useRef(0);
   const defaultBoardApplied = useRef(false);
   const mirrorSynced = useRef(false);
@@ -335,6 +333,19 @@ function Dashboard() {
       return next;
     });
   }, [settings]);
+
+  // No modo sem Trello, abre já no primeiro quadro de exemplo.
+  useEffect(() => {
+    if (authMode !== 'demo' || filters.boardId) return;
+    const first = trelloBoards[0]?.id;
+    if (!first) return;
+    setFilters((previous) => {
+      if (previous.boardId) return previous;
+      const next = { ...previous, boardId: first };
+      saveFilters(next);
+      return next;
+    });
+  }, [authMode, filters.boardId, trelloBoards]);
 
   useEffect(() => {
     if (!connected) {
@@ -604,26 +615,6 @@ function Dashboard() {
     await load(true, true);
   };
 
-  const startRenameList = (list: { id: string; name: string }) => {
-    setEditingListId(list.id);
-    setEditingListName(list.name);
-  };
-
-  const renameList = async () => {
-    const name = editingListName.trim();
-    if (!editingListId || !name) return;
-    setListBusy(true);
-    try {
-      await renameListById(editingListId, name);
-      setEditingListId(null);
-      showToast('Lista renomeada.', 'success');
-    } catch (cause) {
-      showToast(errorMessage(cause), 'error');
-    } finally {
-      setListBusy(false);
-    }
-  };
-
   const createList = async () => {
     const name = newListName.trim();
     if (!name) return;
@@ -644,7 +635,10 @@ function Dashboard() {
     try {
       const next = await callRpc('settings:save', { skipTrello: true });
       setSettings(next);
-      showToast('Modo sem Trello ativado. Você pode conectar quando quiser.', 'success');
+      setConnected(true);
+      setAuthMode('demo');
+      void load(true, true);
+      showToast('Modo sem Trello ativado com quadros de exemplo.', 'success');
     } catch (cause) {
       showToast(errorMessage(cause), 'error');
     }
@@ -991,12 +985,15 @@ function Dashboard() {
               >
                 <span className="sdo-status__dot" />
                 <span className="sdo-status__label">
-                  Trello {connected ? 'conectado' : 'não conectado'}
-                  {connected && authAccount
-                    ? ` · ${authAccount.fullName}`
-                    : connected && authMode === 'token'
-                      ? ' · manual'
-                      : ''}
+                  {authMode === 'demo'
+                    ? 'Modo sem Trello'
+                    : `Trello ${connected ? 'conectado' : 'não conectado'}${
+                        connected && authAccount
+                          ? ` · ${authAccount.fullName}`
+                          : connected && authMode === 'token'
+                            ? ' · manual'
+                            : ''
+                      }`}
                 </span>
               </span>
               <span
@@ -1140,6 +1137,25 @@ function Dashboard() {
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {authMode === 'demo' && !loading && (
+        <div className="sdo-alert sdo-alert--info">
+          <Icon name="info" size={16} />
+          <div>
+            <strong>Modo sem Trello.</strong>
+            <span>
+              Quadros de exemplo salvos neste navegador. Nada é enviado ao Trello.
+            </span>
+          </div>
+          <button
+            type="button"
+            className="sfo-btn sfo-btn--sm"
+            onClick={() => void openOptions('connection')}
+          >
+            Conectar quando quiser
+          </button>
         </div>
       )}
 
@@ -1538,155 +1554,91 @@ function Dashboard() {
               <div className="sdo-lists__grid">
                 {listCounts.map((list) => {
                   const selected = filters.listId === list.id;
-                  if (editingListId === list.id) {
-                    return (
-                      <div key={list.id} className="sdo-list-card sdo-list-card--editing">
-                        <span className="sdo-list-card__body">
-                          <span className="sdo-list-card__name">Renomear lista</span>
-                          <input
-                            className="sdo-inline-input"
-                            value={editingListName}
-                            onChange={(event) => setEditingListName(event.target.value)}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter') {
-                                event.preventDefault();
-                                void renameList();
-                              }
-                              if (event.key === 'Escape') {
-                                event.preventDefault();
-                                setEditingListId(null);
-                              }
-                            }}
-                            autoFocus
-                            disabled={listBusy}
-                            aria-label="Novo nome da lista"
-                          />
-                        </span>
-                        <div className="sdo-list-card__edit-actions">
-                          <button
-                            type="button"
-                            className="sfo-btn sfo-btn--sm sfo-btn--primary"
-                            onClick={() => void renameList()}
-                            disabled={listBusy || !editingListName.trim()}
-                          >
-                            {listBusy ? <span className="sfo-spinner" /> : <Icon name="check" size={12} />}
-                            Salvar
-                          </button>
-                          <button
-                            type="button"
-                            className="sfo-btn sfo-btn--sm"
-                            onClick={() => setEditingListId(null)}
-                            disabled={listBusy}
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  }
                   return (
-                    <div key={list.id} className="sdo-list-card-wrap">
-                      <button
-                        type="button"
-                        className={`sdo-list-card${selected ? ' sdo-list-card--on' : ''}`}
-                        onClick={() => updateFilters({ listId: selected ? '' : list.id })}
-                        aria-pressed={selected}
-                        title={`Filtrar por ${list.name}`}
-                      >
-                        <span className="sdo-list-card__icon">
-                          <Icon name="list" size={16} />
+                    <button
+                      key={list.id}
+                      type="button"
+                      className={`sdo-list-card${selected ? ' sdo-list-card--on' : ''}`}
+                      onClick={() => updateFilters({ listId: selected ? '' : list.id })}
+                      aria-pressed={selected}
+                      title={`Filtrar por ${list.name}`}
+                    >
+                      <span className="sdo-list-card__icon">
+                        <Icon name="list" size={16} />
+                      </span>
+                      <span className="sdo-list-card__body">
+                        <span className="sdo-list-card__name">{list.name}</span>
+                        <strong>{list.count}</strong>
+                        <small>{list.count === 1 ? 'cartão' : 'cartões'}</small>
+                      </span>
+                      {selected && (
+                        <span className="sdo-list-card__check" aria-hidden="true">
+                          <Icon name="check" size={12} />
                         </span>
-                        <span className="sdo-list-card__body">
-                          <span className="sdo-list-card__name">{list.name}</span>
-                          <strong>{list.count}</strong>
-                          <small>{list.count === 1 ? 'cartão' : 'cartões'}</small>
-                        </span>
-                        {selected && (
-                          <span className="sdo-list-card__check" aria-hidden="true">
-                            <Icon name="check" size={12} />
-                          </span>
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        className="sdo-list-card__edit"
-                        onClick={() => startRenameList(list)}
-                        title={`Renomear lista ${list.name}`}
-                        aria-label={`Renomear lista ${list.name}`}
-                      >
-                        <Icon name="edit" size={12} />
-                      </button>
-                    </div>
+                      )}
+                    </button>
                   );
                 })}
-                {addingList ? (
-                  <div className="sdo-list-card sdo-list-card--editing">
-                    <span className="sdo-list-card__body">
-                      <span className="sdo-list-card__name">Nova lista</span>
-                      <input
-                        className="sdo-inline-input"
-                        value={newListName}
-                        onChange={(event) => setNewListName(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') {
-                            event.preventDefault();
-                            void createList();
-                          }
-                          if (event.key === 'Escape') {
-                            event.preventDefault();
-                            setAddingList(false);
-                            setNewListName('');
-                          }
-                        }}
-                        placeholder="Nome da lista"
-                        autoFocus
-                        disabled={listBusy}
-                        aria-label="Nome da nova lista"
-                      />
-                    </span>
-                    <div className="sdo-list-card__edit-actions">
-                      <button
-                        type="button"
-                        className="sfo-btn sfo-btn--sm sfo-btn--primary"
-                        onClick={() => void createList()}
-                        disabled={listBusy || !newListName.trim()}
-                      >
-                        {listBusy ? <span className="sfo-spinner" /> : <Icon name="plus" size={12} />}
-                        Criar
-                      </button>
-                      <button
-                        type="button"
-                        className="sfo-btn sfo-btn--sm"
-                        onClick={() => {
-                          setAddingList(false);
-                          setNewListName('');
-                        }}
-                        disabled={listBusy}
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                ) : (
+              </div>
+              {addingList ? (
+                <div className="sdo-lists__new-form">
+                  <input
+                    className="sdo-inline-input"
+                    value={newListName}
+                    onChange={(event) => setNewListName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        void createList();
+                      }
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        setAddingList(false);
+                        setNewListName('');
+                      }
+                    }}
+                    placeholder="Nome da nova lista"
+                    autoFocus
+                    disabled={listBusy}
+                    aria-label="Nome da nova lista"
+                  />
                   <button
                     type="button"
-                    className="sdo-list-card sdo-list-card--add"
+                    className="sfo-btn sfo-btn--sm sfo-btn--primary"
+                    onClick={() => void createList()}
+                    disabled={listBusy || !newListName.trim()}
+                  >
+                    {listBusy ? <span className="sfo-spinner" /> : <Icon name="plus" size={12} />}
+                    Criar
+                  </button>
+                  <button
+                    type="button"
+                    className="sfo-btn sfo-btn--sm"
+                    onClick={() => {
+                      setAddingList(false);
+                      setNewListName('');
+                    }}
+                    disabled={listBusy}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <div className="sdo-lists__new-row">
+                  <button
+                    type="button"
+                    className="sdo-lists__new"
                     onClick={() => {
                       setAddingList(true);
                       setNewListName('');
                     }}
                     title="Adicionar lista neste quadro"
                   >
-                    <span className="sdo-list-card__icon">
-                      <Icon name="plus" size={16} />
-                    </span>
-                    <span className="sdo-list-card__body">
-                      <span className="sdo-list-card__name">Nova lista</span>
-                      <small>Adicionar neste quadro</small>
-                    </span>
+                    <Icon name="plus" size={12} />
+                    Nova lista
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </section>
           )}
 

@@ -7,12 +7,12 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 ### Adicionado
 
-- **Criar e renomear listas no dashboard**: lápis ao lado do nome e “Nova lista” no fim da grade e no Kanban.
-- **Olho para ver a descrição** do cartão sem abrir o editor.
+- **Criar e renomear listas**: “Nova lista” discreto no rodapé e renomear com duplo clique no nome da coluna do Kanban.
+- **Olho para ver a descrição** do cartão sem abrir o editor, expandindo no próprio cartão.
 - **Destaque no ícone de anexo** quando o cartão tem anexos.
-- **Quadro das regras no topo**: seletor único; as listas/etiquetas de cada regra são desse quadro, e o seletor por regra saiu.
+- **Quadro das regras no topo**: seletor único; as listas/etiquetas de cada regra são desse quadro, e o seletor por regra saiu. As etiquetas aparecem nas cores do Trello.
 - **Sincronizar agora** em Regras, para puxar a configuração da conta do Trello.
-- **Continuar sem Trello**: a extensão abre e pode ser usada sem conectar; quadros/cartões ficam vazios até conectar.
+- **Continuar sem Trello**: a extensão abre com quadros, listas e cartões de exemplo salvos localmente; dá para criar, editar e mover sem conectar.
 
 ### Alterado
 

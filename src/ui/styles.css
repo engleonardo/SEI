@@ -715,8 +715,8 @@
 }
 
 .sf-markdown--roomy {
-  max-height: 16em;
-  overflow: hidden;
+  max-height: none;
+  overflow: visible;
 }
 
 /* ---------------------------------------------------------------- editor */

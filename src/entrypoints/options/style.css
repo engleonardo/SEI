@@ -911,9 +911,10 @@ a {
 }
 
 .sfo-rule__label-chip--active {
-  border-color: var(--accent);
+  border-color: currentColor;
   background: var(--accent-soft);
   color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 22%, transparent);
 }
 
 .sfo-rule__actions {

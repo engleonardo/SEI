@@ -236,46 +236,40 @@ function KanbanColumn({
             aria-label="Nome da lista"
           />
         ) : (
-          <span className="sdo-kanban-column__title">{group.title}</span>
+          <span
+            className="sdo-kanban-column__title"
+            onDoubleClick={() => {
+              if (!onRenameList) return;
+              setTitleDraft(group.title);
+              setEditingTitle(true);
+            }}
+            title={onRenameList ? 'Clique duas vezes para renomear' : undefined}
+            style={onRenameList ? { cursor: 'text' } : undefined}
+          >
+            {group.title}
+          </span>
         )}
         <span className="sdo-kanban-column__count">{group.cards.length}</span>
-        {(onRenameList || (canMoveColumns && onMoveColumn)) && (
+        {canMoveColumns && onMoveColumn && (
           <div className="sdo-kanban-column__actions">
-            {onRenameList && !editingTitle && (
-              <button
-                type="button"
-                onClick={() => {
-                  setTitleDraft(group.title);
-                  setEditingTitle(true);
-                }}
-                title="Renomear lista"
-                aria-label={`Renomear lista ${group.title}`}
-              >
-                <Icon name="edit" size={13} />
-              </button>
-            )}
-            {canMoveColumns && onMoveColumn && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onMoveColumn(listId, 'left')}
-                  disabled={index === 0}
-                  title="Mover coluna para a esquerda"
-                  aria-label={`Mover coluna ${group.title} para a esquerda`}
-                >
-                  <Icon name="chevronLeft" size={13} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onMoveColumn(listId, 'right')}
-                  disabled={index === total - 1}
-                  title="Mover coluna para a direita"
-                  aria-label={`Mover coluna ${group.title} para a direita`}
-                >
-                  <Icon name="chevronRight" size={13} />
-                </button>
-              </>
-            )}
+            <button
+              type="button"
+              onClick={() => onMoveColumn(listId, 'left')}
+              disabled={index === 0}
+              title="Mover coluna para a esquerda"
+              aria-label={`Mover coluna ${group.title} para a esquerda`}
+            >
+              <Icon name="chevronLeft" size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onMoveColumn(listId, 'right')}
+              disabled={index === total - 1}
+              title="Mover coluna para a direita"
+              aria-label={`Mover coluna ${group.title} para a direita`}
+            >
+              <Icon name="chevronRight" size={13} />
+            </button>
           </div>
         )}
         {group.subtitle && <span className="sdo-kanban-column__board">{group.subtitle}</span>}
@@ -310,7 +304,7 @@ function KanbanColumn({
   );
 }
 
-function AddListColumn({ onCreate }: { onCreate: (name: string) => Promise<void> }) {
+function NewListFooter({ onCreate }: { onCreate: (name: string) => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -329,9 +323,9 @@ function AddListColumn({ onCreate }: { onCreate: (name: string) => Promise<void>
   };
 
   return (
-    <section className="sdo-kanban-column sdo-kanban-column--add" aria-label="Adicionar lista">
+    <div className="sdo-kanban-footer">
       {open ? (
-        <>
+        <div className="sdo-kanban-newlist-form">
           <input
             className="sdo-inline-input"
             value={name}
@@ -347,41 +341,44 @@ function AddListColumn({ onCreate }: { onCreate: (name: string) => Promise<void>
                 setOpen(false);
               }
             }}
-            placeholder="Nome da lista"
+            placeholder="Nome da nova lista"
             autoFocus
             disabled={busy}
             aria-label="Nome da nova lista"
           />
-          <div className="sdo-list-card__edit-actions">
-            <button
-              type="button"
-              className="sfo-btn sfo-btn--sm sfo-btn--primary"
-              onClick={() => void submit()}
-              disabled={busy || !name.trim()}
-            >
-              {busy ? <span className="sfo-spinner" /> : <Icon name="plus" size={12} />}
-              Criar
-            </button>
-            <button
-              type="button"
-              className="sfo-btn sfo-btn--sm"
-              onClick={() => {
-                setName('');
-                setOpen(false);
-              }}
-              disabled={busy}
-            >
-              Cancelar
-            </button>
-          </div>
-        </>
+          <button
+            type="button"
+            className="sfo-btn sfo-btn--sm sfo-btn--primary"
+            onClick={() => void submit()}
+            disabled={busy || !name.trim()}
+          >
+            {busy ? <span className="sfo-spinner" /> : <Icon name="plus" size={12} />}
+            Criar
+          </button>
+          <button
+            type="button"
+            className="sfo-btn sfo-btn--sm"
+            onClick={() => {
+              setName('');
+              setOpen(false);
+            }}
+            disabled={busy}
+          >
+            Cancelar
+          </button>
+        </div>
       ) : (
-        <button type="button" className="sdo-kanban-add" onClick={() => setOpen(true)}>
-          <Icon name="plus" size={14} />
-          Adicionar lista
+        <button
+          type="button"
+          className="sdo-kanban-newlist"
+          onClick={() => setOpen(true)}
+          title="Adicionar lista neste quadro"
+        >
+          <Icon name="plus" size={13} />
+          Nova lista
         </button>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -458,8 +455,8 @@ export function KanbanBoard({
             onTogglePin={onTogglePin}
           />
         ))}
-        {canManageLists && onCreateList && <AddListColumn onCreate={onCreateList} />}
       </div>
+      {canManageLists && onCreateList && <NewListFooter onCreate={onCreateList} />}
       <DragOverlay dropAnimation={null}>
         {activeCard ? (
           <div className="sdo-kanban-overlay">

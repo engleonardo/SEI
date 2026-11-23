@@ -6,7 +6,7 @@ import { showToast } from '../toast';
 import { classNames, formatDue, isOverdue, labelColorHex, labelTextColor, locationLabel } from '../utils';
 import { CardDescription } from './CardDescription';
 import { DescriptionEditor } from './DescriptionEditor';
-import { ConfirmDialog, Modal } from './Modal';
+import { ConfirmDialog } from './Modal';
 import { InlineLocationPicker } from './InlineLocationPicker';
 import { ChecklistDialog } from './dialogs/ChecklistDialog';
 import { AttachmentsDialog } from './dialogs/AttachmentsDialog';
@@ -57,7 +57,7 @@ export function CardItem({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
-  const [viewOpen, setViewOpen] = useState(false);
+  const [viewExpanded, setViewExpanded] = useState(descriptionExpanded);
 
   const due = formatDue(card.due, card.dueComplete);
   const overdue = isOverdue(card);
@@ -238,10 +238,11 @@ export function CardItem({
               {card.description && (
                 <button
                   type="button"
-                  className="sf-icon-btn"
-                  onClick={() => setViewOpen(true)}
-                  aria-label="Ver descrição"
-                  title="Ver descrição sem editar"
+                  className={classNames('sf-icon-btn', viewExpanded && 'sf-icon-btn--pinned')}
+                  onClick={() => setViewExpanded((current) => !current)}
+                  aria-pressed={viewExpanded}
+                  aria-label={viewExpanded ? 'Recolher descrição' : 'Expandir descrição'}
+                  title={viewExpanded ? 'Recolher descrição' : 'Expandir descrição'}
                 >
                   <Icon name="eye" size={15} />
                 </button>
@@ -375,8 +376,8 @@ export function CardItem({
             >
               <CardDescription
                 text={card.description}
-                compact={!descriptionExpanded}
-                className={descriptionExpanded ? 'sf-markdown--roomy' : undefined}
+                compact={!viewExpanded}
+                className={viewExpanded ? 'sf-markdown--roomy' : undefined}
               />
             </div>
           ) : (
@@ -593,21 +594,6 @@ export function CardItem({
             for (const id of ids) onRemoved(id);
           }}
         />
-      )}
-
-      {viewOpen && (
-        <Modal
-          title={card.name}
-          subtitle="Descrição do cartão"
-          onClose={() => setViewOpen(false)}
-          footer={
-            <button type="button" className="sf-btn" onClick={() => setViewOpen(false)}>
-              Fechar
-            </button>
-          }
-        >
-          <CardDescription text={card.description} />
-        </Modal>
       )}
     </>
   );
