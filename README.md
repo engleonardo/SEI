@@ -12,8 +12,8 @@ O **Painel SEI Flow** é a página inicial da extensão: reúne prazos, etiqueta
 
 ## Baixar e instalar
 
-- **Chrome / Edge:** [sei-flow-1.6.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.6.0/sei-flow-1.6.0-chrome.zip)
-- **Firefox:** [sei-flow-1.6.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.6.0/sei-flow-1.6.0-firefox.zip)
+- **Chrome / Edge:** [sei-flow-1.7.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.7.0/sei-flow-1.7.0-chrome.zip)
+- **Firefox:** [sei-flow-1.7.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.7.0/sei-flow-1.7.0-firefox.zip)
 - **Todas as versões:** [Releases](https://github.com/engleonardo/SEI/releases)
 
 Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` -> **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.
@@ -24,6 +24,8 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 
 - **Login com o Trello:** conecte sua conta em um clique (OAuth 2.0), sem copiar APP-KEY/TOKEN; os tokens ficam apenas no navegador.
 - **Configurações sincronizadas:** regras e destino padrão acompanham você entre Chrome, Edge e Firefox pela sua conta do Trello.
+- **Quadros pela extensão:** crie e renomeie quadros no Trello sem sair do painel.
+- **Automações reutilizáveis:** copie regras de um quadro para outro, com listas e etiquetas associadas pelo nome.
 - **Vínculo de mão dupla:** crie um cartão novo ou vincule um cartão que já existe no Trello ao processo do SEI.
 - **Sincronização nos dois sentidos:** ao atualizar a extensão, o estado do Trello é relido e aplicado aos cartões, às etiquetas e às regras.
 - **Vários cartões por processo**, todos visíveis e organizados.

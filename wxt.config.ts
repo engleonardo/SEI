@@ -11,7 +11,7 @@ export default defineConfig({
     default_locale: 'pt_BR',
     author: 'Engenheiro Leonardo Almeida de Oliveira',
     homepage_url: 'https://github.com/engleonardo/SEI',
-    permissions: ['storage', 'scripting', 'activeTab', 'alarms', 'notifications', 'identity'],
+    permissions: ['storage', 'scripting', 'activeTab', 'alarms', 'notifications'],
     // O Firefox 115 ainda usa optional_permissions para hosts opcionais;
     // optional_host_permissions só passou a existir no Firefox 128.
     ...(browser === 'firefox'

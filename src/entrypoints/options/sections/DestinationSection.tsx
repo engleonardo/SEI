@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Settings, TrelloBoard, TrelloList } from '../../../core/domain/types';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
 import { Icon } from '../../../ui/icons';
+import { Modal } from '../../../ui/components/Modal';
 import { EmptyState, SectionCard, Spinner, StatusPill, type Notice } from './shared';
 
 export function DestinationSection({
@@ -24,6 +25,9 @@ export function DestinationSection({
   const [lists, setLists] = useState<TrelloList[]>([]);
   const [loadingLists, setLoadingLists] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [boardDialog, setBoardDialog] = useState<'create' | 'rename' | null>(null);
+  const [boardName, setBoardName] = useState('');
+  const [boardBusy, setBoardBusy] = useState(false);
 
   const [connected, setConnected] = useState(Boolean(settings.appKey && settings.appToken));
 
@@ -102,7 +106,49 @@ export function DestinationSection({
     }
   };
 
+  const openCreateBoard = () => {
+    setBoardName('');
+    setBoardDialog('create');
+  };
+
+  const openRenameBoard = () => {
+    if (!selectedBoard) return;
+    setBoardName(selectedBoard.name);
+    setBoardDialog('rename');
+  };
+
+  const submitBoard = async () => {
+    const name = boardName.trim();
+    if (!name || !boardDialog) return;
+    setBoardBusy(true);
+    try {
+      if (boardDialog === 'create') {
+        const created = await callRpc('trello:create-board', { name });
+        await reloadBoards();
+        setBoardId(created.id);
+        setListId('');
+        notify({ kind: 'success', text: 'Quadro criado. Escolha a lista padrão.' });
+      } else if (selectedBoard) {
+        const updated = await callRpc('trello:rename-board', {
+          boardId: selectedBoard.id,
+          name,
+        });
+        if (settings.defaultBoardId === updated.id) {
+          await save({ defaultBoardName: updated.name });
+        }
+        await reloadBoards();
+        notify({ kind: 'success', text: 'Quadro renomeado.' });
+      }
+      setBoardDialog(null);
+    } catch (cause) {
+      notify({ kind: 'error', text: errorMessage(cause) });
+    } finally {
+      setBoardBusy(false);
+    }
+  };
+
   return (
+    <>
     <SectionCard
       title="Quadro e lista padrão"
       subtitle="Destino principal dos cartões criados a partir do SEI. Você ainda pode mover cada cartão individualmente."
@@ -170,6 +216,26 @@ export function DestinationSection({
                 </option>
               ))}
             </select>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+              <button
+                type="button"
+                className="sfo-btn sfo-btn--sm"
+                onClick={openCreateBoard}
+                disabled={busy || boardBusy}
+              >
+                <Icon name="plus" size={13} />
+                Novo quadro
+              </button>
+              <button
+                type="button"
+                className="sfo-btn sfo-btn--sm"
+                onClick={openRenameBoard}
+                disabled={busy || boardBusy || !selectedBoard}
+              >
+                <Icon name="edit" size={13} />
+                Renomear
+              </button>
+            </div>
           </div>
 
           <div className="sfo-field">
@@ -210,5 +276,58 @@ export function DestinationSection({
         </div>
       )}
     </SectionCard>
+      {boardDialog && (
+        <Modal
+          title={boardDialog === 'create' ? 'Novo quadro' : 'Renomear quadro'}
+          subtitle={
+            boardDialog === 'create'
+              ? 'O quadro será criado como privado, com listas padrão.'
+              : 'O novo nome aparece no Trello e no SEI Flow.'
+          }
+          size="sm"
+          onClose={() => {
+            if (!boardBusy) setBoardDialog(null);
+          }}
+          footer={
+            <>
+              <button
+                type="button"
+                className="sf-btn"
+                onClick={() => setBoardDialog(null)}
+                disabled={boardBusy}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="sf-btn sf-btn--primary"
+                onClick={() => void submitBoard()}
+                disabled={boardBusy || !boardName.trim()}
+              >
+                {boardBusy ? <Spinner /> : <Icon name="check" size={14} />}
+                {boardDialog === 'create' ? 'Criar quadro' : 'Salvar nome'}
+              </button>
+            </>
+          }
+        >
+          <div className="sf-field">
+            <label htmlFor="sfo-board-name">Nome do quadro</label>
+            <input
+              id="sfo-board-name"
+              className="sf-input"
+              value={boardName}
+              onChange={(event) => setBoardName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  void submitBoard();
+                }
+              }}
+              autoFocus
+            />
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }

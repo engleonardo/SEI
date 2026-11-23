@@ -29,6 +29,8 @@ export interface AuthStatus {
   expiresAt?: number;
   /** O push final do logout falhou; a configuração foi guardada localmente. */
   backupFailed?: boolean;
+  /** Erro do login por callback (lido pela tela de Conexão). */
+  error?: string;
 }
 
 const SESSION_KEY = 'sei-flow:oauth:v1';

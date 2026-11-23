@@ -69,7 +69,27 @@ export function ConnectionSection({
   const login = async () => {
     setAuthBusy(true);
     try {
-      const status = await callRpc('auth:login', undefined);
+      await callRpc('auth:start', undefined);
+
+      // O login acontece em outra aba; aguarda a sessão aparecer.
+      const started = Date.now();
+      let status: AuthStatus | null = null;
+      while (Date.now() - started < 3 * 60_000) {
+        await new Promise((resolve) => window.setTimeout(resolve, 1_000));
+        const current = await callRpc('auth:status', undefined);
+        if (current.error) throw new Error(current.error);
+        if (current.connected && current.mode === 'oauth') {
+          status = current;
+          break;
+        }
+      }
+
+      if (!status) {
+        throw new Error(
+          'Tempo esgotado. Conclua a autorização na aba do Trello e tente novamente.',
+        );
+      }
+
       setAuth(status);
       notify({
         kind: 'success',
@@ -77,7 +97,8 @@ export function ConnectionSection({
           ? `Conectado como ${status.account.fullName}.`
           : 'Login com o Trello concluído.',
       });
-      // Navega para o próximo passo sem esperar o recarregamento dos quadros.
+
+      await callRpc('auth:finish', undefined).catch(() => null);
       const fresh = await callRpc('settings:get', undefined).catch(() => null);
       onLoginComplete?.(fresh);
       void reloadBoards();

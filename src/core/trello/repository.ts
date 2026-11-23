@@ -121,6 +121,25 @@ export class TrelloRepository {
     return cacheGetOrSet('boards', CACHE_TTL.boards, load);
   }
 
+  async createBoard(name: string): Promise<TrelloBoard> {
+    const board = await this.client.post<TrelloBoard>('/boards', {
+      name: name.trim(),
+      prefs_permissionLevel: 'private',
+      defaultLists: true,
+    });
+    await cacheDelete('boards');
+    await cacheDelete('all-linked');
+    return board;
+  }
+
+  async renameBoard(boardId: string, name: string): Promise<TrelloBoard> {
+    const board = await this.client.put<TrelloBoard>(`/boards/${boardId}`, {
+      name: name.trim(),
+    });
+    await cacheDelete('boards');
+    return board;
+  }
+
   async getLists(boardId: string, fresh = false): Promise<TrelloList[]> {
     const load = async () => {
       const response = await this.client.get<TrelloList[]>(`/boards/${boardId}/lists`, {

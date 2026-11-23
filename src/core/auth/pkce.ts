@@ -7,8 +7,10 @@ const AUTHORIZE_ENDPOINT = 'https://auth.atlassian.com/authorize';
 export interface OAuthState {
   /** nonce contra CSRF */
   n: string;
-  /** URL de retorno da extensão */
+  /** URL de retorno / página de callback */
   r: string;
+  /** `page`: a página entrega o código por content script (sem redirect). */
+  m?: 'page';
 }
 
 function base64UrlFromBytes(bytes: Uint8Array): string {
@@ -53,10 +55,10 @@ export function decodeState(value: string): OAuthState | null {
   try {
     const parsed = JSON.parse(new TextDecoder().decode(base64UrlToBytes(value))) as unknown;
     if (!parsed || typeof parsed !== 'object') return null;
-    const { n, r } = parsed as Partial<OAuthState>;
+    const { n, r, m } = parsed as Partial<OAuthState>;
     if (typeof n !== 'string' || !n) return null;
     if (typeof r !== 'string' || !r) return null;
-    return { n, r };
+    return { n, r, m: m === 'page' ? 'page' : undefined };
   } catch {
     return null;
   }

@@ -28,7 +28,7 @@ Para manter as mesmas regras e o mesmo destino em Chrome, Edge e Firefox, a exte
 - **`storage`**: salvar credenciais, preferências e cache localmente.
 - **`scripting`**: injetar a interface do SEI Flow nas páginas do SEI que você autorizar.
 - **`activeTab`**: identificar a aba atual quando você clica no ícone da extensão, para oferecer a ativação do site correto no Painel SEI Flow.
-- **`identity`**: abrir a tela oficial de login do Trello (OAuth 2.0 com PKCE) quando você escolhe “Entrar com Trello”. Não lê a identidade do navegador nem de outros serviços.
+- **`https://engleonardo.github.io/SEI/oauth-callback.html`**: página de callback do login. Um content script restrito a essa página lê o código e o estado do OAuth e entrega à extensão; não acessa outras páginas.
 - **Permissão opcional de sites**: concedida por você, site a site, ou para todos os sites. Serve apenas para inserir a interface no SEI. Em páginas que não são do SEI, o script é encerrado sem alterar nada.
 - **`https://api.trello.com/*`**: necessário para ler e gravar cartões na sua conta do Trello.
 - **`https://auth.atlassian.com/*`**: necessário para trocar o código de autorização pelos tokens da sua própria sessão (login e renovação).

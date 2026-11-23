@@ -3,6 +3,26 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.7.0] - 2026-11-23
+
+### Adicionado
+
+- **Criar quadros** direto em Opções → Destino: o quadro nasce privado, com listas padrão, e já fica selecionado.
+- **Renomear quadros** pela extensão; se for o destino padrão, o nome é atualizado no painel.
+- **Copiar regras entre quadros** em Opções → Regras: listas e etiquetas são associadas pelo nome e regras incompatíveis são ignoradas.
+
+### Alterado
+
+- **Login OAuth em todos os navegadores** agora abre a autorização em uma aba e conclui pela página de callback, sem URL de retorno por instalação. Funciona igual em Chrome, Edge e Firefox.
+- Permissão **`identity` removida**; o login usa a página de callback e um content script restrito a ela.
+- Cache de cartões/listas reduzido e painel do SEI recarrega ao voltar para a aba, ao ganhar foco e após alterações no dashboard.
+
+### Corrigido
+
+- **Desconexão periódica do Trello**: a renovação do token agora é compartilhada; duas renovações simultâneas não invalidam mais a sessão.
+- **Lentidão/sincronização**: cartões de quadros secundários já carregados no dashboard aparecem na hora no painel do processo; a busca do Trello deixa de ser o único caminho.
+- **Login do Firefox**: o fluxo direto com URL por instalação foi substituído pelo callback por content script.
+
 ## [1.6.0] - 2026-11-20
 
 ### Adicionado

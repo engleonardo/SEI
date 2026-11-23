@@ -41,8 +41,13 @@ import {
   syncConfig,
 } from '../sync/config';
 import { loadTrelloCredentials } from '../auth/credentials';
-import { logout, startLogin } from '../auth/oauth';
-import { readSession, writeAccount } from '../auth/session';
+import {
+  clearOAuthResult,
+  readOAuthResult,
+  startLoginTab,
+  logout,
+} from '../auth/oauth';
+import { readSession } from '../auth/session';
 
 const repository = new TrelloRepository(loadTrelloCredentials);
 
@@ -73,6 +78,11 @@ const handlers = {
   'settings:test-connection': () => repository.testConnection(),
 
   'auth:status': async () => {
+    const result = await readOAuthResult();
+    const error =
+      result && !result.ok && Date.now() - result.at < 10 * 60_000
+        ? (result.error ?? 'Falha no login com o Trello.')
+        : undefined;
     const session = await readSession();
     if (session) {
       return {
@@ -80,50 +90,33 @@ const handlers = {
         mode: 'oauth' as const,
         account: session.account,
         expiresAt: session.expiresAt,
+        error,
       };
     }
     const settings = await getSettings();
     if (settings.appKey && settings.appToken) {
-      return { connected: true, mode: 'token' as const };
+      return { connected: true, mode: 'token' as const, error };
     }
-    return { connected: false, mode: 'none' as const };
+    return { connected: false, mode: 'none' as const, error };
   },
 
-  'auth:login': async () => {
-    const session = await startLogin();
-    let account = session.account;
-    try {
-      const info = await repository.testConnection();
-      const updated = await writeAccount({
-        id: info.id,
-        username: info.username,
-        fullName: info.fullName,
-      });
-      if (updated?.account) account = updated.account;
-    } catch {
-      // A sessão já foi salva; a conta é apenas informativa.
-    }
+  'auth:start': async () => {
+    await startLoginTab();
+    return undefined;
+  },
 
-    // Se o logout anterior não conseguiu subir a configuração, recupera a cópia
-    // local apenas quando a conta é a mesma.
+  'auth:finish': async () => {
+    const session = await readSession();
     try {
-      await restoreLocalConfig(account?.id);
+      await restoreLocalConfig(session?.account?.id);
     } catch {
       // backup é best-effort
     }
-
-    // Dá uma chance ao sync, mas não deixa o login preso se o Trello demorar.
     await Promise.race([
       syncConfig({ force: true }),
       new Promise<void>((resolve) => setTimeout(resolve, 4_000)),
     ]).catch(() => undefined);
-
-    return {
-      connected: true,
-      mode: 'oauth' as const,
-      account,
-      expiresAt: session.expiresAt,
-    };
+    return undefined;
   },
 
   'auth:logout': async (payload) => {
@@ -142,6 +135,7 @@ const handlers = {
       }
     }
     await logout();
+    await clearOAuthResult();
     if (payload?.clearManual) {
       await saveSettings({
         appKey: '',
@@ -259,6 +253,8 @@ const handlers = {
   },
   'trello:copy-card': ({ cardId, listId }) => repository.copyCard(cardId, listId),
   'trello:copy-board': ({ boardId, name }) => repository.copyBoard(boardId, name),
+  'trello:create-board': ({ name }) => repository.createBoard(name),
+  'trello:rename-board': ({ boardId, name }) => repository.renameBoard(boardId, name),
   'trello:mirror-card': ({ cardId, listId }) => repository.createCardMirror(cardId, listId),
   'mirrors:status': ({ cardId }) => getMirrorGroup(cardId),
   'mirrors:remove': async ({ cardId }) => {

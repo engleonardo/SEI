@@ -518,6 +518,10 @@ await shootPage({
   await page.getByRole('button', { name: 'Conexão' }).click();
   await page.waitForTimeout(900);
   await page.screenshot({ path: join(OUT, 'options-1280x800.png') });
+
+  await page.getByRole('button', { name: 'Destino' }).click();
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: join(OUT, 'destination-1280x800.png') });
   await browser.close();
 }
 

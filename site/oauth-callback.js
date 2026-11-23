@@ -109,6 +109,20 @@
     return;
   }
 
+  // No modo "page" o código é entregue à extensão por um content script;
+  // não há redirecionamento para uma URL por instalação do navegador.
+  if (data.m === 'page') {
+    message.textContent = 'Login confirmado. Pode fechar esta aba.';
+    window.setTimeout(function () {
+      try {
+        history.replaceState(null, '', location.pathname);
+      } catch {
+        /* ignora */
+      }
+    }, 1500);
+    return;
+  }
+
   var target = safeReturnUrl(data.r);
   if (!target) {
     fail(
