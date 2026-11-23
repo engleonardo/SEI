@@ -8,6 +8,8 @@
 > **Firefox 128+:** a 1.7.0 exige Firefox 128 ou superior. A partir do 127 o Firefox concede as permissões de host de `content_scripts` na instalação, que é o que faz o content script da página de callback rodar sem liberação manual. No 115–126 o login poderia falhar sem aviso; por isso a versão mínima subiu.
 >
 > **Atualização:** a 1.7.0 adiciona esse host como permissão nova. O Firefox pode pedir aprovação (e desativar até aceitar) para quem já tem a 1.6.0.
+>
+> **Situação:** publicado em 2026-11-23; a API da AMO retorna `current_version 1.7.0` com status `public`.
 
 ## 1. Pacote
 

@@ -18,7 +18,7 @@ O **Painel SEI Flow** é a página inicial da extensão: reúne prazos, etiqueta
 
 Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` -> **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.
 
-> **Firefox:** requer **115 ou superior** no desktop (Android: 142+).
+> **Firefox:** requer **128 ou superior** no desktop (Android: 142+).
 
 ## O que você resolve com o SEI Flow
 

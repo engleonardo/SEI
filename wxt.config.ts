@@ -12,8 +12,8 @@ export default defineConfig({
     author: 'Engenheiro Leonardo Almeida de Oliveira',
     homepage_url: 'https://github.com/engleonardo/SEI',
     permissions: ['storage', 'scripting', 'activeTab', 'alarms', 'notifications'],
-    // O Firefox 115 ainda usa optional_permissions para hosts opcionais;
-    // optional_host_permissions só passou a existir no Firefox 128.
+    // O Firefox mantém `optional_permissions` para hosts opcionais; o mínimo
+    // agora é 128 (Android 142+), mas o formato antigo segue compatível.
     ...(browser === 'firefox'
       ? { optional_permissions: ['*://*/*'] }
       : { optional_host_permissions: ['*://*/*'] }),

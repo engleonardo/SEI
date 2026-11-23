@@ -5,6 +5,8 @@
 > **Antes de enviar:** a página de callback nova precisa estar publicada no GitHub Pages (merge na `main` → workflow Pages).
 >
 > **Atualização:** a 1.7.0 adiciona o host da página de callback em `content_scripts`. No Edge, como no Chrome, isso conta como nova permissão de host: a certificação precisa refletir isso e os usuários atuais podem precisar aceitar a permissão depois da atualização.
+>
+> **Situação:** envio manual pendente. O workflow por API falhou com **HTTP 404** (credenciais/Product ID); use o Partner Center com o `sei-flow-1.7.0-edge.zip` da Release.
 
 ## 1. Pacote
 
