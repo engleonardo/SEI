@@ -1184,6 +1184,32 @@ describe('TrelloRepository', () => {
     expect(candidates[0]?.snippet).toContain(SEI_IN_TEXT);
   });
 
+  it('cria quadro privado com listas padrão', async () => {
+    const client = fakeClient();
+    vi.mocked(client.post).mockResolvedValue({ id: 'board-new', name: 'Novo' });
+    const repo = repository(client);
+
+    const board = await repo.createBoard('  Novo  ');
+
+    expect(client.post).toHaveBeenCalledWith('/boards', {
+      name: 'Novo',
+      prefs_permissionLevel: 'private',
+      defaultLists: true,
+    });
+    expect(board).toEqual({ id: 'board-new', name: 'Novo' });
+  });
+
+  it('renomeia quadro', async () => {
+    const client = fakeClient();
+    vi.mocked(client.put).mockResolvedValue({ id: 'board-1', name: 'Renomeado' });
+    const repo = repository(client);
+
+    const board = await repo.renameBoard('board-1', '  Renomeado ');
+
+    expect(client.put).toHaveBeenCalledWith('/boards/board-1', { name: 'Renomeado' });
+    expect(board.name).toBe('Renomeado');
+  });
+
   it('entrega o cache do processo sem consultar o Trello', async () => {
     const client = fakeClient();
     const cached = [{ id: 'card-1' }] as never;

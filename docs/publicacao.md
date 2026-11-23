@@ -68,15 +68,15 @@ Privacidade: sem servidor próprio, sem telemetria e sem anúncios. Suas credenc
 O SEI Flow é um projeto independente, sem afiliação ao Trello/Atlassian ou ao SEI. Licença MIT.
 ```
 
-## Atualização 1.6.0 (login OAuth e sincronização)
+## Atualização 1.7.0 (login em aba e quadros)
 
 Guias específicos por loja, com os textos prontos para colar:
 
-- **Chrome Web Store:** `docs/store/chrome-1.6.0.md` (inclui a justificativa de host que libera o envio).
-- **Firefox (AMO):** `docs/store/firefox-1.6.0.md`.
-- **Microsoft Edge:** `docs/store/edge-1.6.0.md`.
+- **Chrome Web Store:** `docs/store/chrome-1.7.0.md`.
+- **Firefox (AMO):** `docs/store/firefox-1.7.0.md`.
+- **Microsoft Edge:** `docs/store/edge-1.7.0.md`.
 
-> A 1.6.0 adiciona a permissão `identity`, o host `https://auth.atlassian.com/*` e a sincronização em quadro privado no Trello. As justificativas acima refletem isso.
+> A 1.7.0 **remove a permissão `identity`**. O login abre a autorização em uma aba e conclui pela página de callback; um content script restrito a essa página entrega o código. A justificativa de host inclui `https://engleonardo.github.io/SEI/oauth-callback.html`.
 
 ## Justificativa de permissões (Chrome Web Store)
 
@@ -87,8 +87,8 @@ Copie e adapte no formulário de revisão:
 - **`activeTab`**: identificar a URL da aba atual quando o usuário clica no ícone, para oferecer a ativação do site correto no painel inicial.
 - **`alarms`**: verificar periodicamente prazos e processos atualizados para manter badge e notificações.
 - **`notifications`**: avisar uma vez por dia sobre cartões atrasados ou vencendo hoje.
-- **`identity`**: abrir a tela oficial de login do Trello (OAuth 2.0 com PKCE) quando o usuário escolhe “Entrar com Trello”. Não lê a identidade do navegador nem de outros serviços.
-- **`https://api.trello.com/*`**: ler e gravar cartões, etiquetas, checklists e prazos na conta do Trello do próprio usuário, usando as credenciais fornecidas por ele.
+- **`https://engleonardo.github.io/SEI/oauth-callback.html`**: página de callback do login; o content script lê apenas o código e o estado do OAuth e entrega à extensão. Não acessa outras páginas.
+- **`https://api.trello.com/*`**: ler e gravar cartões, etiquetas, checklists, anexos, prazos e quadros na conta do Trello do próprio usuário, usando as credenciais fornecidas por ele.
 - **`https://auth.atlassian.com/*`**: trocar o código de autorização do Trello pelos tokens da própria sessão do usuário (troca e renovação, sem client secret).
 - **Permissão opcional de host (`*://*/*`)**: permitir que o usuário ative o SEI Flow em instalações do SEI de qualquer órgão/domínio. A permissão é solicitada em tempo de execução, por gesto do usuário, e o script encerra sem alterar páginas que não sejam do SEI.
 

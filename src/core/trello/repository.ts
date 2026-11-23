@@ -121,6 +121,25 @@ export class TrelloRepository {
     return cacheGetOrSet('boards', CACHE_TTL.boards, load);
   }
 
+  async createBoard(name: string): Promise<TrelloBoard> {
+    const board = await this.client.post<TrelloBoard>('/boards', {
+      name: name.trim(),
+      prefs_permissionLevel: 'private',
+      defaultLists: true,
+    });
+    await cacheDelete('boards');
+    await cacheDelete('all-linked');
+    return board;
+  }
+
+  async renameBoard(boardId: string, name: string): Promise<TrelloBoard> {
+    const board = await this.client.put<TrelloBoard>(`/boards/${boardId}`, {
+      name: name.trim(),
+    });
+    await cacheDelete('boards');
+    return board;
+  }
+
   async getLists(boardId: string, fresh = false): Promise<TrelloList[]> {
     const load = async () => {
       const response = await this.client.get<TrelloList[]>(`/boards/${boardId}/lists`, {
@@ -164,7 +183,7 @@ export class TrelloRepository {
     const load = async () => {
       const [board, lists, raw] = await Promise.all([
         this.getBoards().then((boards) => boards.find((item) => item.id === boardId) ?? null),
-        this.getLists(boardId),
+        this.getLists(boardId, fresh),
         this.client.get<TrelloCardApi[]>(`/boards/${boardId}/cards`, {
           filter: 'open',
           fields: CARD_FIELDS,
@@ -359,7 +378,21 @@ export class TrelloRepository {
   async getCachedCardsForProcess(processNumber: string): Promise<TrelloCard[] | null> {
     const process = sanitizeProcessForQuery(processNumber);
     if (!process) return null;
-    return cacheGet<TrelloCard[]>(`process:${process}`, Number.POSITIVE_INFINITY);
+    const direct = await cacheGet<TrelloCard[]>(`process:${process}`, Number.POSITIVE_INFINITY);
+    // A busca do Trello pode demorar para indexar quadros secundários. Se o
+    // dashboard já carregou o quadro, aproveita os cartões do cache na hora.
+    const fromBoards: TrelloCard[] = [];
+    const boards = await cacheGet<TrelloBoard[]>('boards', Number.POSITIVE_INFINITY);
+    for (const board of boards ?? []) {
+      const cards = await cacheGet<TrelloCard[]>(`boardcards:${board.id}`, 10 * 60_000);
+      if (!cards) continue;
+      for (const card of cards) {
+        if (card.links.includes(process)) fromBoards.push(card);
+      }
+    }
+    if (!direct && fromBoards.length === 0) return null;
+    if (fromBoards.length === 0) return direct;
+    return mergeById(direct ?? [], fromBoards);
   }
 
   async getAllLinkedCards(fresh = false): Promise<TrelloCard[]> {

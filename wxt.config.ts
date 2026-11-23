@@ -11,7 +11,7 @@ export default defineConfig({
     default_locale: 'pt_BR',
     author: 'Engenheiro Leonardo Almeida de Oliveira',
     homepage_url: 'https://github.com/engleonardo/SEI',
-    permissions: ['storage', 'scripting', 'activeTab', 'alarms', 'notifications', 'identity'],
+    permissions: ['storage', 'scripting', 'activeTab', 'alarms', 'notifications'],
     // O Firefox 115 ainda usa optional_permissions para hosts opcionais;
     // optional_host_permissions só passou a existir no Firefox 128.
     ...(browser === 'firefox'
@@ -38,7 +38,11 @@ export default defineConfig({
           browser_specific_settings: {
             gecko: {
               id: 'sei-flow@engleonardo',
-              strict_min_version: '115.0',
+              // O login depende do content script da página de callback. Do
+              // Firefox 127 em diante as permissões de host de content_scripts
+              // são concedidas na instalação; versões anteriores exigiriam uma
+              // liberação manual do site e o login falharia sem aviso.
+              strict_min_version: '128.0',
               data_collection_permissions: {
                 required: ['none'],
                 optional: [],

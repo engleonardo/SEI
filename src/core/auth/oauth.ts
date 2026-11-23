@@ -9,6 +9,7 @@ import {
   readSession,
   writePending,
   writeSession,
+  type OAuthAccount,
   type OAuthSession,
 } from './session';
 
@@ -36,6 +37,13 @@ export const OAUTH_SCOPES = [
 
 const TOKEN_ENDPOINT = 'https://auth.atlassian.com/oauth/token';
 const PENDING_TTL_MS = 10 * 60_000;
+const RESULT_KEY = 'sei-flow:oauth:result:v1';
+
+export interface OAuthResult {
+  ok: boolean;
+  error?: string;
+  at: number;
+}
 
 interface TokenPayload {
   access_token?: unknown;
@@ -108,23 +116,57 @@ async function requestTokens(
   };
 }
 
-export function isOAuthAvailable(): boolean {
-  return typeof browser.identity?.launchWebAuthFlow === 'function';
+export async function readOAuthResult(): Promise<OAuthResult | null> {
+  const stored = await browser.storage.local.get(RESULT_KEY);
+  const value = stored?.[RESULT_KEY] as Partial<OAuthResult> | undefined;
+  if (!value || typeof value.at !== 'number') return null;
+  return {
+    ok: value.ok === true,
+    error: typeof value.error === 'string' ? value.error : undefined,
+    at: value.at,
+  };
 }
 
-/** Login interativo. Guarda a sessão em storage.local e devolve os tokens. */
-export async function startLogin(): Promise<OAuthSession> {
-  if (!isOAuthAvailable()) {
-    throw new TrelloError('not_configured', 'Este navegador não oferece o login OAuth.');
-  }
+export async function clearOAuthResult(): Promise<void> {
+  await browser.storage.local.remove(RESULT_KEY);
+}
 
+async function writeOAuthResult(result: OAuthResult): Promise<void> {
+  await browser.storage.local.set({ [RESULT_KEY]: result });
+}
+
+async function fetchAccount(accessToken: string): Promise<OAuthAccount | null> {
+  try {
+    const response = await fetch('https://api.trello.com/1/members/me?fields=id,username,fullName', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      credentials: 'omit',
+    });
+    if (!response.ok) return null;
+    const data = (await response.json()) as {
+      id?: unknown;
+      username?: unknown;
+      fullName?: unknown;
+    };
+    if (typeof data.id !== 'string' || typeof data.username !== 'string') return null;
+    return {
+      id: data.id,
+      username: data.username,
+      fullName: typeof data.fullName === 'string' ? data.fullName : data.username,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Abre a autorização em uma aba; a página de callback entrega o código. */
+export async function startLoginTab(): Promise<void> {
   const verifier = randomToken(64);
   const challenge = await codeChallenge(verifier);
   const nonce = randomToken(16);
-  const returnUrl = browser.identity.getRedirectURL();
-  const state = encodeState({ n: nonce, r: returnUrl });
+  const state = encodeState({ n: nonce, r: OAUTH_REDIRECT_URI, m: 'page' });
 
   await writePending({ verifier, nonce, createdAt: Date.now() });
+  await clearOAuthResult();
 
   const url = buildAuthorizeUrl({
     clientId: OAUTH_CLIENT_ID,
@@ -133,47 +175,18 @@ export async function startLogin(): Promise<OAuthSession> {
     state,
     challenge,
   });
+  await browser.tabs.create({ url });
+}
 
-  let redirect: string | undefined;
-  try {
-    redirect = await browser.identity.launchWebAuthFlow({ url, interactive: true });
-  } catch {
-    await clearPending();
-    throw new TrelloError('auth', 'Login do Trello cancelado ou não concluído.');
-  }
-
-  if (!redirect) {
-    await clearPending();
-    throw new TrelloError('auth', 'Login do Trello cancelado.');
-  }
-
-  let result: URL;
-  try {
-    result = new URL(redirect);
-  } catch {
-    await clearPending();
-    throw new TrelloError('unknown', 'O Trello devolveu um endereço inválido.');
-  }
-
-  const error = result.searchParams.get('error');
-  if (error) {
-    await clearPending();
-    throw new TrelloError(
-      'auth',
-      result.searchParams.get('error_description') || 'O Trello não autorizou o acesso.',
-    );
-  }
-
-  const code = result.searchParams.get('code');
-  const returned = decodeState(result.searchParams.get('state') ?? '');
+/** Troca o código recebido pela página de callback e salva a sessão. */
+export async function completeOAuthCallback(code: string, state: string): Promise<OAuthSession> {
+  const returned = decodeState(state);
   const pending = await readPending();
-
   if (
-    !code ||
     !returned ||
+    returned.m !== 'page' ||
     !pending ||
     returned.n !== pending.nonce ||
-    returned.r !== returnUrl ||
     Date.now() - pending.createdAt > PENDING_TTL_MS
   ) {
     await clearPending();
@@ -204,13 +217,57 @@ export async function startLogin(): Promise<OAuthSession> {
     );
   }
 
+  const account = await fetchAccount(session.accessToken);
+  if (account) session.account = account;
+
   await writeSession(session);
+  await writeOAuthResult({ ok: true, at: Date.now() });
   return session;
 }
 
-export async function refreshSession(
+/** Mensagem enviada pelo content script da página de callback. */
+export async function handleOAuthCallbackMessage(
+  message: { code?: unknown; state?: unknown; error?: unknown; errorDescription?: unknown },
+  sender: { url?: string; tab?: { id?: number } },
+): Promise<void> {
+  if (!sender.url?.startsWith(OAUTH_REDIRECT_URI)) return;
+
+  const providerError = typeof message.error === 'string' ? message.error : '';
+  if (providerError) {
+    await clearPending();
+    const description =
+      typeof message.errorDescription === 'string' && message.errorDescription
+        ? message.errorDescription
+        : `O Trello não autorizou o acesso (${providerError}).`;
+    await writeOAuthResult({ ok: false, error: description, at: Date.now() });
+    if (sender.tab?.id) {
+      await browser.tabs.remove(sender.tab.id).catch(() => undefined);
+    }
+    return;
+  }
+
+  const code = typeof message.code === 'string' ? message.code : '';
+  const state = typeof message.state === 'string' ? message.state : '';
+  if (!code || !state) return;
+
+  try {
+    await completeOAuthCallback(code, state);
+  } catch (error) {
+    await writeOAuthResult({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Falha no login com o Trello.',
+      at: Date.now(),
+    });
+  } finally {
+    if (sender.tab?.id) {
+      await browser.tabs.remove(sender.tab.id).catch(() => undefined);
+    }
+  }
+}
+
+async function refreshSessionInternal(
   session: OAuthSession,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch,
 ): Promise<OAuthSession> {
   const tokens = await requestTokens(
     {
@@ -235,6 +292,23 @@ export async function refreshSession(
   };
   await writeSession(next);
   return next;
+}
+
+let refreshInFlight: Promise<OAuthSession> | null = null;
+
+/**
+ * O refresh token é rotativo: duas renovações simultâneas com o mesmo token
+ * fazem uma delas falhar e derrubar a sessão. Compartilha a renovação em voo.
+ */
+export function refreshSession(
+  session: OAuthSession,
+  fetchImpl: typeof fetch = fetch,
+): Promise<OAuthSession> {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = refreshSessionInternal(session, fetchImpl).finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
 }
 
 /** Token válido para as chamadas ao Trello (renova quando está perto de expirar). */

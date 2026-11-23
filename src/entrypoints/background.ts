@@ -15,6 +15,7 @@ import { saveLastActionTab } from '../core/storage/last-tab';
 import { markSyncChanged } from '../core/storage/sync-tick';
 import { looksLikeSeiUrl } from '../core/sei/detect';
 import { registerAttachmentUploadPort } from '../core/attachments/upload-port';
+import { handleOAuthCallbackMessage } from '../core/auth/oauth';
 import { syncConfig } from '../core/sync/config';
 
 async function maybeInject(tabId: number, url: string): Promise<void> {
@@ -186,6 +187,27 @@ export default defineBackground(() => {
 
   browser.permissions.onRemoved.addListener((removed) => {
     void onPermissionsRemoved(removed as { origins?: string[] });
+  });
+
+  // A página de callback do OAuth entrega o código por content script.
+  browser.runtime.onMessage.addListener((message, sender) => {
+    if (
+      !message ||
+      typeof message !== 'object' ||
+      (message as { type?: unknown }).type !== 'sei-flow:oauth-callback'
+    ) {
+      return false;
+    }
+    void handleOAuthCallbackMessage(
+      message as {
+        code?: unknown;
+        state?: unknown;
+        error?: unknown;
+        errorDescription?: unknown;
+      },
+      { url: sender.url, tab: sender.tab ? { id: sender.tab.id } : undefined },
+    );
+    return false;
   });
 
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {

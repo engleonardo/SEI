@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { TrelloCard, TrelloLabel } from '../../core/domain/types';
 import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import { openOptionsPage } from '../../core/messaging/actions';
+import { watchSyncChanges } from '../../core/storage/sync-tick';
 import { Icon } from '../icons';
 import { labelColorHex, labelTextColor } from '../utils';
 import { CardStack } from '../components/CardStack';
@@ -64,6 +65,28 @@ export function ProcessPanel({
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  // Atualiza quando o dashboard altera algo e ao voltar para a aba do SEI.
+  useEffect(() => {
+    let timer: number | null = null;
+    const reload = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = null;
+        void load();
+      }, 400);
+    };
+    const unwatch = watchSyncChanges(reload);
+    window.addEventListener('focus', reload);
+    document.addEventListener('visibilitychange', reload);
+    return () => {
+      unwatch();
+      window.removeEventListener('focus', reload);
+      document.removeEventListener('visibilitychange', reload);
+      if (timer) window.clearTimeout(timer);
+    };
   }, [load]);
 
   const onChanged = (card: TrelloCard) => {

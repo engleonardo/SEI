@@ -17,6 +17,7 @@ import {
   type RuleTriggerType,
 } from '../../../core/domain/rules';
 import { parseRulesImport } from '../../../core/domain/rule-import';
+import { copyRulesToBoard } from '../../../core/domain/rule-copy';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
 import type { RuleStats } from '../../../core/storage/rule-stats';
 import type { RuleLogEntry } from '../../../core/storage/rule-log';
@@ -54,6 +55,10 @@ export function RulesSection({
   const [importError, setImportError] = useState<string | null>(null);
   const [pendingReplace, setPendingReplace] = useState<Rule[] | null>(null);
   const [importing, setImporting] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copySource, setCopySource] = useState('');
+  const [copyTarget, setCopyTarget] = useState('');
+  const [copying, setCopying] = useState(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const saveSeq = useRef(0);
 
@@ -291,9 +296,7 @@ export function RulesSection({
 
   const toggleConditionLabel = (rule: Rule, labelId: string) => {
     const current = rule.trigger.labelIds ?? [];
-    const next = current.includes(labelId)
-      ? current.filter((id) => id !== labelId)
-      : [...current, labelId];
+    const next = current.includes(labelId) ? current.filter((id) => id !== labelId) : [...current, labelId];
     updateRule(rule.id, {
       trigger: {
         ...rule.trigger,
@@ -376,6 +379,66 @@ export function RulesSection({
 
   const addRule = () => {
     persist([...rules, createRule({ name: 'Nova regra', enabled: false })], 'Regra criada.');
+  };
+
+  const openCopy = () => {
+    const source = rules.find((rule) => rule.boardId)?.boardId ?? boards[0]?.id ?? '';
+    const target = boards.find((board) => board.id !== source)?.id ?? '';
+    setCopySource(source);
+    setCopyTarget(target);
+    setCopyOpen(true);
+  };
+
+  const copyRules = async () => {
+    if (!copySource || !copyTarget || copySource === copyTarget) {
+      notify({ kind: 'error', text: 'Escolha quadros de origem e destino diferentes.' });
+      return;
+    }
+    const sourceRules = rules.filter((rule) => rule.boardId === copySource);
+    if (sourceRules.length === 0) {
+      notify({ kind: 'warning', text: 'O quadro de origem não tem regras.' });
+      return;
+    }
+    setCopying(true);
+    try {
+      const [sourceLists, sourceLabels, targetLists, targetLabels] = await Promise.all([
+        callRpc('trello:lists', { boardId: copySource, fresh: true }),
+        callRpc('trello:board-labels', { boardId: copySource, fresh: true }),
+        callRpc('trello:lists', { boardId: copyTarget, fresh: true }),
+        callRpc('trello:board-labels', { boardId: copyTarget, fresh: true }),
+      ]);
+
+      const result = copyRulesToBoard(
+        sourceRules,
+        { lists: sourceLists, labels: sourceLabels },
+        { lists: targetLists, labels: targetLabels },
+        copyTarget,
+      );
+
+      if (result.copied === 0) {
+        notify({
+          kind: 'warning',
+          text: 'Nenhuma regra pôde ser copiada: as listas ou etiquetas não existem no quadro de destino.',
+        });
+        return;
+      }
+
+      // As regras copiadas já aparecem com as listas/etiquetas do destino.
+      setLists((previous) => ({ ...previous, [copyTarget]: targetLists }));
+      setLabels((previous) => ({ ...previous, [copyTarget]: targetLabels }));
+
+      persist(
+        [...rules, ...result.rules],
+        `${result.copied} regra(s) copiada(s).${
+          result.skipped > 0 ? ` ${result.skipped} ignorada(s) por lista/etiqueta ausente.` : ''
+        }`,
+      );
+      setCopyOpen(false);
+    } catch (cause) {
+      notify({ kind: 'error', text: errorMessage(cause) });
+    } finally {
+      setCopying(false);
+    }
   };
 
   const applyNow = async (rule: Rule) => {
@@ -503,6 +566,16 @@ export function RulesSection({
             <button type="button" className="sfo-btn" onClick={openImport}>
               <Icon name="link" size={14} />
               Importar regras
+            </button>
+            <button
+              type="button"
+              className="sfo-btn"
+              onClick={openCopy}
+              disabled={rules.length === 0 || boards.length < 2}
+              title="Copiar as regras de um quadro para outro"
+            >
+              <Icon name="copy" size={14} />
+              Copiar regras
             </button>
             <span className="sfo-hint">Backup completo (configurações + regras) em Opções → Backup.</span>
             <span className={`sfo-rules-save${saveState === 'error' ? ' sfo-rules-save--error' : ''}`}>
@@ -1114,6 +1187,69 @@ export function RulesSection({
           <p className="sf-hint" style={{ margin: 0 }}>
             <strong>Adicionar</strong> mantém as regras atuais e acrescenta as novas.{' '}
             <strong>Substituir tudo</strong> apaga as atuais e usa apenas as importadas.
+          </p>
+        </Modal>
+      )}
+      {copyOpen && (
+        <Modal
+          title="Copiar regras entre quadros"
+          subtitle="As listas e etiquetas são associadas pelo nome."
+          size="sm"
+          onClose={() => {
+            if (!copying) setCopyOpen(false);
+          }}
+          footer={
+            <>
+              <button type="button" className="sf-btn" onClick={() => setCopyOpen(false)} disabled={copying}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="sf-btn sf-btn--primary"
+                onClick={() => void copyRules()}
+                disabled={copying || !copySource || !copyTarget || copySource === copyTarget}
+              >
+                {copying ? <span className="sf-spinner" /> : <Icon name="copy" size={14} />}
+                Copiar regras
+              </button>
+            </>
+          }
+        >
+          <div className="sf-field">
+            <label htmlFor="sfo-copy-source">Quadro de origem</label>
+            <select
+              id="sfo-copy-source"
+              className="sf-select"
+              value={copySource}
+              onChange={(event) => setCopySource(event.target.value)}
+              disabled={copying}
+            >
+              {boards.map((board) => (
+                <option key={board.id} value={board.id}>
+                  {board.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="sf-field">
+            <label htmlFor="sfo-copy-target">Quadro de destino</label>
+            <select
+              id="sfo-copy-target"
+              className="sf-select"
+              value={copyTarget}
+              onChange={(event) => setCopyTarget(event.target.value)}
+              disabled={copying}
+            >
+              {boards.map((board) => (
+                <option key={board.id} value={board.id}>
+                  {board.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="sf-hint" style={{ margin: 0 }}>
+            As regras do quadro de origem são copiadas para o destino, associando listas e etiquetas pelo
+            nome. Regras com listas ou etiquetas que não existem no destino são ignoradas.
           </p>
         </Modal>
       )}

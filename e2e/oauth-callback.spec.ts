@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 
 const PAGE = pathToFileURL(join(process.cwd(), 'site', 'oauth-callback.html')).href;
 
-function state(value: { n: string; r: string }) {
+function state(value: { n: string; r: string; m?: 'page' }) {
   return Buffer.from(JSON.stringify(value)).toString('base64url');
 }
 
@@ -45,6 +45,21 @@ test('callback bloqueia retorno fora da allowlist', async ({ page }) => {
   );
 
   await expect(page.locator('#message')).toHaveText('Não foi possível concluir o login.');
+  expect(page.url()).toContain('oauth-callback.html');
+});
+
+test('callback em modo página não redireciona', async ({ page }) => {
+  await page.goto(
+    `${PAGE}?code=abc&state=${state({
+      n: 'nonce',
+      r: 'https://engleonardo.github.io/SEI/oauth-callback.html',
+      m: 'page',
+    })}`,
+  );
+
+  await expect(page.locator('#message')).toHaveText(
+    'Login confirmado. Pode fechar esta aba.',
+  );
   expect(page.url()).toContain('oauth-callback.html');
 });
 

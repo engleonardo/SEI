@@ -13,7 +13,9 @@ Gerencie cartões do Trello no SEI: crie, vincule, edite, automatize e mantenha 
 ```
 O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para você trabalhar sem alternar de aba.
 
-• Entre com sua conta do Trello (OAuth 2.0) em um clique, sem copiar chaves; a sessão fica apenas no seu navegador.
+• Entre com sua conta do Trello em uma aba de autorização; a página de callback conclui o login. Funciona em Chrome, Edge e Firefox, sem URL por instalação.
+• Crie e renomeie quadros pela extensão, sem abrir o Trello.
+• Copie automações de um quadro para outro, associando listas e etiquetas pelo nome.
 • Sincronize regras e destino entre navegadores pela sua conta do Trello: as mesmas configurações em Chrome, Edge e Firefox.
 • Saia quando quiser: o logout apaga os dados locais e volta para a tela de conexão; ao entrar de novo, a sincronização restaura as regras e o destino.
 • Crie cartões no Trello a partir de um processo do SEI, escolhendo etiquetas, quadro, lista, início e término.
@@ -88,8 +90,8 @@ Integrar cartões do Trello a processos do SEI, permitindo criar, vincular, visu
 - **`activeTab`**: identificar a aba atual quando o usuário clica no ícone, para oferecer a ativação do site correto no painel inicial.
 - **`alarms`**: verificar periodicamente prazos e processos atualizados para manter as notificações.
 - **`notifications`**: avisar o usuário, uma vez por dia, sobre cartões atrasados ou vencendo hoje.
-- **`identity`**: abrir a tela oficial de login do Trello (OAuth 2.0 com PKCE) quando o usuário escolhe “Conectar com Trello”. Não lê a identidade do navegador nem de outros serviços.
-- **`https://api.trello.com/*`**: ler e gravar cartões, etiquetas, checklists e prazos na conta do próprio usuário.
+- **`https://engleonardo.github.io/SEI/oauth-callback.html`**: página de callback do login. Um content script restrito a essa página lê o código e o estado do OAuth e entrega à extensão; não acessa outras páginas.
+- **`https://api.trello.com/*`**: ler e gravar cartões, etiquetas, checklists, anexos, prazos e quadros na conta do próprio usuário.
 - **`https://auth.atlassian.com/*`**: trocar o código de autorização do Trello pelos tokens da própria sessão do usuário (login e renovação), sem client secret.
 - **Permissão opcional de host (`*://*/*`)**: ativar o SEI Flow em instalações do SEI de qualquer órgão/domínio. É solicitada em tempo de execução, por gesto do usuário; o script encerra sem alterar páginas que não sejam do SEI. A mesma permissão permite a opção de ativar automaticamente apenas endereços cujo host começa com "sei".
 
@@ -107,12 +109,12 @@ Integrar cartões do Trello a processos do SEI, permitindo criar, vincular, visu
 Os arquivos estão em `docs/store/screenshots-1280x800/` (gerados por `node scripts/store-screenshots.mjs`). A Chrome Web Store aceita até 5 imagens; a ordem recomendada é:
 
 1. `dashboard-1280x800.png` - painel inicial com métricas, total do quadro, listas na ordem do Trello e ordenação por lista.
-2. `kanban-1280x800.png` - visão Kanban com colunas, cartões compactos e arraste.
-3. `dashboard-dark-1280x800.png` - o mesmo painel no modo escuro.
-4. `process-1280x800.png` - processo aberto com cartões, caminho do quadro/lista e ações.
+2. `options-1280x800.png` - Conexão com o login OAuth e o modo manual recolhido.
+3. `destination-1280x800.png` - quadro/lista padrão, com criar e renomear quadro.
+4. `kanban-1280x800.png` - visão Kanban com colunas, cartões compactos e arraste.
 5. `rules-1280x800.png` - regras automáticas com contador, aplicar agora e desfazer.
 
-Imagens adicionais para documentação: `rules-dark-1280x800.png`, `filter-1280x800.png`, `create-dialog-1280x800.png` e `options-1280x800.png` (Opções → Conexão, com login OAuth, conta conectada e alternativa manual recolhida).
+Imagens adicionais para documentação: `dashboard-dark-1280x800.png`, `process-1280x800.png`, `rules-dark-1280x800.png`, `filter-1280x800.png` e `create-dialog-1280x800.png`.
 
 Para regerar: `npm run build` e depois `node scripts/store-screenshots.mjs`. As capturas usam dados fictícios.
 

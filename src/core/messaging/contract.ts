@@ -27,7 +27,8 @@ export interface RpcMap {
   'settings:save': { payload: Partial<Settings>; result: Settings };
   'settings:test-connection': { payload: undefined; result: ConnectionInfo };
   'auth:status': { payload: undefined; result: AuthStatus };
-  'auth:login': { payload: undefined; result: AuthStatus };
+  'auth:start': { payload: undefined; result: undefined };
+  'auth:finish': { payload: undefined; result: undefined };
   'auth:logout': { payload: { clearManual?: boolean } | undefined; result: AuthStatus };
   'sync:config': { payload: { force?: boolean } | undefined; result: SyncResult };  'settings:clear-cache': { payload: undefined; result: { cleared: true } };
   'settings:export': {
@@ -97,6 +98,8 @@ export interface RpcMap {
   };
   'trello:copy-card': { payload: { cardId: string; listId: string }; result: TrelloCard };
   'trello:copy-board': { payload: { boardId: string; name: string }; result: TrelloBoard };
+  'trello:create-board': { payload: { name: string }; result: TrelloBoard };
+  'trello:rename-board': { payload: { boardId: string; name: string }; result: TrelloBoard };
   'trello:mirror-card': {
     payload: { cardId: string; listId: string };
     result: { card: TrelloCard; group: MirrorGroup };

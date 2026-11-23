@@ -29,7 +29,11 @@ export function DiagnosticsSection({
   const [confirmLink, setConfirmLink] = useState(false);
   const manifest = browser.runtime.getManifest();
   const permissions = [...(manifest.permissions ?? []), ...(manifest.host_permissions ?? [])];
-  const optional = manifest.optional_host_permissions ?? [];
+  const optional = [
+    ...(manifest.optional_host_permissions ?? []),
+    // O Firefox declara hosts opcionais em `optional_permissions`.
+    ...(manifest.optional_permissions ?? []),
+  ];
 
   const clearCache = async () => {
     setBusy(true);
@@ -143,6 +147,7 @@ export function DiagnosticsSection({
     `Quadro padrão: ${settings.defaultBoardName || '(não configurado)'}`,
     `Lista padrão: ${settings.defaultListName || '(não configurado)'}`,
     `Permissões: ${permissions.join(', ')}`,
+    'Callback OAuth: https://engleonardo.github.io/SEI/oauth-callback.html',
   ].join('\n');
 
   const copy = async () => {
@@ -200,7 +205,17 @@ export function DiagnosticsSection({
           <dd>
             Credenciais e preferências em <code>storage.local</code>; cache com TTL no mesmo local.
           </dd>
+          <dt>Callback OAuth</dt>
+          <dd>
+            <code style={{ overflowWrap: 'anywhere' }}>
+              https://engleonardo.github.io/SEI/oauth-callback.html
+            </code>
+          </dd>
         </dl>
+        <p className="sfo-hint" style={{ margin: '10px 0 0' }}>
+          O login abre a autorização do Trello em uma aba e conclui pela página de callback. Não é preciso
+          cadastrar URL por navegador ou por instalação.
+        </p>
       </CollapsibleCard>
 
       <CollapsibleCard

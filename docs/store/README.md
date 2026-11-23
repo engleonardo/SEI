@@ -1,11 +1,15 @@
 # Publicação na Chrome Web Store - checklist
 
+> **Ordem obrigatória da 1.7.0:** merge da branch na `main` (deploy do GitHub Pages) → conferir a página de callback ao vivo → tag `v1.7.0` → Release → lojas.
+>
+> A tag dispara o workflow **Release** e, quando ele termina, o **publish-store.yml**, que envia **e publica** no Chrome e na AMO automaticamente se os segredos estiverem configurados (nesta máquina eles estão: `CWS_*`, `AMO_*` e `EDGE_*`). Não crie a tag antes de a página de callback estar no ar.
+
 ## Antes de enviar
 
 - [ ] Conta de desenvolvedor paga e verificada no Chrome Web Store.
 - [ ] `npm ci && npm run verify` passando.
 - [ ] `npm run check:package` sem nomes reservados (`_metadata`) no build.
-- [ ] `npm run build && npm run zip` gerando `.output/sei-flow-1.6.0-chrome.zip`.
+- [ ] `npm run build && npm run zip` gerando `.output/sei-flow-1.7.0-chrome.zip`.
 - [ ] Ícone 128×128 correto (`public/icon-128.png`).
 - [ ] Screenshots 1280×800 em `docs/store/screenshots-1280x800/`.
 - [ ] Banner 440×280 em `docs/store/banner-440x280.png` (opcional, para destaque).
@@ -24,7 +28,7 @@
 
 ## Após publicar
 
-- [ ] Criar uma tag `v1.6.0` (ou a versão publicada) no GitHub.
+- [ ] Criar uma tag `v1.7.0` (ou a versão publicada) no GitHub.
 - [ ] Anexar o zip ao GitHub Release.
 - [ ] Configurar os segredos da loja para o envio automático (veja `auto-publish.md`).
 - [ ] Confirmar o link da loja no README.
