@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -190,10 +190,12 @@ function KanbanColumn({
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(group.title);
   const [titleBusy, setTitleBusy] = useState(false);
+  const cancelTitleRef = useRef(false);
 
   const saveTitle = async () => {
     const next = titleDraft.trim();
     if (!next || next === group.title) {
+      cancelTitleRef.current = true;
       setEditingTitle(false);
       setTitleDraft(group.title);
       return;
@@ -201,6 +203,7 @@ function KanbanColumn({
     setTitleBusy(true);
     try {
       await onRenameList?.(listId, next);
+      cancelTitleRef.current = true;
       setEditingTitle(false);
     } finally {
       setTitleBusy(false);
@@ -227,9 +230,17 @@ function KanbanColumn({
               }
               if (event.key === 'Escape') {
                 event.preventDefault();
+                cancelTitleRef.current = true;
                 setTitleDraft(group.title);
                 setEditingTitle(false);
               }
+            }}
+            onBlur={() => {
+              if (cancelTitleRef.current) {
+                cancelTitleRef.current = false;
+                return;
+              }
+              void saveTitle();
             }}
             autoFocus
             disabled={titleBusy}
@@ -240,6 +251,7 @@ function KanbanColumn({
             className="sdo-kanban-column__title"
             onDoubleClick={() => {
               if (!onRenameList) return;
+              cancelTitleRef.current = false;
               setTitleDraft(group.title);
               setEditingTitle(true);
             }}
@@ -325,7 +337,15 @@ function NewListFooter({ onCreate }: { onCreate: (name: string) => Promise<void>
   return (
     <div className="sdo-kanban-footer">
       {open ? (
-        <div className="sdo-kanban-newlist-form">
+        <div
+          className="sdo-kanban-newlist-form"
+          onBlur={(event) => {
+            const next = event.relatedTarget as Node | null;
+            if (next && event.currentTarget.contains(next)) return;
+            setName('');
+            setOpen(false);
+          }}
+        >
           <input
             className="sdo-inline-input"
             value={name}

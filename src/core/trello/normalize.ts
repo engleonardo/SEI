@@ -36,6 +36,8 @@ export function toCard(
     list: list ? { id: list.id, name: list.name, pos: list.pos } : null,
     links,
     hasChecklist: Array.isArray(raw.idChecklists) && raw.idChecklists.length > 0,
+    checklistItems: Number(raw.badges?.checkItems ?? 0),
+    checklistChecked: Number(raw.badges?.checkItemsChecked ?? 0),
     attachmentCount: Number(raw.badges?.attachments ?? 0),
     lastActivity: raw.dateLastActivity ?? null,
   };

@@ -106,6 +106,8 @@ function makeCard(
     list: { id: list.id, name: list.name, pos: list.pos },
     links: parseLinks(desc),
     hasChecklist: Boolean(input.hasChecklist),
+    checklistItems: input.hasChecklist ? 2 : 0,
+    checklistChecked: input.hasChecklist ? 1 : 0,
     attachmentCount: input.attachmentCount ?? 0,
     lastActivity: new Date().toISOString(),
   };

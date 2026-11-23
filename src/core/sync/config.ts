@@ -325,6 +325,11 @@ function enqueue<T>(task: () => Promise<T>): Promise<T> {
 /** Envia o estado local agora (usado após salvar regras/destino). */
 export function pushConfigNow(): Promise<SyncResult> {
   return enqueue(async () => {
+    const settings = await getSettings();
+    if (settings.skipTrello) {
+      const meta = await readMeta();
+      return { pulled: false, pushed: false, skipped: true, updatedAt: meta.updatedAt };
+    }
     const client = new TrelloClient(loadTrelloCredentials);
     return pushConfig(client);
   });
@@ -335,6 +340,13 @@ export function pushConfigNow(): Promise<SyncResult> {
  * vazio não sobrescreve o Trello com as regras padrão.
  */
 async function runSync(options: { force?: boolean } = {}): Promise<SyncResult> {
+  // O modo sem Trello é 100% local: nunca lê nem grava na conta.
+  const settings = await getSettings();
+  if (settings.skipTrello) {
+    const meta = await readMeta();
+    return { pulled: false, pushed: false, skipped: true, updatedAt: meta.updatedAt };
+  }
+
   const client = new TrelloClient(loadTrelloCredentials);
   if (pendingPush) {
     // Mudança local ainda não enviada: envia antes de qualquer pull.

@@ -61,6 +61,7 @@ export interface TrelloCardApi {
   badges?: {
     attachments?: number;
     checkItems?: number;
+    checkItemsChecked?: number;
     comments?: number;
     description?: boolean;
   } | null;
@@ -84,6 +85,9 @@ export interface TrelloCard {
   list: TrelloList | null;
   links: string[];
   hasChecklist: boolean;
+  /** Itens do checklist e quantos estão concluídos (badges do Trello). */
+  checklistItems?: number;
+  checklistChecked?: number;
   /** Quantidade de anexos informada pelos badges do Trello. */
   attachmentCount?: number;
   lastActivity: string | null;

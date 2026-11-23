@@ -1112,6 +1112,45 @@
   margin-top: 6px;
 }
 
+.sdo-card__checklist {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sdo-card__checklist:hover {
+  color: var(--accent);
+}
+
+.sdo-card__expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.sdo-card__expand:hover,
+.sdo-card__expand--on {
+  background: var(--surface);
+  color: var(--accent);
+}
+
 .sdo-label {
   display: inline-flex;
   align-items: center;

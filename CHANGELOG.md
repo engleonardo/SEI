@@ -8,22 +8,25 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 ### Adicionado
 
 - **Criar e renomear listas**: “Nova lista” discreto no rodapé e renomear com duplo clique no nome da coluna do Kanban.
-- **Olho para ver a descrição** do cartão sem abrir o editor, expandindo no próprio cartão.
+- **Três pontinhos (•••)** na linha de informações expandem a descrição no próprio cartão, sem popup.
 - **Destaque no ícone de anexo** quando o cartão tem anexos.
+- **Checklist dentro do texto** do cartão, com o progresso (ex.: 1/2), sem chip na linha de informações.
 - **Quadro das regras no topo**: seletor único; as listas/etiquetas de cada regra são desse quadro, e o seletor por regra saiu. As etiquetas aparecem nas cores do Trello.
 - **Sincronizar agora** em Regras, para puxar a configuração da conta do Trello.
 - **Continuar sem Trello**: a extensão abre com quadros, listas e cartões de exemplo salvos localmente; dá para criar, editar e mover sem conectar.
+- **Edição por clique fora**: nomes, descrições e listas salvam ao clicar em outro local; o formulário de nova lista fecha ao sair.
 
 ### Alterado
 
-- **Pino do cartão** ao lado do nome (lado direito).
-- **Colunas do Kanban** espremidas para caber na tela e centralizadas; a largura atual virou o máximo.
+- **Pino do cartão** no canto direito da linha de etiquetas, junto do ícone de etiqueta.
+- **Colunas do Kanban** espremidas para caber na tela e centralizadas; a largura atual virou o máximo, com limite de 180px por coluna e rolagem horizontal depois disso.
 - **Editor de descrição** sem o espaçamento extra entre linhas que aparecia ao abrir o cartão.
 - **Notificações do navegador removidas**: permissão `notifications`, alarme de prazos e opção nas Preferências.
 
 ### Corrigido
 
 - **Regras no login**: o background sincroniza a configuração logo após o callback, sem depender da aba de Opções; a tela de Regras recarrega quando a configuração é puxada.
+- **Modo sem Trello isolado**: nenhum push é feito enquanto o modo está ativo; ao conectar, os dados de exemplo são descartados e a configuração real é puxada do Trello.
 - **Cópia de regras**: etiqueta nomeada associa somente por nome (não cai para a mesma cor) e o quadro de destino já aparece com listas/etiquetas carregadas.
 
 ## [1.7.0] - 2026-11-23

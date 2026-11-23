@@ -40,7 +40,9 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Atalhos **SEI** e **Trello** no cabeçalho para abrir os dois sistemas rapidamente.
 • As listas aparecem na mesma ordem do Trello, com contagem de cartões.
 • Crie e renomeie listas direto no dashboard: “Nova lista” discreto no rodapé e duplo clique no nome da coluna do Kanban.
-• Visualize a descrição do cartão com o olho, expandindo no próprio cartão, sem abrir o editor.
+• Expanda a descrição no próprio cartão pelos três pontinhos (•••), sem popup.
+• O pino fica no canto direito da linha de etiquetas, junto do ícone de etiqueta.
+• O checklist aparece dentro do texto do cartão, com o progresso.
 • O ícone de anexo fica destacado quando o cartão tem anexos.
 • Filtre por etiqueta (inclusive clicando na etiqueta do cartão), tipo de processo, prazo, quadro, lista, vínculo com o SEI, atualização no Trello e atualização no SEI.
 • Filtro "Sem vínculo" para localizar cartões que ainda não estão ligados a um processo.

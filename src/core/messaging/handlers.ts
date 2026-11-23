@@ -51,8 +51,34 @@ const repository = new TrelloRepository(loadTrelloCredentials);
  * Fecha o login: recupera o backup local (se houver) e puxa a configuração
  * sincronizada do Trello. Roda no background, sem depender da tela de Opções.
  */
+async function clearDemoConfig(): Promise<void> {
+  // Dados do modo sem Trello nunca podem ir para a conta: limpa regras,
+  // destino e metadados de sync antes de qualquer leitura/gravação real.
+  await clearRules();
+  await clearRuleStats();
+  await clearRuleLog();
+  await clearRuleRuns();
+  await clearSyncSnapshot();
+  await clearConfigSyncMeta();
+  await saveSettings({
+    defaultBoardId: '',
+    defaultBoardName: '',
+    defaultListId: '',
+    defaultListName: '',
+  });
+}
+
 export async function finishAuth(): Promise<void> {
   const session = await readSession();
+  const settings = await getSettings();
+  if (settings.skipTrello) {
+    if (!session) return;
+    // Login concluído enquanto o modo sem Trello estava ativo: sai do modo e
+    // descarta os dados de exemplo antes de puxar a configuração real.
+    await saveSettings({ skipTrello: false });
+    cancelConfigSync();
+    await clearDemoConfig();
+  }
   try {
     await restoreLocalConfig(session?.account?.id);
   } catch {
@@ -77,20 +103,15 @@ const handlers = {
     if (previous.appKey !== next.appKey || previous.appToken !== next.appToken) {
       await cacheClear();
     }
+    if (!previous.skipTrello && next.skipTrello) {
+      // Entrando no modo sem Trello: nenhum push pendente pode escapar.
+      cancelConfigSync();
+    }
     if (previous.skipTrello && !next.skipTrello) {
       // Ao sair do modo sem Trello, começa limpo: o login/sync traz o que é real.
-      await clearRules();
-      await clearRuleStats();
-      await clearRuleLog();
-      await clearRuleRuns();
-      await clearSyncSnapshot();
-      await clearConfigSyncMeta();
-      next = await saveSettings({
-        defaultBoardId: '',
-        defaultBoardName: '',
-        defaultListId: '',
-        defaultListName: '',
-      });
+      cancelConfigSync();
+      await clearDemoConfig();
+      next = await getSettings();
     }
     if (
       !next.skipTrello &&

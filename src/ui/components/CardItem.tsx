@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState, type FocusEvent } from 'react';
 import type { CardPatch, TrelloCard } from '../../core/domain/types';
 import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import { Icon } from '../icons';
@@ -54,6 +54,7 @@ export function CardItem({
   const [nameDraft, setNameDraft] = useState(card.name);
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState(card.description);
+  const descDraftRef = useRef(card.description);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
@@ -93,14 +94,30 @@ export function CardItem({
   };
 
   const saveDescription = async () => {
-    if (descDraft === card.description) {
+    const next = descDraftRef.current;
+    if (next === card.description) {
       setEditingDesc(false);
       return;
     }
-    if (await update({ description: descDraft })) {
+    if (await update({ description: next })) {
       setEditingDesc(false);
       showToast('Descrição atualizada.', 'success');
     }
+  };
+
+  const handleNameBlur = () => {
+    if (!nameDraft.trim()) {
+      setNameDraft(card.name);
+      setEditingName(false);
+      return;
+    }
+    void saveName();
+  };
+
+  const handleDescriptionBlur = (event: FocusEvent<HTMLDivElement>) => {
+    const next = event.relatedTarget as Node | null;
+    if (next && event.currentTarget.contains(next)) return;
+    void saveDescription();
   };
 
   const refresh = async () => {
@@ -189,6 +206,7 @@ export function CardItem({
                         setEditingName(false);
                       }
                     }}
+                    onBlur={handleNameBlur}
                     autoFocus
                     disabled={busy}
                     aria-label="Nome do cartão"
@@ -197,6 +215,7 @@ export function CardItem({
                     <button
                       type="button"
                       className="sf-btn sf-btn--primary sf-btn--sm"
+                      onMouseDown={(event) => event.preventDefault()}
                       onClick={() => void saveName()}
                       disabled={busy}
                     >
@@ -205,6 +224,7 @@ export function CardItem({
                     <button
                       type="button"
                       className="sf-btn sf-btn--sm"
+                      onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
                         setNameDraft(card.name);
                         setEditingName(false);
@@ -235,29 +255,6 @@ export function CardItem({
             </div>
 
             <div className="sf-card__actions">
-              {card.description && (
-                <button
-                  type="button"
-                  className={classNames('sf-icon-btn', viewExpanded && 'sf-icon-btn--pinned')}
-                  onClick={() => setViewExpanded((current) => !current)}
-                  aria-pressed={viewExpanded}
-                  aria-label={viewExpanded ? 'Recolher descrição' : 'Expandir descrição'}
-                  title={viewExpanded ? 'Recolher descrição' : 'Expandir descrição'}
-                >
-                  <Icon name="eye" size={15} />
-                </button>
-              )}
-              {onTogglePin && (
-                <button
-                  type="button"
-                  className={classNames('sf-icon-btn', pinned && 'sf-icon-btn--pinned')}
-                  onClick={() => onTogglePin(card.id)}
-                  aria-pressed={pinned}
-                  title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
-                >
-                  <Icon name="pin" size={15} />
-                </button>
-              )}
               <button
                 type="button"
                 className="sf-icon-btn"
@@ -321,13 +318,32 @@ export function CardItem({
             >
               <Icon name="tag" size={11} />
             </button>
+            {onTogglePin && (
+              <button
+                type="button"
+                className={classNames(
+                  'sf-icon-btn',
+                  'sf-card__pin',
+                  pinned && 'sf-icon-btn--pinned',
+                )}
+                onClick={() => onTogglePin(card.id)}
+                aria-pressed={pinned}
+                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+              >
+                <Icon name="pin" size={14} />
+              </button>
+            )}
           </div>
 
           {editingDesc ? (
-            <div style={{ marginTop: 8 }}>
+            <div style={{ marginTop: 8 }} onBlur={handleDescriptionBlur}>
               <DescriptionEditor
                 value={descDraft}
-                onChange={setDescDraft}
+                onChange={(value) => {
+                  setDescDraft(value);
+                  descDraftRef.current = value;
+                }}
                 disabled={busy}
                 autoFocus
                 placeholder="Escreva a descrição…"
@@ -337,6 +353,7 @@ export function CardItem({
                 <button
                   type="button"
                   className="sf-btn sf-btn--primary sf-btn--sm"
+                  onMouseDown={(event) => event.preventDefault()}
                   onClick={() => void saveDescription()}
                   disabled={busy}
                 >
@@ -345,7 +362,9 @@ export function CardItem({
                 <button
                   type="button"
                   className="sf-btn sf-btn--sm"
+                  onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
+                    descDraftRef.current = card.description;
                     setDescDraft(card.description);
                     setEditingDesc(false);
                   }}
@@ -362,6 +381,7 @@ export function CardItem({
               tabIndex={0}
               onClick={(event) => {
                 if ((event.target as HTMLElement).closest('a')) return;
+                descDraftRef.current = card.description;
                 setDescDraft(card.description);
                 setEditingDesc(true);
               }}
@@ -369,6 +389,7 @@ export function CardItem({
                 if ((event.target as HTMLElement).closest('a')) return;
                 if (event.key !== 'Enter' && event.key !== ' ') return;
                 event.preventDefault();
+                descDraftRef.current = card.description;
                 setDescDraft(card.description);
                 setEditingDesc(true);
               }}
@@ -394,6 +415,23 @@ export function CardItem({
             </button>
           )}
 
+          {card.hasChecklist && (
+            <button
+              type="button"
+              className="sf-card__checklist"
+              onClick={() => setDialog('checklist')}
+              title="Abrir checklist"
+            >
+              <Icon name="checklist" size={12} />
+              <span>
+                Checklist
+                {card.checklistItems
+                  ? ` · ${card.checklistChecked ?? 0}/${card.checklistItems}`
+                  : ''}
+              </span>
+            </button>
+          )}
+
           <div className="sf-card__meta">
             {card.dueComplete && !card.due && <span className="sf-chip sf-chip--success">Concluído</span>}
             {due && (
@@ -408,18 +446,19 @@ export function CardItem({
                 {due.label}
               </button>
             )}
-            {card.hasChecklist && (
-              <button
-                type="button"
-                className="sf-chip"
-                onClick={() => setDialog('checklist')}
-                title="Abrir checklist"
-                style={{ cursor: 'pointer' }}
-              >
-                <Icon name="checklist" size={11} />
-                Checklist
-              </button>
-            )}
+            {card.description &&
+              (viewExpanded || card.description.length > 90 || card.description.includes('\n')) && (
+                <button
+                  type="button"
+                  className={classNames('sf-card__expand', viewExpanded && 'sf-card__expand--on')}
+                  onClick={() => setViewExpanded((current) => !current)}
+                  aria-expanded={viewExpanded}
+                  aria-label={viewExpanded ? 'Recolher descrição' : 'Expandir descrição'}
+                  title={viewExpanded ? 'Recolher descrição' : 'Expandir descrição'}
+                >
+                  <Icon name="more" size={14} />
+                </button>
+              )}
             {showProcessMeta && processNumber && (
               <span className="sf-card__meta-item" title="Processo vinculado">
                 <Icon name="link" size={11} />

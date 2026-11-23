@@ -1581,7 +1581,15 @@ function Dashboard() {
                 })}
               </div>
               {addingList ? (
-                <div className="sdo-lists__new-form">
+                <div
+                  className="sdo-lists__new-form"
+                  onBlur={(event) => {
+                    const next = event.relatedTarget as Node | null;
+                    if (next && event.currentTarget.contains(next)) return;
+                    setAddingList(false);
+                    setNewListName('');
+                  }}
+                >
                   <input
                     className="sdo-inline-input"
                     value={newListName}
