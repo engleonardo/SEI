@@ -5,7 +5,7 @@
 >
 > **Antes de enviar:** a página `https://engleonardo.github.io/SEI/oauth-callback.html` precisa estar publicada com o `oauth-callback.js` novo (modo `m: 'page'`). Isso acontece ao mergear a branch na `main` (workflow **Pages**). Sem esse deploy, o login conclui pelo content script, mas a aba mostra erro antes de fechar.
 >
-> **Firefox 127+:** o Firefox 127 em diante concede as permissões de host de `content_scripts` na instalação. No Firefox 115–126 o usuário pode precisar liberar o site da página de callback no painel de extensões para o content script rodar. Se quiser eliminar essa dúvida, suba `strict_min_version` para `128.0`.
+> **Firefox 128+:** a 1.7.0 exige Firefox 128 ou superior. A partir do 127 o Firefox concede as permissões de host de `content_scripts` na instalação, que é o que faz o content script da página de callback rodar sem liberação manual. No 115–126 o login poderia falhar sem aviso; por isso a versão mínima subiu.
 >
 > **Atualização:** a 1.7.0 adiciona esse host como permissão nova. O Firefox pode pedir aprovação (e desativar até aceitar) para quem já tem a 1.6.0.
 

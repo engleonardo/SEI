@@ -14,6 +14,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 ### Alterado
 
 - **Login OAuth em todos os navegadores** agora abre a autorização em uma aba e conclui pela página de callback, sem URL de retorno por instalação. Funciona igual em Chrome, Edge e Firefox.
+- **Firefox 128 ou superior**: a versão mínima subiu porque o login depende do content script da página de callback, e só a partir do Firefox 127 as permissões de host de `content_scripts` são concedidas na instalação.
 - Permissão **`identity` removida**; o login usa a página de callback e um content script restrito a ela.
 - Cache de cartões/listas reduzido e painel do SEI recarrega ao voltar para a aba, ao ganhar foco e após alterações no dashboard.
 

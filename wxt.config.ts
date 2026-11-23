@@ -38,7 +38,11 @@ export default defineConfig({
           browser_specific_settings: {
             gecko: {
               id: 'sei-flow@engleonardo',
-              strict_min_version: '115.0',
+              // O login depende do content script da página de callback. Do
+              // Firefox 127 em diante as permissões de host de content_scripts
+              // são concedidas na instalação; versões anteriores exigiriam uma
+              // liberação manual do site e o login falharia sem aviso.
+              strict_min_version: '128.0',
               data_collection_permissions: {
                 required: ['none'],
                 optional: [],
