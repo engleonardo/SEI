@@ -17,6 +17,7 @@ import {
   type RuleTriggerType,
 } from '../../../core/domain/rules';
 import { parseRulesImport } from '../../../core/domain/rule-import';
+import { copyRulesToBoard } from '../../../core/domain/rule-copy';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
 import type { RuleStats } from '../../../core/storage/rule-stats';
 import type { RuleLogEntry } from '../../../core/storage/rule-log';
@@ -295,9 +296,7 @@ export function RulesSection({
 
   const toggleConditionLabel = (rule: Rule, labelId: string) => {
     const current = rule.trigger.labelIds ?? [];
-    const next = current.includes(labelId)
-      ? current.filter((id) => id !== labelId)
-      : [...current, labelId];
+    const next = current.includes(labelId) ? current.filter((id) => id !== labelId) : [...current, labelId];
     updateRule(rule.id, {
       trigger: {
         ...rule.trigger,
@@ -390,8 +389,6 @@ export function RulesSection({
     setCopyOpen(true);
   };
 
-  const normalizeName = (value: string) => value.trim().toLocaleLowerCase('pt-BR');
-
   const copyRules = async () => {
     if (!copySource || !copyTarget || copySource === copyTarget) {
       notify({ kind: 'error', text: 'Escolha quadros de origem e destino diferentes.' });
@@ -411,105 +408,14 @@ export function RulesSection({
         callRpc('trello:board-labels', { boardId: copyTarget, fresh: true }),
       ]);
 
-      const sourceListById = new Map(sourceLists.map((list) => [list.id, list]));
-      const targetListByName = new Map(
-        targetLists.map((list) => [normalizeName(list.name), list]),
+      const result = copyRulesToBoard(
+        sourceRules,
+        { lists: sourceLists, labels: sourceLabels },
+        { lists: targetLists, labels: targetLabels },
+        copyTarget,
       );
-      const sourceLabelById = new Map(sourceLabels.map((label) => [label.id, label]));
-      const targetLabelByName = new Map(
-        targetLabels
-          .filter((label) => label.name.trim())
-          .map((label) => [normalizeName(label.name), label]),
-      );
-      const targetLabelByColor = new Map(targetLabels.map((label) => [label.color, label]));
-      const mapLabel = (id: string): TrelloLabel | null => {
-        const source = sourceLabelById.get(id);
-        if (!source) return null;
-        const byName = source.name.trim()
-          ? targetLabelByName.get(normalizeName(source.name))
-          : undefined;
-        return byName ?? targetLabelByColor.get(source.color) ?? null;
-      };
 
-      const copied: Rule[] = [];
-      let skipped = 0;
-
-      for (const rule of sourceRules) {
-        let missing = false;
-
-        let triggerListId: string | undefined;
-        if (rule.trigger.listId) {
-          const sourceList = sourceListById.get(rule.trigger.listId);
-          const targetList = sourceList
-            ? targetListByName.get(normalizeName(sourceList.name))
-            : undefined;
-          if (!targetList) missing = true;
-          else triggerListId = targetList.id;
-        }
-
-        let triggerLabelIds: string[] | undefined;
-        if (!missing && rule.trigger.labelIds && rule.trigger.labelIds.length > 0) {
-          triggerLabelIds = [];
-          for (const labelId of rule.trigger.labelIds) {
-            const mapped = mapLabel(labelId);
-            if (!mapped) {
-              missing = true;
-              break;
-            }
-            triggerLabelIds.push(mapped.id);
-          }
-        }
-
-        const actions: RuleAction[] = [];
-        for (const action of rule.actions) {
-          if (missing) break;
-          if (action.type === 'moveToList' && action.listId) {
-            const sourceList = sourceListById.get(action.listId);
-            const targetList = sourceList
-              ? targetListByName.get(normalizeName(sourceList.name))
-              : undefined;
-            if (!targetList) {
-              missing = true;
-              break;
-            }
-            actions.push({ ...action, listId: targetList.id });
-            continue;
-          }
-          if ((action.type === 'addLabel' || action.type === 'removeLabel') && action.labelId) {
-            const mapped = mapLabel(action.labelId);
-            if (!mapped) {
-              missing = true;
-              break;
-            }
-            actions.push({
-              ...action,
-              labelId: mapped.id,
-              labelName: mapped.name || action.labelName,
-            });
-            continue;
-          }
-          actions.push({ ...action });
-        }
-
-        if (missing) {
-          skipped += 1;
-          continue;
-        }
-
-        copied.push({
-          ...rule,
-          id: newRuleId(),
-          boardId: copyTarget,
-          trigger: {
-            ...rule.trigger,
-            listId: triggerListId,
-            labelIds: rule.trigger.labelIds ? triggerLabelIds : undefined,
-          },
-          actions,
-        });
-      }
-
-      if (copied.length === 0) {
+      if (result.copied === 0) {
         notify({
           kind: 'warning',
           text: 'Nenhuma regra pôde ser copiada: as listas ou etiquetas não existem no quadro de destino.',
@@ -517,10 +423,14 @@ export function RulesSection({
         return;
       }
 
+      // As regras copiadas já aparecem com as listas/etiquetas do destino.
+      setLists((previous) => ({ ...previous, [copyTarget]: targetLists }));
+      setLabels((previous) => ({ ...previous, [copyTarget]: targetLabels }));
+
       persist(
-        [...rules, ...copied],
-        `${copied.length} regra(s) copiada(s).${
-          skipped > 0 ? ` ${skipped} ignorada(s) por lista/etiqueta ausente.` : ''
+        [...rules, ...result.rules],
+        `${result.copied} regra(s) copiada(s).${
+          result.skipped > 0 ? ` ${result.skipped} ignorada(s) por lista/etiqueta ausente.` : ''
         }`,
       );
       setCopyOpen(false);
@@ -1290,12 +1200,7 @@ export function RulesSection({
           }}
           footer={
             <>
-              <button
-                type="button"
-                className="sf-btn"
-                onClick={() => setCopyOpen(false)}
-                disabled={copying}
-              >
+              <button type="button" className="sf-btn" onClick={() => setCopyOpen(false)} disabled={copying}>
                 Cancelar
               </button>
               <button
@@ -1343,8 +1248,8 @@ export function RulesSection({
             </select>
           </div>
           <p className="sf-hint" style={{ margin: 0 }}>
-            As regras do quadro de origem são copiadas para o destino, associando listas e etiquetas
-            pelo nome. Regras com listas ou etiquetas que não existem no destino são ignoradas.
+            As regras do quadro de origem são copiadas para o destino, associando listas e etiquetas pelo
+            nome. Regras com listas ou etiquetas que não existem no destino são ignoradas.
           </p>
         </Modal>
       )}
