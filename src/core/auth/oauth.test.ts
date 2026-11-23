@@ -45,8 +45,8 @@ describe('login OAuth pela página de callback', () => {
     const state = encodeState({ n: 'nonce-1', r: OAUTH_REDIRECT_URI, m: 'page' });
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const href = String(input);
-      if (href.includes('auth.atlassian.com')) {
+      const url = new URL(String(input));
+      if (url.hostname === 'auth.atlassian.com') {
         return jsonResponse({
           access_token: 'access-1',
           refresh_token: 'refresh-1',
