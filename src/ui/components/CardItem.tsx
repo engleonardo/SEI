@@ -6,7 +6,7 @@ import { showToast } from '../toast';
 import { classNames, formatDue, isOverdue, labelColorHex, labelTextColor, locationLabel } from '../utils';
 import { CardDescription } from './CardDescription';
 import { DescriptionEditor } from './DescriptionEditor';
-import { ConfirmDialog } from './Modal';
+import { ConfirmDialog, Modal } from './Modal';
 import { InlineLocationPicker } from './InlineLocationPicker';
 import { ChecklistDialog } from './dialogs/ChecklistDialog';
 import { AttachmentsDialog } from './dialogs/AttachmentsDialog';
@@ -57,6 +57,7 @@ export function CardItem({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
 
   const due = formatDue(card.due, card.dueComplete);
   const overdue = isOverdue(card);
@@ -234,6 +235,17 @@ export function CardItem({
             </div>
 
             <div className="sf-card__actions">
+              {card.description && (
+                <button
+                  type="button"
+                  className="sf-icon-btn"
+                  onClick={() => setViewOpen(true)}
+                  aria-label="Ver descrição"
+                  title="Ver descrição sem editar"
+                >
+                  <Icon name="eye" size={15} />
+                </button>
+              )}
               {onTogglePin && (
                 <button
                   type="button"
@@ -464,11 +476,14 @@ export function CardItem({
             </button>
             <button
               type="button"
-              className="sf-btn sf-btn--ghost sf-btn--sm"
+              className={classNames(
+                'sf-btn sf-btn--ghost sf-btn--sm',
+                Boolean(card.attachmentCount) && 'sf-btn--attached',
+              )}
               onClick={() => setDialog('attachments')}
               disabled={busy}
               aria-label="Anexos"
-              title="Anexos"
+              title={card.attachmentCount ? `Anexos (${card.attachmentCount})` : 'Anexos'}
             >
               <Icon name="paperclip" size={14} />
               {actionLabel('Anexos')}
@@ -556,9 +571,7 @@ export function CardItem({
       {dialog === 'checklist' && (
         <ChecklistDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
       )}
-      {dialog === 'attachments' && (
-        <AttachmentsDialog card={card} onClose={() => setDialog(null)} />
-      )}
+      {dialog === 'attachments' && <AttachmentsDialog card={card} onClose={() => setDialog(null)} />}
       {dialog === 'share' && <ShareDialog card={card} onClose={() => setDialog(null)} />}
       {confirmUnlink && processNumber && (
         <ConfirmDialog
@@ -580,6 +593,21 @@ export function CardItem({
             for (const id of ids) onRemoved(id);
           }}
         />
+      )}
+
+      {viewOpen && (
+        <Modal
+          title={card.name}
+          subtitle="Descrição do cartão"
+          onClose={() => setViewOpen(false)}
+          footer={
+            <button type="button" className="sf-btn" onClick={() => setViewOpen(false)}>
+              Fechar
+            </button>
+          }
+        >
+          <CardDescription text={card.description} />
+        </Modal>
       )}
     </>
   );

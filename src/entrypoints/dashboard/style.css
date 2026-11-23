@@ -1281,7 +1281,6 @@
   outline: none;
   font-size: 13px;
   line-height: 1.5;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
@@ -1605,6 +1604,18 @@
   color: var(--success);
 }
 
+.sdo-card__attachment--on {
+  color: var(--accent);
+}
+
+.sdo-card__attachment--on svg {
+  color: var(--accent);
+}
+
+.sdo-card__pin {
+  margin-left: auto;
+}
+
 /* ---------------------------------------------------------------- listas */
 
 .sdo-lists {
@@ -1891,6 +1902,106 @@
   border-radius: 999px;
   background: var(--accent);
   color: #fff;
+}
+
+.sdo-list-card-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.sdo-list-card-wrap .sdo-list-card {
+  width: 100%;
+}
+
+.sdo-list-card__edit {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+.sdo-list-card-wrap:hover .sdo-list-card__edit,
+.sdo-list-card__edit:focus-visible {
+  opacity: 1;
+}
+
+.sdo-list-card__edit:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.sdo-list-card--editing {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 8px;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--surface);
+}
+
+.sdo-list-card--editing .sdo-list-card__body {
+  width: 100%;
+}
+
+.sdo-list-card__edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sdo-list-card--add {
+  justify-content: center;
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sdo-list-card--add:hover {
+  border-color: var(--accent);
+}
+
+.sdo-list-card--add .sdo-list-card__icon {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.sdo-list-card--add .sdo-list-card__name {
+  color: var(--accent);
+}
+
+.sdo-kanban-column__title-input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: none;
+}
+
+.sdo-kanban-column.sdo-kanban-column--add {
+  flex: 0 0 190px;
+  min-width: 170px;
+  max-width: 210px;
+  justify-content: center;
+  border-style: dashed;
+  background: transparent;
 }
 
 .sdo-pill {
@@ -2581,6 +2692,7 @@
 .sdo-kanban {
   display: flex;
   align-items: flex-start;
+  justify-content: safe center;
   gap: 14px;
   padding: 2px 0 12px;
   overflow-x: auto;
@@ -2606,10 +2718,11 @@
 
 .sdo-kanban-column {
   display: flex;
-  flex: 0 0 340px;
+  flex: 1 1 0;
   flex-direction: column;
   gap: 8px;
-  width: 340px;
+  width: auto;
+  min-width: 180px;
   max-width: 340px;
   height: clamp(420px, calc(100vh - 200px), 900px);
   height: clamp(420px, calc(100dvh - 200px), 900px);

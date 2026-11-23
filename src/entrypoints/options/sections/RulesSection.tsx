@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TrelloBoard, TrelloLabel, TrelloList } from '../../../core/domain/types';
 import {
   MAX_DATE_OFFSET_DAYS,
@@ -21,6 +21,7 @@ import { copyRulesToBoard } from '../../../core/domain/rule-copy';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
 import type { RuleStats } from '../../../core/storage/rule-stats';
 import type { RuleLogEntry } from '../../../core/storage/rule-log';
+import { watchSyncChanges } from '../../../core/storage/sync-tick';
 import { Icon } from '../../../ui/icons';
 import { ConfirmDialog, Modal } from '../../../ui/components/Modal';
 import { SectionCard, Spinner, StatusPill, type Notice } from './shared';
@@ -33,7 +34,9 @@ export function RulesSection({
   notify: (notice: Notice) => void;
 }) {
   const [rules, setRules] = useState<Rule[]>([]);
+  const [activeBoardId, setActiveBoardId] = useState('');
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [lists, setLists] = useState<Record<string, TrelloList[]>>({});
   const [labels, setLabels] = useState<Record<string, TrelloLabel[]>>({});
   const [busyRule, setBusyRule] = useState<string | null>(null);
@@ -113,11 +116,10 @@ export function RulesSection({
       .then((value) => {
         if (!active) return;
         setRules(value);
-        const boardIds = new Set<string>();
-        for (const rule of value) {
-          if (rule.boardId) boardIds.add(rule.boardId);
-        }
-        for (const boardId of boardIds) void loadBoardData(boardId);
+        setActiveBoardId((previous) => {
+          if (previous && value.some((rule) => rule.boardId === previous)) return previous;
+          return value.find((rule) => rule.boardId)?.boardId || previous || '';
+        });
       })
       .catch((cause) => {
         if (active) notify({ kind: 'error', text: errorMessage(cause) });
@@ -131,7 +133,54 @@ export function RulesSection({
     return () => {
       active = false;
     };
-  }, [loadBoardData, loadLastRun, loadStats, loadLog, notify]);
+  }, [loadLastRun, loadStats, loadLog, notify]);
+
+  // Se ainda não há regra, usa o primeiro quadro disponível como contexto.
+  useEffect(() => {
+    if (activeBoardId) return;
+    const first = boards[0]?.id;
+    if (first) setActiveBoardId(first);
+  }, [boards, activeBoardId]);
+
+  // Carrega listas e etiquetas do quadro em edição (e de novo ao trocar).
+  useEffect(() => {
+    if (activeBoardId) void loadBoardData(activeBoardId);
+  }, [activeBoardId, loadBoardData]);
+
+  // O background pode puxar configuração nova (login/alarme); recarrega a lista.
+  useEffect(() => {
+    return watchSyncChanges(() => {
+      void callRpc('rules:list', undefined)
+        .then((value) => setRules(Array.isArray(value) ? value : []))
+        .catch(() => undefined);
+    });
+  }, []);
+
+  const visibleRules = useMemo(
+    () => rules.filter((rule) => rule.boardId === activeBoardId),
+    [rules, activeBoardId],
+  );
+
+  const syncNow = async () => {
+    setSyncing(true);
+    try {
+      const result = await callRpc('sync:config', { force: true });
+      const fresh = await callRpc('rules:list', undefined);
+      setRules(fresh);
+      notify({
+        kind: 'success',
+        text: result.pulled
+          ? 'Regras sincronizadas do Trello.'
+          : result.pushed
+            ? 'Configuração enviada ao Trello.'
+            : 'A configuração já estava atualizada.',
+      });
+    } catch (cause) {
+      notify({ kind: 'error', text: errorMessage(cause) });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const persist = (next: Rule[], message?: string) => {
     setRules(next);
@@ -280,20 +329,6 @@ export function RulesSection({
     persist(next);
   };
 
-  const changeBoard = (rule: Rule, boardId: string) => {
-    updateRule(rule.id, {
-      boardId,
-      trigger: { ...rule.trigger, listId: undefined, labelIds: undefined, labelMode: undefined },
-      actions: rule.actions.map((action) => ({
-        ...action,
-        listId: undefined,
-        labelId: undefined,
-        labelName: undefined,
-      })),
-    });
-    void loadBoardData(boardId);
-  };
-
   const toggleConditionLabel = (rule: Rule, labelId: string) => {
     const current = rule.trigger.labelIds ?? [];
     const next = current.includes(labelId) ? current.filter((id) => id !== labelId) : [...current, labelId];
@@ -350,14 +385,15 @@ export function RulesSection({
   };
 
   const moveRule = (ruleId: string, direction: -1 | 1) => {
-    const index = rules.findIndex((rule) => rule.id === ruleId);
+    const index = visibleRules.findIndex((rule) => rule.id === ruleId);
     const target = index + direction;
-    if (index < 0 || target < 0 || target >= rules.length) return;
-    const moved = rules[index];
+    if (index < 0 || target < 0 || target >= visibleRules.length) return;
+    const reordered = [...visibleRules];
+    const [moved] = reordered.splice(index, 1);
     if (!moved) return;
-    const next = [...rules];
-    next.splice(index, 1);
-    next.splice(target, 0, moved);
+    reordered.splice(target, 0, moved);
+    let cursor = 0;
+    const next = rules.map((rule) => (rule.boardId === activeBoardId ? reordered[cursor++]! : rule));
     persist(next, 'Ordem das regras atualizada.');
   };
 
@@ -378,11 +414,18 @@ export function RulesSection({
   };
 
   const addRule = () => {
-    persist([...rules, createRule({ name: 'Nova regra', enabled: false })], 'Regra criada.');
+    persist(
+      [...rules, createRule({ name: 'Nova regra', enabled: false, boardId: activeBoardId })],
+      'Regra criada.',
+    );
   };
 
   const openCopy = () => {
-    const source = rules.find((rule) => rule.boardId)?.boardId ?? boards[0]?.id ?? '';
+    const source =
+      (activeBoardId && rules.some((rule) => rule.boardId === activeBoardId) ? activeBoardId : undefined) ??
+      rules.find((rule) => rule.boardId)?.boardId ??
+      boards[0]?.id ??
+      '';
     const target = boards.find((board) => board.id !== source)?.id ?? '';
     setCopySource(source);
     setCopyTarget(target);
@@ -426,6 +469,7 @@ export function RulesSection({
       // As regras copiadas já aparecem com as listas/etiquetas do destino.
       setLists((previous) => ({ ...previous, [copyTarget]: targetLists }));
       setLabels((previous) => ({ ...previous, [copyTarget]: targetLabels }));
+      setActiveBoardId(copyTarget);
 
       persist(
         [...rules, ...result.rules],
@@ -613,16 +657,54 @@ export function RulesSection({
           </div>
         )}
 
+        <div className="sfo-rules-board">
+          <div className="sfo-field sfo-rules-board__field">
+            <label htmlFor="sfo-rules-board">Quadro das regras</label>
+            <select
+              id="sfo-rules-board"
+              className="sfo-select"
+              value={activeBoardId}
+              onChange={(event) => setActiveBoardId(event.target.value)}
+              disabled={loading || boards.length === 0}
+            >
+              {boards.length === 0 && <option value="">Nenhum quadro carregado</option>}
+              {boards.map((board) => (
+                <option key={board.id} value={board.id}>
+                  {board.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <span className="sfo-hint sfo-rules-board__hint">
+            As listas e etiquetas de cada regra são deste quadro. Use “Copiar regras” para levar automações
+            para outro quadro.
+          </span>
+          <button
+            type="button"
+            className="sfo-btn sfo-btn--sm"
+            onClick={() => void syncNow()}
+            disabled={syncing}
+            title="Buscar as regras salvas na sua conta do Trello"
+          >
+            {syncing ? <Spinner /> : <Icon name="refresh" size={13} />}
+            Sincronizar agora
+          </button>
+        </div>
+
         {loading ? (
           <div className="sfo-loading">
             <Spinner />
             <span>Carregando regras…</span>
           </div>
-        ) : rules.length === 0 ? (
-          <p className="sfo-hint">Nenhuma regra configurada. Crie a primeira em “Nova regra”.</p>
+        ) : visibleRules.length === 0 ? (
+          <p className="sfo-hint">
+            {rules.length === 0
+              ? 'Nenhuma regra configurada. Crie a primeira em “Nova regra”.'
+              : 'Nenhuma regra neste quadro. Crie uma em “Nova regra” ou troque o quadro acima.'}
+          </p>
         ) : (
           <div className="sfo-rules">
-            {rules.map((rule, index) => {
+            {visibleRules.map((rule, index) => {
               const issue = ruleIssue(rule);
               const stat = stats[rule.id];
               return (
@@ -682,7 +764,7 @@ export function RulesSection({
                         type="button"
                         className="sfo-icon-btn"
                         onClick={() => moveRule(rule.id, 1)}
-                        disabled={index === rules.length - 1}
+                        disabled={index === visibleRules.length - 1}
                         title="Mover regra para baixo"
                         aria-label="Mover regra para baixo"
                       >
@@ -699,23 +781,6 @@ export function RulesSection({
                       <Icon name="trash" size={14} />
                     </button>
                   </header>
-
-                  <div className="sfo-rule__row">
-                    <span className="sfo-rule__label">Quadro</span>
-                    <select
-                      className="sfo-select"
-                      value={rule.boardId}
-                      onChange={(event) => changeBoard(rule, event.target.value)}
-                      aria-label="Quadro da regra"
-                    >
-                      <option value="">Escolha o quadro</option>
-                      {boards.map((board) => (
-                        <option key={board.id} value={board.id}>
-                          {board.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
 
                   <div className="sfo-rule__row">
                     <span className="sfo-rule__label">Vínculo</span>

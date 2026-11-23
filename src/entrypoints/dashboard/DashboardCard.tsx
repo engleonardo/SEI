@@ -5,6 +5,7 @@ import type { ProcessCatalog } from '../../core/storage/processes';
 import { Icon } from '../../ui/icons';
 import { CardDescription } from '../../ui/components/CardDescription';
 import { DescriptionEditor } from '../../ui/components/DescriptionEditor';
+import { Modal } from '../../ui/components/Modal';
 import { showToast } from '../../ui/toast';
 import { classNames, formatDue, labelColorHex, labelTextColor, locationLabel } from '../../ui/utils';
 import { InlineLocationPicker } from '../../ui/components/InlineLocationPicker';
@@ -51,6 +52,7 @@ export function DashboardCard({
   const [descDraft, setDescDraft] = useState(card.description);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
 
   const due = formatDue(card.due, card.dueComplete);
   const unread = cardHasUnreadProcess(card, catalog);
@@ -231,6 +233,18 @@ export function DashboardCard({
               >
                 <Icon name="checklist" size={11} />
                 Checklist
+              </button>
+            )}
+            {onTogglePin && (
+              <button
+                type="button"
+                className={classNames('sfo-icon-btn', 'sdo-card__pin', pinned && 'sfo-icon-btn--pinned')}
+                onClick={() => onTogglePin(card.id)}
+                aria-pressed={pinned}
+                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+              >
+                <Icon name="pin" size={13} />
               </button>
             )}
           </div>
@@ -416,16 +430,15 @@ export function DashboardCard({
             )
           )}
           <div className="sdo-card__side-actions">
-            {onTogglePin && (
+            {card.description && (
               <button
                 type="button"
-                className={classNames('sfo-icon-btn', pinned && 'sfo-icon-btn--pinned')}
-                onClick={() => onTogglePin(card.id)}
-                aria-pressed={pinned}
-                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
-                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+                className="sfo-btn sfo-btn--sm sfo-btn--ghost"
+                onClick={() => setViewOpen(true)}
+                title="Ver descrição sem editar"
+                aria-label="Ver descrição"
               >
-                <Icon name="pin" size={14} />
+                <Icon name="eye" size={13} />
               </button>
             )}
             <button
@@ -479,10 +492,13 @@ export function DashboardCard({
             </button>
             <button
               type="button"
-              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
+              className={classNames(
+                'sfo-btn sfo-btn--sm sfo-btn--ghost',
+                Boolean(card.attachmentCount) && 'sdo-card__attachment--on',
+              )}
               onClick={() => setDialog('attachments')}
               disabled={busy}
-              title="Anexos"
+              title={card.attachmentCount ? `Anexos (${card.attachmentCount})` : 'Anexos'}
               aria-label="Anexos"
             >
               <Icon name="paperclip" size={13} />
@@ -533,9 +549,7 @@ export function DashboardCard({
               aria-label={card.dueComplete ? 'Reabrir' : 'Concluir'}
             >
               <Icon name={card.dueComplete ? 'refresh' : 'check'} size={13} />
-              <span className="sdo-card__action-label">
-                {card.dueComplete ? 'Reabrir' : 'Concluir'}
-              </span>
+              <span className="sdo-card__action-label">{card.dueComplete ? 'Reabrir' : 'Concluir'}</span>
             </button>
           </div>
           <div className="sdo-card__footer-danger">
@@ -560,9 +574,7 @@ export function DashboardCard({
       {dialog === 'checklist' && (
         <ChecklistDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
       )}
-      {dialog === 'attachments' && (
-        <AttachmentsDialog card={card} onClose={() => setDialog(null)} />
-      )}
+      {dialog === 'attachments' && <AttachmentsDialog card={card} onClose={() => setDialog(null)} />}
       {dialog === 'share' && <ShareDialog card={card} onClose={() => setDialog(null)} />}
       {confirmDelete && (
         <DeleteCardDialog
@@ -572,6 +584,21 @@ export function DashboardCard({
             for (const id of ids) onRemoved(id);
           }}
         />
+      )}
+
+      {viewOpen && (
+        <Modal
+          title={card.name}
+          subtitle="Descrição do cartão"
+          onClose={() => setViewOpen(false)}
+          footer={
+            <button type="button" className="sf-btn" onClick={() => setViewOpen(false)}>
+              Fechar
+            </button>
+          }
+        >
+          <CardDescription text={card.description} />
+        </Modal>
       )}
     </>
   );

@@ -19,7 +19,7 @@ Sobre permissões:
 - storage: guarda credenciais e preferências localmente.
 - scripting: injeta a interface apenas nas páginas do SEI autorizadas.
 - activeTab: identifica a aba ao clicar no ícone.
-- alarms/notifications: avisos diários de prazos.
+- alarms: sincronização periódica das configurações entre navegadores.
 - api.trello.com: leitura/gravação dos cartões do próprio usuário.
 - Permissão opcional de host: solicitada em tempo de execução para ativar o SEI
   no domínio do órgão; o script encerra em páginas que não são do SEI.

@@ -1186,6 +1186,28 @@ a {
   font-weight: 600;
 }
 
+.sfo-rules-board {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.sfo-rules-board__field {
+  flex: 0 1 280px;
+  min-width: 220px;
+}
+
+.sfo-rules-board__hint {
+  flex: 1 1 220px;
+  margin: 0 0 4px;
+}
+
 .sfo-rules-save .sfo-spinner {
   width: 12px;
   height: 12px;

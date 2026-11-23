@@ -27,6 +27,8 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Conclua ou reabra o cartão com um clique, sem exigir prazo.
 • Ao concluir, a data e hora do clique ficam gravadas no prazo do cartão no Trello.
 • Regras automáticas por quadro: ao criar, ao concluir, ao entrar em uma lista, ao entrar em qualquer lista e quando o processo do SEI recebe novidade.
+• Escolha o quadro das regras uma vez, no topo; cada regra usa as listas e etiquetas desse quadro.
+• Copie regras de um quadro para outro associando listas e etiquetas pelo nome.
 • Várias ações por regra (mover, mover para o topo, adicionar ou remover etiqueta, definir início/término, limpar datas, comentar, concluir ou reabrir), execução em cadeia, contador de aplicações, "Aplicar agora" com confirmação e "Desfazer" a última aplicação.
 • Datas nas regras: defina início e término como hoje, em N dias ou há N dias, sem calcular manualmente.
 • Comentários automáticos com marcadores como {processo}, {cartao}, {data}, {hora}, {lista}, {quadro} e {regra}.
@@ -37,11 +39,13 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Atualização automática do painel ao voltar para a aba/janela e quando o SEI sinaliza mudanças, sem polling contínuo.
 • Atalhos **SEI** e **Trello** no cabeçalho para abrir os dois sistemas rapidamente.
 • As listas aparecem na mesma ordem do Trello, com contagem de cartões.
+• Crie e renomeie listas direto no dashboard: lápis ao lado do nome e “Nova lista” no fim.
+• Visualize a descrição do cartão com o olho, sem abrir o editor.
+• O ícone de anexo fica destacado quando o cartão tem anexos.
 • Filtre por etiqueta (inclusive clicando na etiqueta do cartão), tipo de processo, prazo, quadro, lista, vínculo com o SEI, atualização no Trello e atualização no SEI.
 • Filtro "Sem vínculo" para localizar cartões que ainda não estão ligados a um processo.
 • Edite o cartão direto no painel, sem abrir outra tela.
 • Clique no número do processo para abrir a página correspondente no SEI.
-• Notificações diárias de prazos.
 • Desvincule sem excluir o cartão do Trello.
 • Exclua o cartão do Trello pelo SEI ou pelo painel, com confirmação.
 • Edite as datas de início e de vencimento no mesmo diálogo de prazo.
@@ -50,6 +54,7 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Funciona em qualquer domínio e versão do SEI (3.x, 4.x e 5.x).
 • Ative apenas os sites que você usa, com opção de ativar automaticamente endereços que começam com "sei"; sem permissão global obrigatória.
 • Backup das configurações e regras para levar a outro computador.
+• Continue sem conectar o Trello quando quiser: a extensão abre normalmente e os quadros/cartões ficam vazios até você conectar.
 • **Kanban no dashboard**: arraste cartões entre colunas, reordene colunas, use rolagem por coluna e desfaça com Ctrl+Z.
 • **Editor de descrição WYSIWYG**: formate texto e links sem precisar saber Markdown.
 • **Anexos**: envie arquivos até 10MB, anexe por link, liste, abra e exclua.
@@ -88,8 +93,7 @@ Integrar cartões do Trello a processos do SEI, permitindo criar, vincular, visu
 - **`storage`**: salvar localmente as credenciais do Trello (login OAuth ou APP-KEY/TOKEN), preferências, sites autorizados e cache de cartões. Nenhum dado é enviado ao criador.
 - **`scripting`**: injetar a interface do SEI Flow nas páginas do SEI que o usuário autorizou.
 - **`activeTab`**: identificar a aba atual quando o usuário clica no ícone, para oferecer a ativação do site correto no painel inicial.
-- **`alarms`**: verificar periodicamente prazos e processos atualizados para manter as notificações.
-- **`notifications`**: avisar o usuário, uma vez por dia, sobre cartões atrasados ou vencendo hoje.
+- **`alarms`**: sincronizar periodicamente as configurações e manter o painel atualizado.
 - **`https://engleonardo.github.io/SEI/oauth-callback.html`**: página de callback do login. Um content script restrito a essa página lê o código e o estado do OAuth e entrega à extensão; não acessa outras páginas.
 - **`https://api.trello.com/*`**: ler e gravar cartões, etiquetas, checklists, anexos, prazos e quadros na conta do próprio usuário.
 - **`https://auth.atlassian.com/*`**: trocar o código de autorização do Trello pelos tokens da própria sessão do usuário (login e renovação), sem client secret.

@@ -56,7 +56,7 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Filtre o painel por etiqueta, tipo de processo, prazo, quadro, lista e atualização no Trello/SEI.
 • Abra os detalhes e edite qualquer cartão direto pelo painel.
 • Clique no processo para abrir a página correspondente no SEI.
-• Notificações diárias de prazos e badge com processos atualizados no SEI.
+• Badge com processos atualizados no SEI.
 • Desvincule sem excluir o cartão do Trello.
 • Filtre a lista de processos por quadro, lista, situação, etiqueta, prazo e busca.
 • Funciona em qualquer domínio e versão do SEI (3.x, 4.x e 5.x).
@@ -85,8 +85,7 @@ Copie e adapte no formulário de revisão:
 - **`storage`**: salvar localmente as credenciais do Trello (login OAuth ou APP-KEY/TOKEN), o quadro/lista padrão, as preferências e o cache de cartões. Nenhum dado sai do navegador.
 - **`scripting`**: injetar a interface do SEI Flow nas páginas do SEI que o usuário autorizou explicitamente.
 - **`activeTab`**: identificar a URL da aba atual quando o usuário clica no ícone, para oferecer a ativação do site correto no painel inicial.
-- **`alarms`**: verificar periodicamente prazos e processos atualizados para manter badge e notificações.
-- **`notifications`**: avisar uma vez por dia sobre cartões atrasados ou vencendo hoje.
+- **`alarms`**: sincronizar periodicamente as configurações entre navegadores e manter o painel atualizado.
 - **`https://engleonardo.github.io/SEI/oauth-callback.html`**: página de callback do login; o content script lê apenas o código e o estado do OAuth e entrega à extensão. Não acessa outras páginas.
 - **`https://api.trello.com/*`**: ler e gravar cartões, etiquetas, checklists, anexos, prazos e quadros na conta do Trello do próprio usuário, usando as credenciais fornecidas por ele.
 - **`https://auth.atlassian.com/*`**: trocar o código de autorização do Trello pelos tokens da própria sessão do usuário (troca e renovação, sem client secret).

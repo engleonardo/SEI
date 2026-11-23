@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'light',
   compact: true,
   notificationsEnabled: true,
+  skipTrello: false,
   autoRefreshMinutes: 0,
 };
 
@@ -25,6 +26,7 @@ function sanitize(value: Partial<Settings> | null | undefined): Settings {
     theme: value?.theme === 'dark' || value?.theme === 'auto' ? value.theme : 'light',
     notificationsEnabled:
       typeof value?.notificationsEnabled === 'boolean' ? value.notificationsEnabled : true,
+    skipTrello: value?.skipTrello === true,
     activatedOrigins: Array.isArray(value?.activatedOrigins)
       ? [
           ...new Set(

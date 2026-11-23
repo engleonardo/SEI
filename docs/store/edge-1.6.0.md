@@ -19,7 +19,7 @@ Em **Store listing**:
 - **Summary:** copie o "Resumo" de `docs/store/listing-pt-BR.md`.
 - **Description:** copie a "Descrição completa".
 - **Category:** Productivity.
-- **Privacy policy:** `https://github.com/engleonardo/SEI/blob/main/PRIVACY.md`
+- **Privacy policy:** `https://engleonardo.github.io/SEI/privacy.html`
 - **Support:** `https://github.com/engleonardo/SEI/issues`
 - **Screenshots (1280x800):** envie as de `docs/store/screenshots-1280x800/`. Sugestão:
   1. `dashboard-1280x800.png`

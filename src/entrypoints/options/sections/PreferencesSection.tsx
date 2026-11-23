@@ -15,21 +15,18 @@ export function PreferencesSection({
 }) {
   const [theme, setTheme] = useState<ThemePreference>(settings.theme);
   const [compact, setCompact] = useState(settings.compact);
-  const [notifications, setNotifications] = useState(settings.notificationsEnabled);
   const [autoRefresh, setAutoRefresh] = useState(String(settings.autoRefreshMinutes));
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setTheme(settings.theme);
     setCompact(settings.compact);
-    setNotifications(settings.notificationsEnabled);
     setAutoRefresh(String(settings.autoRefreshMinutes));
   }, [settings]);
 
   const dirty =
     theme !== settings.theme ||
     compact !== settings.compact ||
-    notifications !== settings.notificationsEnabled ||
     Number(autoRefresh) !== settings.autoRefreshMinutes;
 
   const savePreferences = async () => {
@@ -39,7 +36,6 @@ export function PreferencesSection({
       await save({
         theme,
         compact,
-        notificationsEnabled: notifications,
         autoRefreshMinutes: minutes,
       });
       notify({ kind: 'success', text: 'Preferências salvas.' });
@@ -114,38 +110,19 @@ export function PreferencesSection({
             onChange={(event) => setAutoRefresh(event.target.value)}
           />
           <span className="sfo-hint">
-            Intervalo de atualização da lista dentro do SEI. Use <code>0</code> para atualizar
-            apenas manualmente. O painel também se atualiza ao voltar o foco e quando o SEI avisa
-            mudanças.
+            Intervalo de atualização da lista dentro do SEI. Use <code>0</code> para atualizar apenas
+            manualmente. O painel também se atualiza ao voltar o foco e quando o SEI avisa mudanças.
           </span>
         </div>
       </div>
 
       <label className="sfo-toggle-row">
-        <input
-          type="checkbox"
-          checked={compact}
-          onChange={(event) => setCompact(event.target.checked)}
-        />
+        <input type="checkbox" checked={compact} onChange={(event) => setCompact(event.target.checked)} />
         <span className="sfo-toggle-row__body">
           <span className="sfo-toggle-row__title">Cartões compactos na lista de processos</span>
           <span className="sfo-toggle-row__text">
-            Mostra os cartões em versão reduzida abaixo de cada processo, com ações por ícone.
-            Desmarque para usar cartões completos também na lista.
-          </span>
-        </span>
-      </label>
-
-      <label className="sfo-toggle-row">
-        <input
-          type="checkbox"
-          checked={notifications}
-          onChange={(event) => setNotifications(event.target.checked)}
-        />
-        <span className="sfo-toggle-row__body">
-          <span className="sfo-toggle-row__title">Notificações de prazos</span>
-          <span className="sfo-toggle-row__text">
-            Envia um aviso por dia quando houver cartões atrasados ou vencendo hoje.
+            Mostra os cartões em versão reduzida abaixo de cada processo, com ações por ícone. Desmarque para
+            usar cartões completos também na lista.
           </span>
         </span>
       </label>

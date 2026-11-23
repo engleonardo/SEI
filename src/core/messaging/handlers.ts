@@ -46,6 +46,23 @@ import { readSession } from '../auth/session';
 
 const repository = new TrelloRepository(loadTrelloCredentials);
 
+/**
+ * Fecha o login: recupera o backup local (se houver) e puxa a configuração
+ * sincronizada do Trello. Roda no background, sem depender da tela de Opções.
+ */
+export async function finishAuth(): Promise<void> {
+  const session = await readSession();
+  try {
+    await restoreLocalConfig(session?.account?.id);
+  } catch {
+    // backup é best-effort
+  }
+  await Promise.race([
+    syncConfig({ force: true }),
+    new Promise<void>((resolve) => setTimeout(resolve, 6_000)),
+  ]).catch(() => undefined);
+}
+
 type HandlerMap = {
   [T in RpcType]: (payload: RpcMap[T]['payload']) => Promise<RpcMap[T]['result']>;
 };
@@ -102,16 +119,7 @@ const handlers = {
   },
 
   'auth:finish': async () => {
-    const session = await readSession();
-    try {
-      await restoreLocalConfig(session?.account?.id);
-    } catch {
-      // backup é best-effort
-    }
-    await Promise.race([
-      syncConfig({ force: true }),
-      new Promise<void>((resolve) => setTimeout(resolve, 4_000)),
-    ]).catch(() => undefined);
+    await finishAuth();
     return undefined;
   },
 
@@ -249,6 +257,8 @@ const handlers = {
   'trello:copy-board': ({ boardId, name }) => repository.copyBoard(boardId, name),
   'trello:create-board': ({ name }) => repository.createBoard(name),
   'trello:rename-board': ({ boardId, name }) => repository.renameBoard(boardId, name),
+  'trello:create-list': ({ boardId, name }) => repository.createList(boardId, name),
+  'trello:rename-list': ({ boardId, listId, name }) => repository.renameList(boardId, listId, name),
   'trello:mirror-card': ({ cardId, listId }) => repository.createCardMirror(cardId, listId),
   'mirrors:status': ({ cardId }) => getMirrorGroup(cardId),
   'mirrors:remove': async ({ cardId }) => {
@@ -376,38 +386,6 @@ const handlers = {
     return { updated: result.updated, total: result.total, rulesApplied };
   },
 } satisfies HandlerMap;
-
-export interface DueSummary {
-  total: number;
-  overdue: number;
-  dueToday: number;
-  dueSoon: number;
-}
-
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-export async function getDueSummary(): Promise<DueSummary> {
-  const cards = await repository.getAllLinkedCards();
-  const today = startOfDay(new Date());
-  const soonLimit = new Date(today);
-  soonLimit.setDate(soonLimit.getDate() + 7);
-
-  let overdue = 0;
-  let dueToday = 0;
-  let dueSoon = 0;
-
-  for (const card of cards) {
-    if (!card.due || card.dueComplete) continue;
-    const due = startOfDay(new Date(card.due));
-    if (due.getTime() < today.getTime()) overdue += 1;
-    else if (due.getTime() === today.getTime()) dueToday += 1;
-    else if (due.getTime() <= soonLimit.getTime()) dueSoon += 1;
-  }
-
-  return { total: cards.length, overdue, dueToday, dueSoon };
-}
 
 export async function handleRpc(request: RpcRequest): Promise<RpcResponse<unknown>> {
   const handler = (handlers as Record<string, unknown>)[request.rpc] as

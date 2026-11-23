@@ -108,9 +108,7 @@ async function requestTokens(
   return {
     accessToken,
     refreshToken:
-      typeof payload?.refresh_token === 'string' && payload.refresh_token
-        ? payload.refresh_token
-        : undefined,
+      typeof payload?.refresh_token === 'string' && payload.refresh_token ? payload.refresh_token : undefined,
     expiresAt: Date.now() + expiresIn * 1000,
     scope: typeof payload?.scope === 'string' ? payload.scope : undefined,
   };
@@ -229,8 +227,8 @@ export async function completeOAuthCallback(code: string, state: string): Promis
 export async function handleOAuthCallbackMessage(
   message: { code?: unknown; state?: unknown; error?: unknown; errorDescription?: unknown },
   sender: { url?: string; tab?: { id?: number } },
-): Promise<void> {
-  if (!sender.url?.startsWith(OAUTH_REDIRECT_URI)) return;
+): Promise<boolean> {
+  if (!sender.url?.startsWith(OAUTH_REDIRECT_URI)) return false;
 
   const providerError = typeof message.error === 'string' ? message.error : '';
   if (providerError) {
@@ -243,21 +241,23 @@ export async function handleOAuthCallbackMessage(
     if (sender.tab?.id) {
       await browser.tabs.remove(sender.tab.id).catch(() => undefined);
     }
-    return;
+    return false;
   }
 
   const code = typeof message.code === 'string' ? message.code : '';
   const state = typeof message.state === 'string' ? message.state : '';
-  if (!code || !state) return;
+  if (!code || !state) return false;
 
   try {
     await completeOAuthCallback(code, state);
+    return true;
   } catch (error) {
     await writeOAuthResult({
       ok: false,
       error: error instanceof Error ? error.message : 'Falha no login com o Trello.',
       at: Date.now(),
     });
+    return false;
   } finally {
     if (sender.tab?.id) {
       await browser.tabs.remove(sender.tab.id).catch(() => undefined);
@@ -265,10 +265,7 @@ export async function handleOAuthCallbackMessage(
   }
 }
 
-async function refreshSessionInternal(
-  session: OAuthSession,
-  fetchImpl: typeof fetch,
-): Promise<OAuthSession> {
+async function refreshSessionInternal(session: OAuthSession, fetchImpl: typeof fetch): Promise<OAuthSession> {
   const tokens = await requestTokens(
     {
       grant_type: 'refresh_token',

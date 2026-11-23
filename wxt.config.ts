@@ -11,7 +11,7 @@ export default defineConfig({
     default_locale: 'pt_BR',
     author: 'Engenheiro Leonardo Almeida de Oliveira',
     homepage_url: 'https://github.com/engleonardo/SEI',
-    permissions: ['storage', 'scripting', 'activeTab', 'alarms', 'notifications'],
+    permissions: ['storage', 'scripting', 'activeTab', 'alarms'],
     // O Firefox mantém `optional_permissions` para hosts opcionais; o mínimo
     // agora é 128 (Android 142+), mas o formato antigo segue compatível.
     ...(browser === 'firefox'

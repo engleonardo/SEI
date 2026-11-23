@@ -33,6 +33,7 @@ export type IconName =
   | 'sun'
   | 'moon'
   | 'pin'
+  | 'eye'
   | 'undo'
   | 'paperclip'
   | 'grip'
@@ -106,6 +107,12 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <path d="M9 3h6l-1 6 4 4H6l4-4-1-6z" />
       <path d="M12 13v8" />
+    </>
+  ),
+  eye: (
+    <>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
     </>
   ),
   undo: (

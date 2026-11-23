@@ -3,6 +3,7 @@ import { loadTrelloCredentials } from '../auth/credentials';
 import type { Settings } from '../domain/types';
 import { getRules, saveRules } from '../storage/rules';
 import { getSettings, saveSettings } from '../storage/settings';
+import { markSyncChanged } from '../storage/sync-tick';
 import { TrelloClient } from '../trello/client';
 
 /**
@@ -69,12 +70,7 @@ export interface SyncResult {
   updatedAt: number;
 }
 
-const DESTINATION_KEYS = [
-  'defaultBoardId',
-  'defaultBoardName',
-  'defaultListId',
-  'defaultListName',
-] as const;
+const DESTINATION_KEYS = ['defaultBoardId', 'defaultBoardName', 'defaultListId', 'defaultListName'] as const;
 
 export function isConfigBoardName(name: string | undefined | null): boolean {
   const value = (name ?? '').trim();
@@ -87,10 +83,7 @@ async function readMeta(): Promise<SyncMeta> {
   return {
     boardId: typeof value?.boardId === 'string' ? value.boardId : undefined,
     listId: typeof value?.listId === 'string' ? value.listId : undefined,
-    updatedAt:
-      typeof value?.updatedAt === 'number' && Number.isFinite(value.updatedAt)
-        ? value.updatedAt
-        : 0,
+    updatedAt: typeof value?.updatedAt === 'number' && Number.isFinite(value.updatedAt) ? value.updatedAt : 0,
     lastAttemptAt:
       typeof value?.lastAttemptAt === 'number' && Number.isFinite(value.lastAttemptAt)
         ? value.lastAttemptAt
@@ -181,9 +174,7 @@ async function readRemote(
   });
   const chunks = (cards ?? [])
     .filter((card) => card.idList === list.id && card.name.startsWith(CARD_PREFIX))
-    .sort(
-      (a, b) => Number(a.name.slice(CARD_PREFIX.length)) - Number(b.name.slice(CARD_PREFIX.length)),
-    );
+    .sort((a, b) => Number(a.name.slice(CARD_PREFIX.length)) - Number(b.name.slice(CARD_PREFIX.length)));
   if (chunks.length === 0) return null;
 
   const config = parseRemote(chunks.map((card) => card.desc).join(''));
@@ -374,6 +365,7 @@ async function runSync(options: { force?: boolean } = {}): Promise<SyncResult> {
 
   if (config.updatedAt > meta.updatedAt) {
     await applyRemote(config);
+    await markSyncChanged();
     await writeMeta({ boardId, listId, updatedAt: config.updatedAt, lastAttemptAt: now });
     return { pulled: true, pushed: false, updatedAt: config.updatedAt };
   }

@@ -23,17 +23,20 @@ export function toCard(
     idList: raw.idList ?? list?.id ?? '',
     idChecklists: Array.isArray(raw.idChecklists) ? raw.idChecklists : [],
     labels: Array.isArray(raw.labels)
-      ? raw.labels.filter((label) => Boolean(label?.id)).map((label) => ({
-          id: label.id,
-          name: label.name ?? '',
-          color: label.color ?? null,
-          idBoard: label.idBoard,
-        }))
+      ? raw.labels
+          .filter((label) => Boolean(label?.id))
+          .map((label) => ({
+            id: label.id,
+            name: label.name ?? '',
+            color: label.color ?? null,
+            idBoard: label.idBoard,
+          }))
       : [],
     board: board ? { id: board.id, name: board.name } : null,
     list: list ? { id: list.id, name: list.name, pos: list.pos } : null,
     links,
     hasChecklist: Array.isArray(raw.idChecklists) && raw.idChecklists.length > 0,
+    attachmentCount: Number(raw.badges?.attachments ?? 0),
     lastActivity: raw.dateLastActivity ?? null,
   };
 }

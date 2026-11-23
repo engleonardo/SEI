@@ -104,7 +104,6 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 | Métricas do painel refletem os filtros aplicados                                     | Sim      |
 | Links dos processos abrem a página correspondente no SEI                             | Sim      |
 | Atualizações do Trello (7/30 dias e desde a última visita)                           | Sim      |
-| Notificações diárias de prazos                                                       | Sim      |
 | Barra fixa, atalho de busca e filtros persistidos                                    | Sim      |
 | Exportação CSV dos cartões filtrados                                                 | Sim      |
 
@@ -219,7 +218,7 @@ Em **Opções -> Backup** você exporta e importa as configurações gerais:
 
 - quadro e lista padrão;
 - sites do SEI autorizados (a permissão do navegador precisa ser concedida de novo no destino);
-- tema, modo compacto, notificações e intervalo de atualização automática;
+- tema, modo compacto e intervalo de atualização automática;
 - **todas as regras**, na ordem atual (opcional, marcado por padrão);
 - opcionalmente, a APP-KEY e o TOKEN do Trello.
 
