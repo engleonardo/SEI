@@ -54,6 +54,10 @@ export function RulesSection({
   const [importError, setImportError] = useState<string | null>(null);
   const [pendingReplace, setPendingReplace] = useState<Rule[] | null>(null);
   const [importing, setImporting] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copySource, setCopySource] = useState('');
+  const [copyTarget, setCopyTarget] = useState('');
+  const [copying, setCopying] = useState(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const saveSeq = useRef(0);
 
@@ -378,6 +382,155 @@ export function RulesSection({
     persist([...rules, createRule({ name: 'Nova regra', enabled: false })], 'Regra criada.');
   };
 
+  const openCopy = () => {
+    const source = rules.find((rule) => rule.boardId)?.boardId ?? boards[0]?.id ?? '';
+    const target = boards.find((board) => board.id !== source)?.id ?? '';
+    setCopySource(source);
+    setCopyTarget(target);
+    setCopyOpen(true);
+  };
+
+  const normalizeName = (value: string) => value.trim().toLocaleLowerCase('pt-BR');
+
+  const copyRules = async () => {
+    if (!copySource || !copyTarget || copySource === copyTarget) {
+      notify({ kind: 'error', text: 'Escolha quadros de origem e destino diferentes.' });
+      return;
+    }
+    const sourceRules = rules.filter((rule) => rule.boardId === copySource);
+    if (sourceRules.length === 0) {
+      notify({ kind: 'warning', text: 'O quadro de origem não tem regras.' });
+      return;
+    }
+    setCopying(true);
+    try {
+      const [sourceLists, sourceLabels, targetLists, targetLabels] = await Promise.all([
+        callRpc('trello:lists', { boardId: copySource, fresh: true }),
+        callRpc('trello:board-labels', { boardId: copySource, fresh: true }),
+        callRpc('trello:lists', { boardId: copyTarget, fresh: true }),
+        callRpc('trello:board-labels', { boardId: copyTarget, fresh: true }),
+      ]);
+
+      const sourceListById = new Map(sourceLists.map((list) => [list.id, list]));
+      const targetListByName = new Map(
+        targetLists.map((list) => [normalizeName(list.name), list]),
+      );
+      const sourceLabelById = new Map(sourceLabels.map((label) => [label.id, label]));
+      const targetLabelByName = new Map(
+        targetLabels
+          .filter((label) => label.name.trim())
+          .map((label) => [normalizeName(label.name), label]),
+      );
+      const targetLabelByColor = new Map(targetLabels.map((label) => [label.color, label]));
+      const mapLabel = (id: string): TrelloLabel | null => {
+        const source = sourceLabelById.get(id);
+        if (!source) return null;
+        const byName = source.name.trim()
+          ? targetLabelByName.get(normalizeName(source.name))
+          : undefined;
+        return byName ?? targetLabelByColor.get(source.color) ?? null;
+      };
+
+      const copied: Rule[] = [];
+      let skipped = 0;
+
+      for (const rule of sourceRules) {
+        let missing = false;
+
+        let triggerListId: string | undefined;
+        if (rule.trigger.listId) {
+          const sourceList = sourceListById.get(rule.trigger.listId);
+          const targetList = sourceList
+            ? targetListByName.get(normalizeName(sourceList.name))
+            : undefined;
+          if (!targetList) missing = true;
+          else triggerListId = targetList.id;
+        }
+
+        let triggerLabelIds: string[] | undefined;
+        if (!missing && rule.trigger.labelIds && rule.trigger.labelIds.length > 0) {
+          triggerLabelIds = [];
+          for (const labelId of rule.trigger.labelIds) {
+            const mapped = mapLabel(labelId);
+            if (!mapped) {
+              missing = true;
+              break;
+            }
+            triggerLabelIds.push(mapped.id);
+          }
+        }
+
+        const actions: RuleAction[] = [];
+        for (const action of rule.actions) {
+          if (missing) break;
+          if (action.type === 'moveToList' && action.listId) {
+            const sourceList = sourceListById.get(action.listId);
+            const targetList = sourceList
+              ? targetListByName.get(normalizeName(sourceList.name))
+              : undefined;
+            if (!targetList) {
+              missing = true;
+              break;
+            }
+            actions.push({ ...action, listId: targetList.id });
+            continue;
+          }
+          if ((action.type === 'addLabel' || action.type === 'removeLabel') && action.labelId) {
+            const mapped = mapLabel(action.labelId);
+            if (!mapped) {
+              missing = true;
+              break;
+            }
+            actions.push({
+              ...action,
+              labelId: mapped.id,
+              labelName: mapped.name || action.labelName,
+            });
+            continue;
+          }
+          actions.push({ ...action });
+        }
+
+        if (missing) {
+          skipped += 1;
+          continue;
+        }
+
+        copied.push({
+          ...rule,
+          id: newRuleId(),
+          boardId: copyTarget,
+          trigger: {
+            ...rule.trigger,
+            listId: triggerListId,
+            labelIds: rule.trigger.labelIds ? triggerLabelIds : undefined,
+          },
+          actions,
+        });
+      }
+
+      if (copied.length === 0) {
+        notify({
+          kind: 'warning',
+          text: 'Nenhuma regra pôde ser copiada: as listas ou etiquetas não existem no quadro de destino.',
+        });
+        return;
+      }
+
+      persist(
+        [...rules, ...copied],
+        `${copied.length} regra(s) copiada(s).${
+          skipped > 0 ? ` ${skipped} ignorada(s) por lista/etiqueta ausente.` : ''
+        }`,
+      );
+      setCopyOpen(false);
+    } catch (cause) {
+      notify({ kind: 'error', text: errorMessage(cause) });
+    } finally {
+      setCopying(false);
+    }
+  };
+
   const applyNow = async (rule: Rule) => {
     const issue = ruleIssue(rule);
     if (issue) {
@@ -503,6 +656,16 @@ export function RulesSection({
             <button type="button" className="sfo-btn" onClick={openImport}>
               <Icon name="link" size={14} />
               Importar regras
+            </button>
+            <button
+              type="button"
+              className="sfo-btn"
+              onClick={openCopy}
+              disabled={rules.length === 0 || boards.length < 2}
+              title="Copiar as regras de um quadro para outro"
+            >
+              <Icon name="copy" size={14} />
+              Copiar regras
             </button>
             <span className="sfo-hint">Backup completo (configurações + regras) em Opções → Backup.</span>
             <span className={`sfo-rules-save${saveState === 'error' ? ' sfo-rules-save--error' : ''}`}>
@@ -1114,6 +1277,74 @@ export function RulesSection({
           <p className="sf-hint" style={{ margin: 0 }}>
             <strong>Adicionar</strong> mantém as regras atuais e acrescenta as novas.{' '}
             <strong>Substituir tudo</strong> apaga as atuais e usa apenas as importadas.
+          </p>
+        </Modal>
+      )}
+      {copyOpen && (
+        <Modal
+          title="Copiar regras entre quadros"
+          subtitle="As listas e etiquetas são associadas pelo nome."
+          size="sm"
+          onClose={() => {
+            if (!copying) setCopyOpen(false);
+          }}
+          footer={
+            <>
+              <button
+                type="button"
+                className="sf-btn"
+                onClick={() => setCopyOpen(false)}
+                disabled={copying}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="sf-btn sf-btn--primary"
+                onClick={() => void copyRules()}
+                disabled={copying || !copySource || !copyTarget || copySource === copyTarget}
+              >
+                {copying ? <span className="sf-spinner" /> : <Icon name="copy" size={14} />}
+                Copiar regras
+              </button>
+            </>
+          }
+        >
+          <div className="sf-field">
+            <label htmlFor="sfo-copy-source">Quadro de origem</label>
+            <select
+              id="sfo-copy-source"
+              className="sf-select"
+              value={copySource}
+              onChange={(event) => setCopySource(event.target.value)}
+              disabled={copying}
+            >
+              {boards.map((board) => (
+                <option key={board.id} value={board.id}>
+                  {board.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="sf-field">
+            <label htmlFor="sfo-copy-target">Quadro de destino</label>
+            <select
+              id="sfo-copy-target"
+              className="sf-select"
+              value={copyTarget}
+              onChange={(event) => setCopyTarget(event.target.value)}
+              disabled={copying}
+            >
+              {boards.map((board) => (
+                <option key={board.id} value={board.id}>
+                  {board.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="sf-hint" style={{ margin: 0 }}>
+            As regras do quadro de origem são copiadas para o destino, associando listas e etiquetas
+            pelo nome. Regras com listas ou etiquetas que não existem no destino são ignoradas.
           </p>
         </Modal>
       )}

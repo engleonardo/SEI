@@ -37,6 +37,13 @@ export const OAUTH_SCOPES = [
 const TOKEN_ENDPOINT = 'https://auth.atlassian.com/oauth/token';
 const PENDING_TTL_MS = 10 * 60_000;
 
+/**
+ * O Firefox só intercepta o redirecionamento quando a URL de retorno dele é
+ * usada direto como redirect_uri. Chrome/Edge usam a página estática.
+ */
+const IS_FIREFOX =
+  typeof navigator !== 'undefined' && /\bFirefox\//i.test(navigator.userAgent);
+
 interface TokenPayload {
   access_token?: unknown;
   refresh_token?: unknown;
@@ -122,13 +129,14 @@ export async function startLogin(): Promise<OAuthSession> {
   const challenge = await codeChallenge(verifier);
   const nonce = randomToken(16);
   const returnUrl = browser.identity.getRedirectURL();
+  const redirectUri = IS_FIREFOX ? returnUrl : OAUTH_REDIRECT_URI;
   const state = encodeState({ n: nonce, r: returnUrl });
 
   await writePending({ verifier, nonce, createdAt: Date.now() });
 
   const url = buildAuthorizeUrl({
     clientId: OAUTH_CLIENT_ID,
-    redirectUri: OAUTH_REDIRECT_URI,
+    redirectUri,
     scopes: OAUTH_SCOPES,
     state,
     challenge,
@@ -137,9 +145,20 @@ export async function startLogin(): Promise<OAuthSession> {
   let redirect: string | undefined;
   try {
     redirect = await browser.identity.launchWebAuthFlow({ url, interactive: true });
-  } catch {
+  } catch (error) {
     await clearPending();
-    throw new TrelloError('auth', 'Login do Trello cancelado ou não concluído.');
+    const raw = error instanceof Error ? error.message : String(error ?? '');
+    const detail = raw
+      .replace(/code=[^&\s]+/gi, 'code=***')
+      .replace(/state=[^&\s]+/gi, 'state=***')
+      .slice(0, 200)
+      .trim();
+    throw new TrelloError(
+      'auth',
+      detail
+        ? `Login do Trello não concluído: ${detail}`
+        : 'Login do Trello cancelado ou não concluído.',
+    );
   }
 
   if (!redirect) {
@@ -208,9 +227,9 @@ export async function startLogin(): Promise<OAuthSession> {
   return session;
 }
 
-export async function refreshSession(
+async function refreshSessionInternal(
   session: OAuthSession,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch,
 ): Promise<OAuthSession> {
   const tokens = await requestTokens(
     {
@@ -235,6 +254,23 @@ export async function refreshSession(
   };
   await writeSession(next);
   return next;
+}
+
+let refreshInFlight: Promise<OAuthSession> | null = null;
+
+/**
+ * O refresh token é rotativo: duas renovações simultâneas com o mesmo token
+ * fazem uma delas falhar e derrubar a sessão. Compartilha a renovação em voo.
+ */
+export function refreshSession(
+  session: OAuthSession,
+  fetchImpl: typeof fetch = fetch,
+): Promise<OAuthSession> {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = refreshSessionInternal(session, fetchImpl).finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
 }
 
 /** Token válido para as chamadas ao Trello (renova quando está perto de expirar). */

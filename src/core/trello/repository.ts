@@ -164,7 +164,7 @@ export class TrelloRepository {
     const load = async () => {
       const [board, lists, raw] = await Promise.all([
         this.getBoards().then((boards) => boards.find((item) => item.id === boardId) ?? null),
-        this.getLists(boardId),
+        this.getLists(boardId, fresh),
         this.client.get<TrelloCardApi[]>(`/boards/${boardId}/cards`, {
           filter: 'open',
           fields: CARD_FIELDS,

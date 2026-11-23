@@ -5,12 +5,12 @@ const memory = new Map<string, { at: number; value: unknown }>();
 const inFlight = new Map<string, Promise<unknown>>();
 
 export const CACHE_TTL = {
-  boards: 10 * 60_000,
-  boardLists: 10 * 60_000,
-  boardCards: 60_000,
-  boardLabels: 10 * 60_000,
-  processCards: 60_000,
-  allLinkedCards: 60_000,
+  boards: 2 * 60_000,
+  boardLists: 2 * 60_000,
+  boardCards: 30_000,
+  boardLabels: 2 * 60_000,
+  processCards: 30_000,
+  allLinkedCards: 30_000,
 } as const;
 
 function storageKey(key: string): string {

@@ -136,6 +136,14 @@ export function DiagnosticsSection({
     return Array.from(map.values()).sort((a, b) => a.cardName.localeCompare(b.cardName, 'pt-BR'));
   }, [candidates]);
 
+  const redirectUrl = useMemo(() => {
+    try {
+      return browser.identity?.getRedirectURL?.() ?? '';
+    } catch {
+      return '';
+    }
+  }, []);
+
   const diagnostics = [
     `SEI Flow v${manifest.version}`,
     `ID: ${browser.runtime.id}`,
@@ -143,7 +151,17 @@ export function DiagnosticsSection({
     `Quadro padrão: ${settings.defaultBoardName || '(não configurado)'}`,
     `Lista padrão: ${settings.defaultListName || '(não configurado)'}`,
     `Permissões: ${permissions.join(', ')}`,
+    `URL de retorno OAuth: ${redirectUrl || '(indisponível)'}`,
   ].join('\n');
+
+  const copyRedirect = async () => {
+    try {
+      await navigator.clipboard.writeText(redirectUrl);
+      notify({ kind: 'success', text: 'URL de retorno copiada.' });
+    } catch {
+      notify({ kind: 'error', text: 'Não foi possível copiar a URL.' });
+    }
+  };
 
   const copy = async () => {
     try {
@@ -200,7 +218,25 @@ export function DiagnosticsSection({
           <dd>
             Credenciais e preferências em <code>storage.local</code>; cache com TTL no mesmo local.
           </dd>
+          <dt>URL de retorno OAuth</dt>
+          <dd style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+            <code style={{ overflowWrap: 'anywhere' }}>{redirectUrl || '-'}</code>
+            {redirectUrl && (
+              <button
+                type="button"
+                className="sfo-btn sfo-btn--sm"
+                onClick={() => void copyRedirect()}
+              >
+                <Icon name="copy" size={13} />
+                Copiar
+              </button>
+            )}
+          </dd>
         </dl>
+        <p className="sfo-hint" style={{ margin: '10px 0 0' }}>
+          No Firefox, adicione esta URL como URL de retorno no app do Trello (OAuth 2.0). No
+          Chrome/Edge, a URL usada é a página de callback estática.
+        </p>
       </CollapsibleCard>
 
       <CollapsibleCard
