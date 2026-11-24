@@ -1145,6 +1145,12 @@
   cursor: pointer;
 }
 
+.sdo-card__expand-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 3px;
+}
+
 .sdo-card__expand:hover,
 .sdo-card__expand--on {
   background: var(--surface);
@@ -1412,7 +1418,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 5px 12px;
-  margin-top: 7px;
+  margin-top: 12px;
   color: var(--muted);
   font-size: 11.5px;
 }
@@ -1649,10 +1655,6 @@
 
 .sdo-card__attachment--on svg {
   color: var(--accent);
-}
-
-.sdo-card__pin {
-  margin-left: auto;
 }
 
 /* ---------------------------------------------------------------- listas */

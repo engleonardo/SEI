@@ -174,6 +174,18 @@ export function DescriptionEditor({
     </button>
   );
 
+  const insertTaskList = () => {
+    if (disabled) return;
+    const element = editorRef.current;
+    if (!element) return;
+    element.focus();
+    document.execCommand('insertHTML', false, '<ul><li><input type="checkbox"> </li></ul>');
+    const lists = element.querySelectorAll('ul');
+    const lastItem = lists[lists.length - 1]?.querySelector('li');
+    if (lastItem) placeCaretAtEnd(lastItem as HTMLElement);
+    emit();
+  };
+
   return (
     <div className={classNames('sf-editor', disabled && 'sf-editor--disabled')}>
       <div className="sf-editor__toolbar" role="toolbar" aria-label="Formatação da descrição">
@@ -190,6 +202,7 @@ export function DescriptionEditor({
           () => run('insertUnorderedList'),
         )}
         {toolbarButton('1.', 'Lista numerada', () => run('insertOrderedList'))}
+        {toolbarButton(<Icon name="checklist" size={13} />, 'Lista de tarefas', insertTaskList)}
         {toolbarButton('❝', 'Citação', () => toggleBlock('blockquote'))}
         {toolbarButton(<Icon name="link" size={13} />, 'Inserir link', openLink)}
       </div>
@@ -241,6 +254,9 @@ export function DescriptionEditor({
         aria-label={ariaLabel}
         data-placeholder={placeholder}
         onInput={emit}
+        onChange={(event) => {
+          if ((event.target as HTMLElement).closest('input[type="checkbox"]')) emit();
+        }}
         onBlur={emit}
         onPaste={(event) => {
           event.preventDefault();

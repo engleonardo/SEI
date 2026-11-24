@@ -1230,6 +1230,23 @@ describe('TrelloRepository', () => {
     expect(list.name).toBe('Renomeada');
   });
 
+  it('atualiza nome e cor da etiqueta', async () => {
+    const client = fakeClient();
+    vi.mocked(client.put).mockResolvedValue({ id: 'label-1', name: 'Nova', color: 'green' });
+    const repo = repository(client);
+
+    const label = await repo.updateLabel('board-1', 'label-1', {
+      name: '  Nova ',
+      color: 'green',
+    });
+
+    expect(client.put).toHaveBeenCalledWith('/labels/label-1', {
+      name: 'Nova',
+      color: 'green',
+    });
+    expect(label.color).toBe('green');
+  });
+
   it('entrega o cache do processo sem consultar o Trello', async () => {
     const client = fakeClient();
     const cached = [{ id: 'card-1' }] as never;

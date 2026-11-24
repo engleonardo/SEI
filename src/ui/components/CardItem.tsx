@@ -318,22 +318,6 @@ export function CardItem({
             >
               <Icon name="tag" size={11} />
             </button>
-            {onTogglePin && (
-              <button
-                type="button"
-                className={classNames(
-                  'sf-icon-btn',
-                  'sf-card__pin',
-                  pinned && 'sf-icon-btn--pinned',
-                )}
-                onClick={() => onTogglePin(card.id)}
-                aria-pressed={pinned}
-                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
-                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
-              >
-                <Icon name="pin" size={14} />
-              </button>
-            )}
           </div>
 
           {editingDesc ? (
@@ -432,6 +416,25 @@ export function CardItem({
             </button>
           )}
 
+          {card.description &&
+            (viewExpanded || card.description.length > 90 || card.description.includes('\n')) && (
+              <div className="sf-card__expand-row">
+                <button
+                  type="button"
+                  className={classNames(
+                    'sf-card__expand',
+                    viewExpanded && 'sf-card__expand--on',
+                  )}
+                  onClick={() => setViewExpanded((current) => !current)}
+                  aria-expanded={viewExpanded}
+                  aria-label={viewExpanded ? 'Recolher descrição' : 'Expandir descrição'}
+                  title={viewExpanded ? 'Recolher descrição' : 'Expandir descrição'}
+                >
+                  <Icon name="more" size={14} />
+                </button>
+              </div>
+            )}
+
           <div className="sf-card__meta">
             {card.dueComplete && !card.due && <span className="sf-chip sf-chip--success">Concluído</span>}
             {due && (
@@ -446,19 +449,18 @@ export function CardItem({
                 {due.label}
               </button>
             )}
-            {card.description &&
-              (viewExpanded || card.description.length > 90 || card.description.includes('\n')) && (
-                <button
-                  type="button"
-                  className={classNames('sf-card__expand', viewExpanded && 'sf-card__expand--on')}
-                  onClick={() => setViewExpanded((current) => !current)}
-                  aria-expanded={viewExpanded}
-                  aria-label={viewExpanded ? 'Recolher descrição' : 'Expandir descrição'}
-                  title={viewExpanded ? 'Recolher descrição' : 'Expandir descrição'}
-                >
-                  <Icon name="more" size={14} />
-                </button>
-              )}
+            {onTogglePin && (
+              <button
+                type="button"
+                className={classNames('sf-icon-btn', pinned && 'sf-icon-btn--pinned')}
+                onClick={() => onTogglePin(card.id)}
+                aria-pressed={pinned}
+                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+              >
+                <Icon name="pin" size={14} />
+              </button>
+            )}
             {showProcessMeta && processNumber && (
               <span className="sf-card__meta-item" title="Processo vinculado">
                 <Icon name="link" size={11} />

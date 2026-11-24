@@ -307,7 +307,10 @@ const handlers = {
     return undefined;
   },
   'mirrors:sync': () => repository.syncMirrors(),
-  'trello:create-label': ({ boardId, name, color }) => repository.createLabel(boardId, name, color),
+  'trello:create-label': ({ boardId, name, color }) =>
+    repository.createLabel(boardId, name, color),
+  'trello:update-label': ({ boardId, labelId, name, color }) =>
+    repository.updateLabel(boardId, labelId, { name, color }),
   'trello:add-label': ({ cardId, labelId }) => repository.addLabelToCard(cardId, labelId),
   'trello:remove-label': ({ cardId, labelId }) => repository.removeLabelFromCard(cardId, labelId),
   'trello:checklists': ({ cardId, fresh }) => repository.getChecklists(cardId, fresh),
@@ -462,6 +465,8 @@ const demoHandlers = {
   'trello:update-list': ({ listId, pos }) => demo.demoUpdateList(listId, pos),
   'trello:create-label': ({ boardId, name, color }) =>
     demo.demoCreateLabel(boardId, name, color),
+  'trello:update-label': ({ boardId, labelId, name, color }) =>
+    demo.demoUpdateLabel(boardId, labelId, { name, color }),
   'trello:add-label': ({ cardId, labelId }) => demo.demoAddLabel(cardId, labelId),
   'trello:remove-label': ({ cardId, labelId }) => demo.demoRemoveLabel(cardId, labelId),
   'trello:attachments': ({ cardId }) => demo.demoAttachments(cardId),

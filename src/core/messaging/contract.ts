@@ -117,6 +117,10 @@ export interface RpcMap {
     payload: { boardId: string; name: string; color: string };
     result: TrelloLabel;
   };
+  'trello:update-label': {
+    payload: { boardId: string; labelId: string; name?: string; color?: string };
+    result: TrelloLabel;
+  };
   'trello:add-label': { payload: { cardId: string; labelId: string }; result: TrelloCard };
   'trello:remove-label': { payload: { cardId: string; labelId: string }; result: TrelloCard };
   'trello:checklists': { payload: { cardId: string; fresh?: boolean }; result: TrelloChecklist[] };

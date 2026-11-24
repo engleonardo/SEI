@@ -8,9 +8,11 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 ### Adicionado
 
 - **Criar e renomear listas**: “Nova lista” discreto no rodapé e renomear com duplo clique no nome da coluna do Kanban.
-- **Três pontinhos (•••)** na linha de informações expandem a descrição no próprio cartão, sem popup.
+- **Três pontinhos (•••)** no fim do texto, centralizados, expandem a descrição no próprio cartão, sem popup.
 - **Destaque no ícone de anexo** quando o cartão tem anexos.
 - **Checklist dentro do texto** do cartão, com o progresso (ex.: 1/2), sem chip na linha de informações.
+- **Checklist no editor de texto**: botão na barra de formatação insere uma lista de tarefas.
+- **Editar etiquetas existentes**: nome e cor, inclusive as já criadas.
 - **Quadro das regras no topo**: seletor único; as listas/etiquetas de cada regra são desse quadro, e o seletor por regra saiu. As etiquetas aparecem nas cores do Trello.
 - **Sincronizar agora** em Regras, para puxar a configuração da conta do Trello.
 - **Continuar sem Trello**: a extensão abre com quadros, listas e cartões de exemplo salvos localmente; dá para criar, editar e mover sem conectar.
@@ -18,7 +20,9 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 ### Alterado
 
-- **Pino do cartão** no canto direito da linha de etiquetas, junto do ícone de etiqueta.
+- **Pino do cartão** ao lado do número do processo.
+- **Atualizado** aparece só como ícone; a data/hora exata fica no tooltip.
+- **Espaço entre a descrição e os dados do processo** aumentado para manter o texto legível.
 - **Colunas do Kanban** espremidas para caber na tela e centralizadas; a largura atual virou o máximo, com limite de 180px por coluna e rolagem horizontal depois disso.
 - **Editor de descrição** sem o espaçamento extra entre linhas que aparecia ao abrir o cartão.
 - **Notificações do navegador removidas**: permissão `notifications`, alarme de prazos e opção nas Preferências.

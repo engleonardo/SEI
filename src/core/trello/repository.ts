@@ -1308,6 +1308,20 @@ export class TrelloRepository {
     return label;
   }
 
+  async updateLabel(
+    boardId: string,
+    labelId: string,
+    patch: { name?: string; color?: string },
+  ): Promise<TrelloLabel> {
+    const body: Record<string, string> = {};
+    if (patch.name !== undefined) body.name = patch.name.trim();
+    if (patch.color !== undefined) body.color = patch.color;
+    const label = await this.client.put<TrelloLabel>(`/labels/${labelId}`, body);
+    await cacheDelete(`labels:${boardId}`);
+    await this.invalidateCardCaches();
+    return label;
+  }
+
   async addLabelToCard(cardId: string, labelId: string): Promise<TrelloCard> {
     await this.client.post(`/cards/${cardId}/idLabels`, { value: labelId });
     await this.invalidateCardCaches();

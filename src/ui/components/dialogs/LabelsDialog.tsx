@@ -28,6 +28,9 @@ export function LabelsDialog({
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [color, setColor] = useState<string>('blue');
+  const [editingLabel, setEditingLabel] = useState<TrelloLabel | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState<string>('blue');
 
   useEffect(() => {
     let active = true;
@@ -78,6 +81,47 @@ export function LabelsDialog({
         : await callRpc('trello:add-label', { cardId: card.id, labelId: label.id });
       setSelected(updated.labels);
       onChanged(updated);
+    } catch (cause) {
+      setError(errorMessage(cause));
+      showToast(errorMessage(cause), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startEdit = (label: TrelloLabel) => {
+    setEditingLabel(label);
+    setEditName(label.name);
+    setEditColor(label.color ?? 'blue');
+    setError(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingLabel(null);
+    setEditName('');
+  };
+
+  const saveEdit = async () => {
+    if (!editingLabel) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await callRpc('trello:update-label', {
+        boardId: card.idBoard,
+        labelId: editingLabel.id,
+        name: editName.trim(),
+        color: editColor,
+      });
+      setLabels((previous) =>
+        previous.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      const nextSelected = selected.map((item) => (item.id === updated.id ? updated : item));
+      setSelected(nextSelected);
+      if (nextSelected.some((item) => item.id === updated.id)) {
+        onChanged({ ...card, labels: nextSelected });
+      }
+      setEditingLabel(null);
+      showToast('Etiqueta atualizada.', 'success');
     } catch (cause) {
       setError(errorMessage(cause));
       showToast(errorMessage(cause), 'error');
@@ -148,35 +192,105 @@ export function LabelsDialog({
             {labels.map((label) => {
               const active = isSelected(label.id);
               return (
-                <button
-                  key={label.id}
-                  type="button"
-                  className="sf-label-option"
-                  onClick={() => void toggle(label)}
-                  disabled={busy}
-                  aria-pressed={active}
-                  style={{ cursor: busy ? 'wait' : 'pointer' }}
-                >
-                  <span
-                    className="sf-label-option__swatch"
-                    style={{ backgroundColor: labelColorHex(label.color) }}
-                  />
-                  <span className="sf-label-option__name">
-                    {label.name || `Etiqueta ${label.color ?? 'sem cor'}`}
-                  </span>
-                  <span
-                    className="sf-checkbox"
-                    style={{ color: active ? 'var(--sf-accent)' : 'var(--sf-muted)' }}
+                <div key={label.id} className="sf-label-row">
+                  <button
+                    type="button"
+                    className="sf-label-option"
+                    onClick={() => void toggle(label)}
+                    disabled={busy}
+                    aria-pressed={active}
+                    style={{ cursor: busy ? 'wait' : 'pointer' }}
                   >
-                    <Icon name={active ? 'check' : 'plus'} size={15} />
-                  </span>
-                </button>
+                    <span
+                      className="sf-label-option__swatch"
+                      style={{ backgroundColor: labelColorHex(label.color) }}
+                    />
+                    <span className="sf-label-option__name">
+                      {label.name || `Etiqueta ${label.color ?? 'sem cor'}`}
+                    </span>
+                    <span
+                      className="sf-checkbox"
+                      style={{ color: active ? 'var(--sf-accent)' : 'var(--sf-muted)' }}
+                    >
+                      <Icon name={active ? 'check' : 'plus'} size={15} />
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="sf-icon-btn"
+                    onClick={() => startEdit(label)}
+                    disabled={busy}
+                    title={`Editar etiqueta ${label.name || label.color || ''}`}
+                    aria-label={`Editar etiqueta ${label.name || label.color || ''}`}
+                  >
+                    <Icon name="edit" size={13} />
+                  </button>
+                </div>
               );
             })}
           </div>
         )}
 
         {error && labels.length > 0 && <ErrorState message={error} />}
+
+        {editingLabel && (
+          <div
+            className="sf-field"
+            style={{ borderTop: '1px solid var(--sf-border)', paddingTop: 12 }}
+          >
+            <span className="sf-label">Editar etiqueta</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <input
+                className="sf-input"
+                value={editName}
+                onChange={(event) => setEditName(event.target.value)}
+                placeholder="Nome da etiqueta"
+                disabled={busy}
+                style={{ flex: 1, minWidth: 150 }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    void saveEdit();
+                  }
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    cancelEdit();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="sf-btn sf-btn--primary"
+                onClick={() => void saveEdit()}
+                disabled={busy}
+              >
+                {busy ? <Spinner /> : <Icon name="check" size={14} />}
+                Salvar
+              </button>
+              <button type="button" className="sf-btn" onClick={cancelEdit} disabled={busy}>
+                Cancelar
+              </button>
+            </div>
+            <div className="sf-color-grid" style={{ marginTop: 6 }}>
+              {TRELLO_LABEL_COLORS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  className={classNames(
+                    'sf-color-swatch',
+                    option === editColor && 'sf-color-swatch--active',
+                  )}
+                  style={{ backgroundColor: labelColorHex(option) }}
+                  onClick={() => setEditColor(option)}
+                  disabled={busy}
+                  aria-label={`Cor ${option}`}
+                  aria-pressed={option === editColor}
+                  title={option}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="sf-field" style={{ borderTop: '1px solid var(--sf-border)', paddingTop: 12 }}>
           <span className="sf-label">Criar nova etiqueta</span>

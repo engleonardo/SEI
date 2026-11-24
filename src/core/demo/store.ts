@@ -473,6 +473,27 @@ export async function demoCreateLabel(
   return { id: label.id, name: label.name, color: label.color, idBoard: label.idBoard };
 }
 
+export async function demoUpdateLabel(
+  boardId: string,
+  labelId: string,
+  patch: { name?: string; color?: string },
+): Promise<TrelloLabel> {
+  const data = await getDemoData();
+  const label = data.labels.find(
+    (item) => item.id === labelId && (!boardId || item.idBoard === boardId),
+  );
+  if (!label) throw new TrelloError('not_found', 'Etiqueta de exemplo não encontrada.');
+  if (patch.name !== undefined) label.name = patch.name.trim();
+  if (patch.color !== undefined) label.color = patch.color;
+  for (const card of data.cards) {
+    card.labels = card.labels.map((item) =>
+      item.id === label.id ? { ...item, name: label.name, color: label.color } : item,
+    );
+  }
+  await persist(data);
+  return { id: label.id, name: label.name, color: label.color, idBoard: label.idBoard };
+}
+
 export async function demoAddLabel(cardId: string, labelId: string): Promise<TrelloCard> {
   const data = await getDemoData();
   const card = requireCard(data, cardId);

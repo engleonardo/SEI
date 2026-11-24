@@ -14,7 +14,7 @@ import { ShareDialog } from '../../ui/components/dialogs/ShareDialog';
 import { DeleteCardDialog } from '../../ui/components/dialogs/DeleteCardDialog';
 import { DueDialog } from '../../ui/components/dialogs/DueDialog';
 import { LabelsDialog } from '../../ui/components/dialogs/LabelsDialog';
-import { cardHasUnreadProcess, formatActivity, processRecordsFor, processTypesFor } from './model';
+import { cardHasUnreadProcess, processRecordsFor, processTypesFor } from './model';
 
 export interface DashboardCardProps {
   card: TrelloCard;
@@ -57,7 +57,6 @@ export function DashboardCard({
   const due = formatDue(card.due, card.dueComplete);
   const unread = cardHasUnreadProcess(card, catalog);
   const types = processTypesFor(card, catalog);
-  const activity = formatActivity(card);
   const processes = processRecordsFor(card, catalog);
   const processByNumber = new Map(processes.map((process) => [process.number, process]));
 
@@ -270,22 +269,6 @@ export function DashboardCard({
             >
               <Icon name="tag" size={11} />
             </button>
-            {onTogglePin && (
-              <button
-                type="button"
-                className={classNames(
-                  'sfo-icon-btn',
-                  'sdo-card__pin',
-                  pinned && 'sfo-icon-btn--pinned',
-                )}
-                onClick={() => onTogglePin(card.id)}
-                aria-pressed={pinned}
-                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
-                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
-              >
-                <Icon name="pin" size={13} />
-              </button>
-            )}
           </div>
 
           {editingDesc ? (
@@ -378,18 +361,9 @@ export function DashboardCard({
             </button>
           )}
 
-          <div className="sdo-card__meta">
-            <button
-              type="button"
-              className="sdo-meta-button"
-              onClick={() => setLocationOpen((current) => !current)}
-              title="Mover cartão"
-            >
-              <Icon name="board" size={12} /> {locationLabel(card)}
-            </button>
-
-            {card.description &&
-              (descExpanded || card.description.length > 90 || card.description.includes('\n')) && (
+          {card.description &&
+            (descExpanded || card.description.length > 90 || card.description.includes('\n')) && (
+              <div className="sdo-card__expand-row">
                 <button
                   type="button"
                   className={classNames(
@@ -403,7 +377,31 @@ export function DashboardCard({
                 >
                   <Icon name="more" size={13} />
                 </button>
-              )}
+              </div>
+            )}
+
+          <div className="sdo-card__meta">
+            <button
+              type="button"
+              className="sdo-meta-button"
+              onClick={() => setLocationOpen((current) => !current)}
+              title="Mover cartão"
+            >
+              <Icon name="board" size={12} /> {locationLabel(card)}
+            </button>
+
+            {onTogglePin && (
+              <button
+                type="button"
+                className={classNames('sfo-icon-btn', pinned && 'sfo-icon-btn--pinned')}
+                onClick={() => onTogglePin(card.id)}
+                aria-pressed={pinned}
+                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+              >
+                <Icon name="pin" size={13} />
+              </button>
+            )}
 
             {card.links.map((processNumber) => {
               const record = processByNumber.get(processNumber);
@@ -442,9 +440,13 @@ export function DashboardCard({
               </span>
             ))}
 
-            {activity && (
-              <span title={card.lastActivity ? new Date(card.lastActivity).toLocaleString('pt-BR') : ''}>
-                <Icon name="clock" size={11} /> Atualizado {activity}
+            {card.lastActivity && (
+              <span
+                className="sdo-card__activity"
+                title={`Atualizado em ${new Date(card.lastActivity).toLocaleString('pt-BR')}`}
+                aria-label={`Atualizado em ${new Date(card.lastActivity).toLocaleString('pt-BR')}`}
+              >
+                <Icon name="clock" size={11} />
               </span>
             )}
           </div>
