@@ -130,7 +130,7 @@ jobs:
                 echo "::error::$label falhou."
                 echo "$response"
                 if echo "$response" | grep -q 'InProgressSubmission'; then
-                  echo "::notice::A versão anterior ainda está em análise na Microsoft. Aguarde a aprovação ou cancele o envio."
+                  return 2
                 fi
                 return 1
               fi
@@ -194,6 +194,10 @@ jobs:
           if [ "$code" != "202" ]; then
             echo "::error::Falha ao publicar (HTTP $code)."
             cat "$body"
+            if jq -e '.errorCode == "InProgressSubmission"' "$body" >/dev/null 2>&1; then
+              echo "::warning::Já existe uma submissão em análise na Microsoft (InProgressSubmission). Nada a publicar agora."
+              exit 0
+            fi
             exit 1
           fi
 
@@ -205,6 +209,13 @@ jobs:
           fi
 
           echo "Operação de publicação: $op"
-          wait_operation "Publicação" "$BASE/submissions/operations/$op"
-
-          echo "::notice::Pacote enviado e publicado no Edge Add-ons. A revisão da Microsoft é assíncrona."
+          if wait_operation "Publicação" "$BASE/submissions/operations/$op"; then
+            echo "::notice::Pacote enviado e publicado no Edge Add-ons. A revisão da Microsoft é assíncrona."
+          else
+            rc=$?
+            if [ "$rc" = "2" ]; then
+              echo "::warning::Já existe uma submissão em análise na Microsoft (InProgressSubmission). Nada a publicar agora; aguarde a aprovação e rode de novo se a versão enviada não for a desejada."
+              exit 0
+            fi
+            exit 1
+          fi
