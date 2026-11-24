@@ -68,6 +68,16 @@ Privacidade: sem servidor próprio, sem telemetria e sem anúncios. Suas credenc
 O SEI Flow é um projeto independente, sem afiliação ao Trello/Atlassian ou ao SEI. Licença MIT.
 ```
 
+## Atualização 1.8.0 (listas, regras, sem Trello e sem notificações)
+
+Guias específicos por loja:
+
+- **Chrome Web Store:** `docs/store/chrome-1.8.0.md`.
+- **Firefox (AMO):** `docs/store/firefox-1.8.0.md`.
+- **Microsoft Edge:** `docs/store/edge-1.8.0.md`.
+
+> A 1.8.0 **remove a permissão `notifications`** e o alarme diário de prazos. Não há permissão nova; o host da página de callback já entrou na 1.7.0. A política agora fica em `https://engleonardo.github.io/SEI/privacy.html`.
+
 ## Atualização 1.7.0 (login em aba e quadros)
 
 Guias específicos por loja, com os textos prontos para colar:

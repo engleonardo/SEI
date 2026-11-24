@@ -1,6 +1,9 @@
 name: Publish Edge (API)
 
 on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
@@ -21,11 +24,12 @@ permissions:
 jobs:
   publish:
     name: Build and publish on Edge Add-ons
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ github.event.workflow_run.head_sha || inputs.tag || github.ref }}
 
       - uses: actions/setup-node@v7
         with:
