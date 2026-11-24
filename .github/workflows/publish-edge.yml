@@ -106,7 +106,7 @@ jobs:
           EDGE_API_KEY="$(trim "$EDGE_API_KEY")"
           EDGE_PRODUCT_ID="$(trim "$EDGE_PRODUCT_ID")"
 
-          BASE="https://api.addons.microsoftedge.microsoft.com/v1.1/products/$EDGE_PRODUCT_ID"
+          BASE="https://api.addons.microsoftedge.microsoft.com/v1/products/$EDGE_PRODUCT_ID"
           ZIP=".output/sei-flow-$VERSION-edge.zip"
           AUTH=(-H "Authorization: ApiKey $EDGE_API_KEY" -H "X-ClientID: $EDGE_CLIENT_ID")
 
@@ -158,7 +158,10 @@ jobs:
             echo "::error::Falha no upload (HTTP $code)."
             cat "$body"
             if [ "$code" = "404" ]; then
-              echo "::notice::HTTP 404 no Edge geralmente significa Product ID ou Client ID de outra conta, ou API key inválida/incompleta. Confira EDGE_PRODUCT_ID (GUID da Identidade da extensão, não o Store ID), EDGE_CLIENT_ID e gere uma nova EDGE_API_KEY."
+              echo "::notice::HTTP 404 no Edge geralmente significa Product ID de outra conta ou um Store ID no lugar do Product ID. Confira EDGE_PRODUCT_ID (GUID da Identidade da extensão)."
+            fi
+            if [ "$code" = "403" ]; then
+              echo "::notice::HTTP 403 'Client ID is Invalid' significa que o EDGE_CLIENT_ID não é o Client ID da página Publish API (ou a API key não pertence a ele). Copie o Client ID e a API key juntos em Partner Center → Publish API."
             fi
             exit 1
           fi
