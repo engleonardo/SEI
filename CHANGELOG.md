@@ -27,8 +27,8 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - **Atualizado**: a data relativa aparece ao lado do processo, sem o texto “Atualizado”; a data/hora exata fica no tooltip.
 - **Sem prazo**: cartões sem prazo mostram um botão discreto no lado direito, que abre o diálogo de prazo (antes o espaço ficava vazio).
 - **Espaço antes dos três pontinhos** e descrição compacta sem o degradê que apagava a 3ª linha; a linha de dados do processo voltou ao espaçamento anterior.
-- **Colunas do Kanban** espremidas para caber na tela e centralizadas; a largura atual virou o máximo, com limite de 180px por coluna e rolagem horizontal depois disso. Nomes longos truncam com tooltip e as setas de mover coluna ficaram menores.
-- **Linha e sombra** antes de iniciar os cartões, separando o cabeçalho da coluna do conteúdo.
+- **Colunas do Kanban** espremidas para caber na tela e centralizadas; a largura atual virou o máximo, com limite de 180px por coluna e rolagem horizontal depois disso. Nomes longos truncam com tooltip, as setas de mover coluna ficaram menores e o nome do quadro fica sempre na mesma linha.
+- **Linha e sombra** antes de iniciar os cartões, próximas do nome do quadro, separando o cabeçalho da coluna do conteúdo.
 - **Editor de descrição** sem o espaçamento extra entre linhas que aparecia ao abrir o cartão.
 - **Notificações do navegador removidas**: permissão `notifications`, alarme de prazos e opção nas Preferências.
 
