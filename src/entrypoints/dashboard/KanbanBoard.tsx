@@ -255,7 +255,7 @@ function KanbanColumn({
               setTitleDraft(group.title);
               setEditingTitle(true);
             }}
-            title={onRenameList ? 'Clique duas vezes para renomear' : undefined}
+            title={onRenameList ? `${group.title} — clique duas vezes para renomear` : group.title}
             style={onRenameList ? { cursor: 'text' } : undefined}
           >
             {group.title}
@@ -271,7 +271,7 @@ function KanbanColumn({
               title="Mover coluna para a esquerda"
               aria-label={`Mover coluna ${group.title} para a esquerda`}
             >
-              <Icon name="chevronLeft" size={13} />
+              <Icon name="chevronLeft" size={12} />
             </button>
             <button
               type="button"
@@ -280,7 +280,7 @@ function KanbanColumn({
               title="Mover coluna para a direita"
               aria-label={`Mover coluna ${group.title} para a direita`}
             >
-              <Icon name="chevronRight" size={13} />
+              <Icon name="chevronRight" size={12} />
             </button>
           </div>
         )}

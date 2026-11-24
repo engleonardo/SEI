@@ -14,6 +14,7 @@ import { ShareDialog } from '../../ui/components/dialogs/ShareDialog';
 import { DeleteCardDialog } from '../../ui/components/dialogs/DeleteCardDialog';
 import { DueDialog } from '../../ui/components/dialogs/DueDialog';
 import { LabelsDialog } from '../../ui/components/dialogs/LabelsDialog';
+import { LinkProcessDialog } from '../../ui/components/dialogs/LinkProcessDialog';
 import { cardHasUnreadProcess, formatActivity, processRecordsFor, processTypesFor } from './model';
 
 export interface DashboardCardProps {
@@ -53,6 +54,7 @@ export function DashboardCard({
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
+  const [linkProcessOpen, setLinkProcessOpen] = useState(false);
 
   const due = formatDue(card.due, card.dueComplete);
   const unread = cardHasUnreadProcess(card, catalog);
@@ -391,6 +393,18 @@ export function DashboardCard({
               <Icon name="board" size={12} /> {locationLabel(card)}
             </button>
 
+            {card.links.length === 0 && (
+              <button
+                type="button"
+                className="sdo-link-missing"
+                onClick={() => setLinkProcessOpen(true)}
+                title="Vincular a um processo do SEI"
+              >
+                <Icon name="link" size={11} />
+                Sem vínculo
+              </button>
+            )}
+
             {card.links.map((processNumber) => {
               const record = processByNumber.get(processNumber);
               const label = (
@@ -637,6 +651,15 @@ export function DashboardCard({
           onDeleted={(ids) => {
             for (const id of ids) onRemoved(id);
           }}
+        />
+      )}
+
+      {linkProcessOpen && (
+        <LinkProcessDialog
+          card={card}
+          catalog={catalog}
+          onClose={() => setLinkProcessOpen(false)}
+          onChanged={onChanged}
         />
       )}
     </>

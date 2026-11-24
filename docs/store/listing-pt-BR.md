@@ -42,6 +42,7 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • Crie e renomeie listas direto no dashboard: “Nova lista” discreto no rodapé e duplo clique no nome da coluna do Kanban.
 • Expanda a descrição no próprio cartão pelos três pontinhos (•••) no fim do texto, sem popup.
 • O pino fica ao lado do número do processo.
+• Vincule um cartão sem processo pelo próprio cartão: “Sem vínculo” abre as sugestões de processos do SEI.
 • Mover e clonar ficam no início do rodapé do cartão (no Kanban, ao lado do arrastar).
 • O checklist aparece dentro do texto do cartão, com o progresso, e também pode ser inserido pelo editor.
 • Edite o nome e a cor das etiquetas existentes.
