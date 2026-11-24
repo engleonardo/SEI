@@ -247,6 +247,7 @@ export function LabelsDialog({
                 placeholder="Nome da etiqueta"
                 disabled={busy}
                 style={{ flex: 1, minWidth: 150 }}
+                autoFocus
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') {
                     event.preventDefault();

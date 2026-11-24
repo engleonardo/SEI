@@ -266,6 +266,7 @@ export function DescriptionEditor({
         }}
         onClick={(event) => {
           if ((event.target as HTMLElement).closest('a')) event.preventDefault();
+          if ((event.target as HTMLElement).closest('input[type="checkbox"]')) emit();
         }}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {

@@ -295,7 +295,7 @@ function App() {
 
         {notice && <div className={`sfo-alert sfo-alert--${notice.kind}`}>{notice.text}</div>}
 
-        {connected && (
+        {connected && !demoMode && (
           <SetupChecklist
             settings={settings}
             connected={connected}

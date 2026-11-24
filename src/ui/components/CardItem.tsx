@@ -469,7 +469,7 @@ export function CardItem({
                   aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
                   title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
                 >
-                  <Icon name="pin" size={16} />
+                  <Icon name="pin" size={14} />
                 </button>
               )}
             </span>

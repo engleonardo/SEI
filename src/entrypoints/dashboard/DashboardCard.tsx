@@ -434,7 +434,7 @@ export function DashboardCard({
                 aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
                 title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
               >
-                <Icon name="pin" size={15} />
+                <Icon name="pin" size={13} />
               </button>
             )}
 
