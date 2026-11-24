@@ -4,7 +4,7 @@
 >
 > A tag dispara o workflow **Release** e, quando ele termina, o **publish-store.yml**, que envia **e publica** no Chrome e na AMO automaticamente se os segredos estiverem configurados (nesta máquina eles estão: `CWS_*`, `AMO_*` e `EDGE_*`). O **Publish Edge (API)** também roda depois do Release quando os segredos do Edge estiverem corretos.
 >
-> **Situação:** 1.7.0 publicada (Chrome, Firefox) e Edge pendente de credenciais. A 1.8.0 é a próxima atualização.
+> **Situação:** 1.8.0 na AMO (pública), no Chrome (em revisão) e no Edge (em revisão, envio manual). A 1.7.0 continua publicada no Chrome e no Edge até a aprovação. As credenciais do Edge já estão válidas; o próximo Release publica sozinho.
 
 ## Antes de enviar
 

@@ -2,6 +2,8 @@
 
 > A 1.8.0 é uma atualização da **1.7.0**. Ela **remove** a permissão `notifications` e o alarme de prazos; não adiciona permissões novas.
 > O pacote pode ser enviado pelo site do Partner Center ou pelo workflow **Publish Edge (API)**.
+>
+> **Situação:** enviado manualmente em 2026-11-23 e **em análise** na Microsoft. A 1.7.0 continua publicada até a aprovação.
 
 ## 1. Pacote
 
@@ -67,7 +69,14 @@ Depois disso, o Edge pode ser publicado pelo workflow **Publish Edge (API)**. El
 - `upload_only`: `true` só envia, `false` envia e publica;
 - `notes`: texto para a certificação.
 
-> O erro **HTTP 404** no upload normalmente é Product ID/Client ID de outra conta ou um Store ID no lugar do Product ID. O workflow valida o formato GUID, mas só a API confirma a conta.
+> **Como diagnosticar o upload:**
+>
+> - **HTTP 404 `Resource not found`**: o caminho da API está errado. A API do Edge Add-ons usa `https://api.addons.microsoftedge.microsoft.com/v1/products/{productId}`; `/v1.1/products/...` não existe.
+> - **HTTP 403 `Client ID is Invalid`**: o endpoint está certo e o `EDGE_CLIENT_ID` não é o Client ID da página **Publish API** (ou a API key não pertence a ele). Copie os dois na mesma tela, pelo ícone de copiar; o Client ID é um GUID e a API key é longa.
+> - **`InProgressSubmission`**: já existe uma submissão em análise para o produto. O upload funciona, mas a publicação é recusada até a Microsoft concluir a revisão. O workflow trata isso como **aviso** e termina verde.
+> - Confira também se o **Product ID** é o GUID da **Extension identity** (e não o Store ID).
+>
+> O workflow valida o formato GUID, mas só a API confirma a conta.
 
 ## 6. Enviar
 
