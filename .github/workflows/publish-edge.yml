@@ -127,11 +127,12 @@ jobs:
                 return 0
               fi
               if [ "$status" = "Failed" ]; then
-                echo "::error::$label falhou."
-                echo "$response"
                 if echo "$response" | grep -q 'InProgressSubmission'; then
+                  echo "::warning::$label: já existe uma submissão em análise na Microsoft."
                   return 2
                 fi
+                echo "::error::$label falhou."
+                echo "$response"
                 return 1
               fi
               sleep 5
