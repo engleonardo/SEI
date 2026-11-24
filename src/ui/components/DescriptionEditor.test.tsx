@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { DescriptionEditor } from './DescriptionEditor';
 
@@ -23,5 +23,13 @@ describe('DescriptionEditor', () => {
     rerender(<DescriptionEditor value="**Dois**" onChange={vi.fn()} />);
     const editor = screen.getByRole('textbox', { name: 'Descrição do cartão' });
     expect(editor.querySelector('strong')?.textContent).toBe('Dois');
+  });
+
+  it('marca uma tarefa e emite o Markdown com [x]', () => {
+    const onChange = vi.fn();
+    render(<DescriptionEditor value={'- [ ] item'} onChange={onChange} />);
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(onChange).toHaveBeenCalled();
+    expect(onChange.mock.calls.at(-1)?.[0]).toContain('[x]');
   });
 });

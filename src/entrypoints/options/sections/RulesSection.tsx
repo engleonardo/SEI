@@ -27,6 +27,8 @@ import { labelColorHex, labelTextColor } from '../../../ui/utils';
 import { ConfirmDialog, Modal } from '../../../ui/components/Modal';
 import { SectionCard, Spinner, StatusPill, type Notice } from './shared';
 
+const UNASSIGNED_BOARD = '__none__';
+
 export function RulesSection({
   boards,
   notify,
@@ -67,6 +69,7 @@ export function RulesSection({
   const [copying, setCopying] = useState(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const saveSeq = useRef(0);
+  const hasUnassignedRules = rules.some((rule) => !rule.boardId);
 
   const loadLastRun = useCallback(async () => {
     try {
@@ -120,8 +123,12 @@ export function RulesSection({
         if (!active) return;
         setRules(value);
         setActiveBoardId((previous) => {
+          if (previous === UNASSIGNED_BOARD) return previous;
           if (previous && value.some((rule) => rule.boardId === previous)) return previous;
-          return value.find((rule) => rule.boardId)?.boardId || previous || '';
+          const assigned = value.find((rule) => rule.boardId)?.boardId;
+          if (assigned) return assigned;
+          if (value.some((rule) => !rule.boardId)) return UNASSIGNED_BOARD;
+          return previous || '';
         });
       })
       .catch((cause) => {
@@ -145,9 +152,18 @@ export function RulesSection({
     if (first) setActiveBoardId(first);
   }, [boards, activeBoardId]);
 
+  // Se o usuário atribuir/remover todos os modelos sem quadro, sai da visão "Sem quadro".
+  useEffect(() => {
+    if (activeBoardId !== UNASSIGNED_BOARD || hasUnassignedRules) return;
+    const first = boards[0]?.id;
+    if (first) setActiveBoardId(first);
+  }, [activeBoardId, boards, hasUnassignedRules]);
+
   // Carrega listas e etiquetas do quadro em edição (e de novo ao trocar).
   useEffect(() => {
-    if (activeBoardId) void loadBoardData(activeBoardId);
+    if (activeBoardId && activeBoardId !== UNASSIGNED_BOARD) {
+      void loadBoardData(activeBoardId);
+    }
   }, [activeBoardId, loadBoardData]);
 
   // O background pode puxar configuração nova (login/alarme); recarrega a lista.
@@ -159,8 +175,14 @@ export function RulesSection({
     });
   }, []);
 
+  const matchesActiveBoard = (rule: Rule) =>
+    activeBoardId === UNASSIGNED_BOARD ? !rule.boardId : rule.boardId === activeBoardId;
+
   const visibleRules = useMemo(
-    () => rules.filter((rule) => rule.boardId === activeBoardId),
+    () =>
+      rules.filter((rule) =>
+        activeBoardId === UNASSIGNED_BOARD ? !rule.boardId : rule.boardId === activeBoardId,
+      ),
     [rules, activeBoardId],
   );
 
@@ -336,6 +358,23 @@ export function RulesSection({
     persist(next);
   };
 
+  const assignRuleBoard = (rule: Rule, boardId: string) => {
+    updateRule(rule.id, {
+      boardId,
+      trigger: { ...rule.trigger, listId: undefined, labelIds: undefined, labelMode: undefined },
+      actions: rule.actions.map((action) => ({
+        ...action,
+        listId: undefined,
+        labelId: undefined,
+        labelName: undefined,
+      })),
+    });
+    if (boardId) {
+      void loadBoardData(boardId);
+      setActiveBoardId(boardId);
+    }
+  };
+
   const toggleConditionLabel = (rule: Rule, labelId: string) => {
     const current = rule.trigger.labelIds ?? [];
     const next = current.includes(labelId) ? current.filter((id) => id !== labelId) : [...current, labelId];
@@ -400,7 +439,7 @@ export function RulesSection({
     if (!moved) return;
     reordered.splice(target, 0, moved);
     let cursor = 0;
-    const next = rules.map((rule) => (rule.boardId === activeBoardId ? reordered[cursor++]! : rule));
+    const next = rules.map((rule) => (matchesActiveBoard(rule) ? reordered[cursor++]! : rule));
     persist(next, 'Ordem das regras atualizada.');
   };
 
@@ -422,14 +461,25 @@ export function RulesSection({
 
   const addRule = () => {
     persist(
-      [...rules, createRule({ name: 'Nova regra', enabled: false, boardId: activeBoardId })],
+      [
+        ...rules,
+        createRule({
+          name: 'Nova regra',
+          enabled: false,
+          boardId: activeBoardId === UNASSIGNED_BOARD ? '' : activeBoardId,
+        }),
+      ],
       'Regra criada.',
     );
   };
 
   const openCopy = () => {
     const source =
-      (activeBoardId && rules.some((rule) => rule.boardId === activeBoardId) ? activeBoardId : undefined) ??
+      (activeBoardId &&
+      activeBoardId !== UNASSIGNED_BOARD &&
+      rules.some((rule) => rule.boardId === activeBoardId)
+        ? activeBoardId
+        : undefined) ??
       rules.find((rule) => rule.boardId)?.boardId ??
       boards[0]?.id ??
       '';
@@ -676,9 +726,12 @@ export function RulesSection({
               className="sfo-select"
               value={activeBoardId}
               onChange={(event) => setActiveBoardId(event.target.value)}
-              disabled={loading || boards.length === 0}
+              disabled={loading || (boards.length === 0 && !hasUnassignedRules)}
             >
-              {boards.length === 0 && <option value="">Nenhum quadro carregado</option>}
+              {hasUnassignedRules && <option value={UNASSIGNED_BOARD}>Sem quadro (modelos)</option>}
+              {boards.length === 0 && !hasUnassignedRules && (
+                <option value="">Nenhum quadro carregado</option>
+              )}
               {boards.map((board) => (
                 <option key={board.id} value={board.id}>
                   {board.name}
@@ -689,7 +742,9 @@ export function RulesSection({
           <span className="sfo-hint sfo-rules-board__hint">
             {demoMode
               ? 'Modo sem Trello: as listas e etiquetas são de exemplo; aplicar regras fica indisponível.'
-              : 'As listas e etiquetas de cada regra são deste quadro. Use “Copiar regras” para levar automações para outro quadro.'}
+              : activeBoardId === UNASSIGNED_BOARD
+                ? 'Atribua um quadro a cada modelo para configurar listas e etiquetas. Use “Copiar regras” para levar automações para outro quadro.'
+                : 'As listas e etiquetas de cada regra são deste quadro. Use “Copiar regras” para levar automações para outro quadro.'}
           </span>
           <button
             type="button"
@@ -697,9 +752,7 @@ export function RulesSection({
             onClick={() => void syncNow()}
             disabled={syncing || demoMode}
             title={
-              demoMode
-                ? 'Indisponível no modo sem Trello'
-                : 'Buscar as regras salvas na sua conta do Trello'
+              demoMode ? 'Indisponível no modo sem Trello' : 'Buscar as regras salvas na sua conta do Trello'
             }
           >
             {syncing ? <Spinner /> : <Icon name="refresh" size={13} />}
@@ -797,6 +850,25 @@ export function RulesSection({
                       <Icon name="trash" size={14} />
                     </button>
                   </header>
+
+                  {!rule.boardId && (
+                    <div className="sfo-rule__row">
+                      <span className="sfo-rule__label">Quadro</span>
+                      <select
+                        className="sfo-select"
+                        value={rule.boardId}
+                        onChange={(event) => assignRuleBoard(rule, event.target.value)}
+                        aria-label="Quadro da regra"
+                      >
+                        <option value="">Escolha o quadro</option>
+                        {boards.map((board) => (
+                          <option key={board.id} value={board.id}>
+                            {board.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="sfo-rule__row">
                     <span className="sfo-rule__label">Vínculo</span>
