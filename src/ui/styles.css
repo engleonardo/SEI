@@ -603,7 +603,7 @@
 .sf-card__expand-row {
   display: flex;
   justify-content: center;
-  margin-top: 4px;
+  margin-top: 10px;
 }
 
 .sf-card__expand:hover,
@@ -744,12 +744,13 @@
 
 .sf-markdown--compact {
   position: relative;
-  max-height: 4.4em;
+  max-height: 4.6em;
   overflow: hidden;
 }
 
 .sf-markdown--compact::after {
   content: '';
+  display: none;
   position: absolute;
   right: 0;
   bottom: 0;
@@ -915,7 +916,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
-  margin-top: 14px;
+  margin-top: 8px;
   font-size: 12px;
   color: var(--sf-muted);
 }

@@ -22,7 +22,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 - **Pino do cartão** ao lado do número do processo.
 - **Atualizado** aparece só como ícone; a data/hora exata fica no tooltip.
-- **Espaço entre a descrição e os dados do processo** aumentado para manter o texto legível.
+- **Espaço antes dos três pontinhos** e descrição compacta sem o degradê que apagava a 3ª linha; a linha de dados do processo voltou ao espaçamento anterior.
 - **Colunas do Kanban** espremidas para caber na tela e centralizadas; a largura atual virou o máximo, com limite de 180px por coluna e rolagem horizontal depois disso.
 - **Editor de descrição** sem o espaçamento extra entre linhas que aparecia ao abrir o cartão.
 - **Notificações do navegador removidas**: permissão `notifications`, alarme de prazos e opção nas Preferências.

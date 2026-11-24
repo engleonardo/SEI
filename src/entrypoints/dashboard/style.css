@@ -1148,7 +1148,7 @@
 .sdo-card__expand-row {
   display: flex;
   justify-content: center;
-  margin-top: 3px;
+  margin-top: 8px;
 }
 
 .sdo-card__expand:hover,
@@ -1253,12 +1253,13 @@
 
 .sdo-card .sf-markdown--compact {
   position: relative;
-  max-height: 4.4em;
+  max-height: 4.6em;
   overflow: hidden;
 }
 
 .sdo-card .sf-markdown--compact::after {
   content: '';
+  display: none;
   position: absolute;
   right: 0;
   bottom: 0;
@@ -1418,7 +1419,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 5px 12px;
-  margin-top: 12px;
+  margin-top: 7px;
   color: var(--muted);
   font-size: 11.5px;
 }
@@ -2962,7 +2963,7 @@
 }
 
 .sdo-card--kanban .sdo-card__desc .sf-markdown--compact {
-  max-height: 4.5em;
+  max-height: 4.6em;
 }
 
 .sdo-card--kanban .sdo-meta-button,
