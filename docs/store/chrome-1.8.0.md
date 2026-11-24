@@ -3,7 +3,7 @@
 > A 1.8.0 é uma atualização da **1.7.0** e **não adiciona permissões novas**. Ela **remove** a permissão `notifications` e o alarme de prazos; os usuários atuais **não são desativados** por causa disso.
 > O login continua igual: autorização em uma aba + página de callback com content script restrito.
 >
-> **Situação:** enviado em 2026-11-23 pelo workflow. Acompanhe em **Status**.
+> **Situação:** **1.8.0 publicada** em 2026-11-23 (100% dos usuários). A 1.7.0 foi substituída.
 
 ## 1. Pacote
 
