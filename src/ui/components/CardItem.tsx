@@ -449,24 +449,30 @@ export function CardItem({
                 {due.label}
               </button>
             )}
-            {onTogglePin && (
-              <button
-                type="button"
-                className={classNames('sf-icon-btn', pinned && 'sf-icon-btn--pinned')}
-                onClick={() => onTogglePin(card.id)}
-                aria-pressed={pinned}
-                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
-                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
-              >
-                <Icon name="pin" size={14} />
-              </button>
-            )}
-            {showProcessMeta && processNumber && (
-              <span className="sf-card__meta-item" title="Processo vinculado">
-                <Icon name="link" size={11} />
-                {processNumber}
-              </span>
-            )}
+            <span className="sf-card__process-group">
+              {showProcessMeta && processNumber && (
+                <span className="sf-card__meta-item" title="Processo vinculado">
+                  <Icon name="link" size={11} />
+                  {processNumber}
+                </span>
+              )}
+              {onTogglePin && (
+                <button
+                  type="button"
+                  className={classNames(
+                    'sf-icon-btn',
+                    'sf-card__pin-inline',
+                    pinned && 'sf-icon-btn--pinned',
+                  )}
+                  onClick={() => onTogglePin(card.id)}
+                  aria-pressed={pinned}
+                  aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+                  title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+                >
+                  <Icon name="pin" size={16} />
+                </button>
+              )}
+            </span>
             {card.links.length > 1 && (
               <span className="sf-chip sf-chip--accent" title={card.links.join(', ')}>
                 <Icon name="link" size={11} />
@@ -494,6 +500,28 @@ export function CardItem({
 
         <div className="sf-card__footer">
           <div className="sf-card__footer-actions">
+            <button
+              type="button"
+              className="sf-btn sf-btn--ghost sf-btn--sm"
+              onClick={() => setLocationOpen((current) => !current)}
+              disabled={busy}
+              aria-label="Mover cartão"
+              title="Mover cartão"
+            >
+              <Icon name="board" size={14} />
+              {actionLabel('Mover')}
+            </button>
+            <button
+              type="button"
+              className="sf-btn sf-btn--ghost sf-btn--sm"
+              onClick={() => setDialog('share')}
+              disabled={busy}
+              aria-label="Clonar ou compartilhar"
+              title="Clonar ou compartilhar"
+            >
+              <Icon name="copy" size={14} />
+              {actionLabel('Clonar')}
+            </button>
             <button
               type="button"
               className="sf-btn sf-btn--ghost sf-btn--sm"
@@ -533,17 +561,6 @@ export function CardItem({
             <button
               type="button"
               className="sf-btn sf-btn--ghost sf-btn--sm"
-              onClick={() => setDialog('share')}
-              disabled={busy}
-              aria-label="Compartilhar e clonar"
-              title="Compartilhar e clonar"
-            >
-              <Icon name="copy" size={14} />
-              {actionLabel('Compartilhar')}
-            </button>
-            <button
-              type="button"
-              className="sf-btn sf-btn--ghost sf-btn--sm"
               onClick={() => setDialog('due')}
               disabled={busy}
               aria-label="Prazo"
@@ -551,17 +568,6 @@ export function CardItem({
             >
               <Icon name="calendar" size={14} />
               {actionLabel('Prazo')}
-            </button>
-            <button
-              type="button"
-              className="sf-btn sf-btn--ghost sf-btn--sm"
-              onClick={() => setLocationOpen((current) => !current)}
-              disabled={busy}
-              aria-label="Mover cartão"
-              title="Mover cartão"
-            >
-              <Icon name="board" size={14} />
-              {actionLabel('Mover')}
             </button>
             <button
               type="button"

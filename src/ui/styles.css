@@ -928,6 +928,17 @@
   min-width: 0;
 }
 
+.sf-card__process-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sf-card__pin-inline {
+  width: 22px;
+  height: 22px;
+}
+
 .sf-card__footer {
   position: relative;
   display: flex;

@@ -20,7 +20,8 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 ### Alterado
 
-- **Pino do cartão** ao lado do número do processo.
+- **Pino do cartão** ao lado do número do processo, com ícone um pouco maior.
+- **Mover e clonar** no início do rodapé do cartão (no Kanban, ao lado do arrastar).
 - **Atualizado** aparece só como ícone; a data/hora exata fica no tooltip.
 - **Espaço antes dos três pontinhos** e descrição compacta sem o degradê que apagava a 3ª linha; a linha de dados do processo voltou ao espaçamento anterior.
 - **Colunas do Kanban** espremidas para caber na tela e centralizadas; a largura atual virou o máximo, com limite de 180px por coluna e rolagem horizontal depois disso.

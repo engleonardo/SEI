@@ -390,19 +390,6 @@ export function DashboardCard({
               <Icon name="board" size={12} /> {locationLabel(card)}
             </button>
 
-            {onTogglePin && (
-              <button
-                type="button"
-                className={classNames('sfo-icon-btn', pinned && 'sfo-icon-btn--pinned')}
-                onClick={() => onTogglePin(card.id)}
-                aria-pressed={pinned}
-                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
-                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
-              >
-                <Icon name="pin" size={13} />
-              </button>
-            )}
-
             {card.links.map((processNumber) => {
               const record = processByNumber.get(processNumber);
               const label = (
@@ -433,6 +420,23 @@ export function DashboardCard({
                 </span>
               );
             })}
+
+            {onTogglePin && (
+              <button
+                type="button"
+                className={classNames(
+                  'sfo-icon-btn',
+                  'sdo-card__pin-inline',
+                  pinned && 'sfo-icon-btn--pinned',
+                )}
+                onClick={() => onTogglePin(card.id)}
+                aria-pressed={pinned}
+                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+              >
+                <Icon name="pin" size={15} />
+              </button>
+            )}
 
             {types.map((type) => (
               <span key={type} className="sdo-type">
@@ -512,6 +516,28 @@ export function DashboardCard({
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
+              onClick={() => setLocationOpen((current) => !current)}
+              disabled={busy}
+              title="Mover"
+              aria-label="Mover"
+            >
+              <Icon name="board" size={13} />
+              <span className="sdo-card__action-label">Mover</span>
+            </button>
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
+              onClick={() => setDialog('share')}
+              disabled={busy}
+              title="Compartilhar e clonar"
+              aria-label="Compartilhar e clonar"
+            >
+              <Icon name="copy" size={13} />
+              <span className="sdo-card__action-label">Clonar</span>
+            </button>
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
               onClick={() => setDialog('labels')}
               disabled={busy}
               title="Etiquetas"
@@ -548,17 +574,6 @@ export function DashboardCard({
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
-              onClick={() => setDialog('share')}
-              disabled={busy}
-              title="Compartilhar e clonar"
-              aria-label="Compartilhar e clonar"
-            >
-              <Icon name="copy" size={13} />
-              <span className="sdo-card__action-label">Compartilhar</span>
-            </button>
-            <button
-              type="button"
-              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
               onClick={() => setDialog('due')}
               disabled={busy}
               title="Prazo"
@@ -566,17 +581,6 @@ export function DashboardCard({
             >
               <Icon name="calendar" size={13} />
               <span className="sdo-card__action-label">Prazo</span>
-            </button>
-            <button
-              type="button"
-              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
-              onClick={() => setLocationOpen((current) => !current)}
-              disabled={busy}
-              title="Mover"
-              aria-label="Mover"
-            >
-              <Icon name="board" size={13} />
-              <span className="sdo-card__action-label">Mover</span>
             </button>
             <button
               type="button"
