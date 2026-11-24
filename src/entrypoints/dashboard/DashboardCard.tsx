@@ -14,7 +14,7 @@ import { ShareDialog } from '../../ui/components/dialogs/ShareDialog';
 import { DeleteCardDialog } from '../../ui/components/dialogs/DeleteCardDialog';
 import { DueDialog } from '../../ui/components/dialogs/DueDialog';
 import { LabelsDialog } from '../../ui/components/dialogs/LabelsDialog';
-import { cardHasUnreadProcess, processRecordsFor, processTypesFor } from './model';
+import { cardHasUnreadProcess, formatActivity, processRecordsFor, processTypesFor } from './model';
 
 export interface DashboardCardProps {
   card: TrelloCard;
@@ -57,6 +57,7 @@ export function DashboardCard({
   const due = formatDue(card.due, card.dueComplete);
   const unread = cardHasUnreadProcess(card, catalog);
   const types = processTypesFor(card, catalog);
+  const activity = formatActivity(card);
   const processes = processRecordsFor(card, catalog);
   const processByNumber = new Map(processes.map((process) => [process.number, process]));
 
@@ -438,21 +439,21 @@ export function DashboardCard({
               </button>
             )}
 
+            {activity && (
+              <span
+                className="sdo-card__activity"
+                title={`Atualizado em ${new Date(card.lastActivity!).toLocaleString('pt-BR')}`}
+                aria-label={`Atualizado em ${new Date(card.lastActivity!).toLocaleString('pt-BR')}`}
+              >
+                <Icon name="clock" size={11} /> {activity}
+              </span>
+            )}
+
             {types.map((type) => (
               <span key={type} className="sdo-type">
                 <Icon name="tag" size={11} /> {type}
               </span>
             ))}
-
-            {card.lastActivity && (
-              <span
-                className="sdo-card__activity"
-                title={`Atualizado em ${new Date(card.lastActivity).toLocaleString('pt-BR')}`}
-                aria-label={`Atualizado em ${new Date(card.lastActivity).toLocaleString('pt-BR')}`}
-              >
-                <Icon name="clock" size={11} />
-              </span>
-            )}
           </div>
 
           {locationOpen && (
@@ -477,13 +478,21 @@ export function DashboardCard({
               <Icon name="calendar" size={11} />
               {due.label}
             </button>
+          ) : card.dueComplete ? (
+            <span className="sdo-pill sdo-pill--success">
+              <Icon name="check" size={11} />
+              Concluído
+            </span>
           ) : (
-            card.dueComplete && (
-              <span className="sdo-pill sdo-pill--success">
-                <Icon name="check" size={11} />
-                Concluído
-              </span>
-            )
+            <button
+              type="button"
+              className="sdo-pill sdo-pill--neutral"
+              onClick={() => setDialog('due')}
+              title="Definir prazo"
+            >
+              <Icon name="calendar" size={11} />
+              Sem prazo
+            </button>
           )}
           <div className="sdo-card__side-actions">
             <button
