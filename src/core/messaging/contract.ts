@@ -30,7 +30,8 @@ export interface RpcMap {
   'auth:start': { payload: undefined; result: undefined };
   'auth:finish': { payload: undefined; result: undefined };
   'auth:logout': { payload: { clearManual?: boolean } | undefined; result: AuthStatus };
-  'sync:config': { payload: { force?: boolean } | undefined; result: SyncResult };  'settings:clear-cache': { payload: undefined; result: { cleared: true } };
+  'sync:config': { payload: { force?: boolean } | undefined; result: SyncResult };
+  'settings:clear-cache': { payload: undefined; result: { cleared: true } };
   'settings:export': {
     payload: { includeCredentials: boolean; includeRules?: boolean };
     result: SettingsBackup;
@@ -100,6 +101,11 @@ export interface RpcMap {
   'trello:copy-board': { payload: { boardId: string; name: string }; result: TrelloBoard };
   'trello:create-board': { payload: { name: string }; result: TrelloBoard };
   'trello:rename-board': { payload: { boardId: string; name: string }; result: TrelloBoard };
+  'trello:create-list': { payload: { boardId: string; name: string }; result: TrelloList };
+  'trello:rename-list': {
+    payload: { boardId: string; listId: string; name: string };
+    result: TrelloList;
+  };
   'trello:mirror-card': {
     payload: { cardId: string; listId: string };
     result: { card: TrelloCard; group: MirrorGroup };
@@ -109,6 +115,10 @@ export interface RpcMap {
   'mirrors:sync': { payload: undefined; result: { updated: number } };
   'trello:create-label': {
     payload: { boardId: string; name: string; color: string };
+    result: TrelloLabel;
+  };
+  'trello:update-label': {
+    payload: { boardId: string; labelId: string; name?: string; color?: string };
     result: TrelloLabel;
   };
   'trello:add-label': { payload: { cardId: string; labelId: string }; result: TrelloCard };

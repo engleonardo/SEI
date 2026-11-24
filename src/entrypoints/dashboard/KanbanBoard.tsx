@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -35,8 +35,7 @@ const columnKeyboardCoordinateGetter: KeyboardCoordinateGetter = (event, args) =
   const rect = context.collisionRect;
   if (!rect) return undefined;
 
-  const direction =
-    event.code === KeyboardCode.Right ? 1 : event.code === KeyboardCode.Left ? -1 : 0;
+  const direction = event.code === KeyboardCode.Right ? 1 : event.code === KeyboardCode.Left ? -1 : 0;
   if (direction === 0) return undefined;
 
   const origin = rect.left + rect.width / 2;
@@ -76,6 +75,9 @@ interface KanbanBoardProps {
   onMoveColumn?: (listId: string, direction: 'left' | 'right') => void;
   canMoveColumns?: boolean;
   onAddCard?: (boardId: string, listId: string) => void;
+  canManageLists?: boolean;
+  onRenameList?: (listId: string, name: string) => Promise<void>;
+  onCreateList?: (name: string) => Promise<void>;
 }
 
 function listIdFromGroup(group: CardGroup): string {
@@ -113,9 +115,7 @@ function KanbanCard({
     id: card.id,
     data: { card },
   });
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : undefined;
+  const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined;
 
   return (
     <div
@@ -158,6 +158,7 @@ function KanbanColumn({
   canMoveColumns,
   onMoveColumn,
   onAddCard,
+  onRenameList,
   catalog,
   pinned,
   onChanged,
@@ -172,6 +173,7 @@ function KanbanColumn({
   canMoveColumns: boolean;
   onMoveColumn?: (listId: string, direction: 'left' | 'right') => void;
   onAddCard?: (boardId: string, listId: string) => void;
+  onRenameList?: (listId: string, name: string) => Promise<void>;
   catalog: ProcessCatalog;
   pinned: Set<string>;
   onChanged: (card: TrelloCard) => void;
@@ -185,6 +187,28 @@ function KanbanColumn({
     id: `column:${group.key}`,
     data: { listId },
   });
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(group.title);
+  const [titleBusy, setTitleBusy] = useState(false);
+  const cancelTitleRef = useRef(false);
+
+  const saveTitle = async () => {
+    const next = titleDraft.trim();
+    if (!next || next === group.title) {
+      cancelTitleRef.current = true;
+      setEditingTitle(false);
+      setTitleDraft(group.title);
+      return;
+    }
+    setTitleBusy(true);
+    try {
+      await onRenameList?.(listId, next);
+      cancelTitleRef.current = true;
+      setEditingTitle(false);
+    } finally {
+      setTitleBusy(false);
+    }
+  };
 
   return (
     <section
@@ -194,7 +218,49 @@ function KanbanColumn({
     >
       <header className="sdo-kanban-column__head">
         <span className="sdo-kanban-column__dot" />
-        <span className="sdo-kanban-column__title">{group.title}</span>
+        {editingTitle ? (
+          <input
+            className="sdo-kanban-column__title-input"
+            value={titleDraft}
+            onChange={(event) => setTitleDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                void saveTitle();
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                cancelTitleRef.current = true;
+                setTitleDraft(group.title);
+                setEditingTitle(false);
+              }
+            }}
+            onBlur={() => {
+              if (cancelTitleRef.current) {
+                cancelTitleRef.current = false;
+                return;
+              }
+              void saveTitle();
+            }}
+            autoFocus
+            disabled={titleBusy}
+            aria-label="Nome da lista"
+          />
+        ) : (
+          <span
+            className="sdo-kanban-column__title"
+            onDoubleClick={() => {
+              if (!onRenameList) return;
+              cancelTitleRef.current = false;
+              setTitleDraft(group.title);
+              setEditingTitle(true);
+            }}
+            title={onRenameList ? `${group.title} — clique duas vezes para renomear` : group.title}
+            style={onRenameList ? { cursor: 'text' } : undefined}
+          >
+            {group.title}
+          </span>
+        )}
         <span className="sdo-kanban-column__count">{group.cards.length}</span>
         {canMoveColumns && onMoveColumn && (
           <div className="sdo-kanban-column__actions">
@@ -205,7 +271,7 @@ function KanbanColumn({
               title="Mover coluna para a esquerda"
               aria-label={`Mover coluna ${group.title} para a esquerda`}
             >
-              <Icon name="chevronLeft" size={13} />
+              <Icon name="chevronLeft" size={12} />
             </button>
             <button
               type="button"
@@ -214,7 +280,7 @@ function KanbanColumn({
               title="Mover coluna para a direita"
               aria-label={`Mover coluna ${group.title} para a direita`}
             >
-              <Icon name="chevronRight" size={13} />
+              <Icon name="chevronRight" size={12} />
             </button>
           </div>
         )}
@@ -250,6 +316,92 @@ function KanbanColumn({
   );
 }
 
+function NewListFooter({ onCreate }: { onCreate: (name: string) => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    const next = name.trim();
+    if (!next) return;
+    setBusy(true);
+    try {
+      await onCreate(next);
+      setName('');
+      setOpen(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="sdo-kanban-footer">
+      {open ? (
+        <div
+          className="sdo-kanban-newlist-form"
+          onBlur={(event) => {
+            const next = event.relatedTarget as Node | null;
+            if (next && event.currentTarget.contains(next)) return;
+            setName('');
+            setOpen(false);
+          }}
+        >
+          <input
+            className="sdo-inline-input"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                void submit();
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                setName('');
+                setOpen(false);
+              }
+            }}
+            placeholder="Nome da nova lista"
+            autoFocus
+            disabled={busy}
+            aria-label="Nome da nova lista"
+          />
+          <button
+            type="button"
+            className="sfo-btn sfo-btn--sm sfo-btn--primary"
+            onClick={() => void submit()}
+            disabled={busy || !name.trim()}
+          >
+            {busy ? <span className="sfo-spinner" /> : <Icon name="plus" size={12} />}
+            Criar
+          </button>
+          <button
+            type="button"
+            className="sfo-btn sfo-btn--sm"
+            onClick={() => {
+              setName('');
+              setOpen(false);
+            }}
+            disabled={busy}
+          >
+            Cancelar
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="sdo-kanban-newlist"
+          onClick={() => setOpen(true)}
+          title="Adicionar lista neste quadro"
+        >
+          <Icon name="plus" size={13} />
+          Nova lista
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function KanbanBoard({
   groups,
   catalog,
@@ -263,6 +415,9 @@ export function KanbanBoard({
   onMoveColumn,
   canMoveColumns = false,
   onAddCard,
+  canManageLists = false,
+  onRenameList,
+  onCreateList,
 }: KanbanBoardProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -310,6 +465,7 @@ export function KanbanBoard({
             canMoveColumns={canMoveColumns}
             onMoveColumn={onMoveColumn}
             onAddCard={onAddCard}
+            onRenameList={onRenameList}
             catalog={catalog}
             pinned={pinned}
             onChanged={onChanged}
@@ -320,6 +476,7 @@ export function KanbanBoard({
           />
         ))}
       </div>
+      {canManageLists && onCreateList && <NewListFooter onCreate={onCreateList} />}
       <DragOverlay dropAnimation={null}>
         {activeCard ? (
           <div className="sdo-kanban-overlay">

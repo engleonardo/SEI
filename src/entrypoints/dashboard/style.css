@@ -1018,6 +1018,9 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  box-shadow: 0 -8px 12px -12px rgba(15, 23, 42, 0.45);
+  padding-top: 4px;
 }
 
 .sdo-card {
@@ -1110,6 +1113,51 @@
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 6px;
+}
+
+.sdo-card__checklist {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sdo-card__checklist:hover {
+  color: var(--accent);
+}
+
+.sdo-card__expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.sdo-card__expand-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.sdo-card__expand:hover,
+.sdo-card__expand--on {
+  background: var(--surface);
+  color: var(--accent);
 }
 
 .sdo-label {
@@ -1208,12 +1256,13 @@
 
 .sdo-card .sf-markdown--compact {
   position: relative;
-  max-height: 4.4em;
+  max-height: 4.6em;
   overflow: hidden;
 }
 
 .sdo-card .sf-markdown--compact::after {
   content: '';
+  display: none;
   position: absolute;
   right: 0;
   bottom: 0;
@@ -1281,7 +1330,6 @@
   outline: none;
   font-size: 13px;
   line-height: 1.5;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
@@ -1375,8 +1423,36 @@
   align-items: center;
   gap: 5px 12px;
   margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
   color: var(--muted);
   font-size: 11.5px;
+}
+
+.sdo-card__pin-inline {
+  width: 22px;
+  height: 22px;
+  margin-left: -6px;
+}
+
+.sdo-link-missing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sdo-link-missing:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .sdo-card__meta > span,
@@ -1603,6 +1679,14 @@
 
 .sdo-card__complete {
   color: var(--success);
+}
+
+.sdo-card__attachment--on {
+  color: var(--accent);
+}
+
+.sdo-card__attachment--on svg {
+  color: var(--accent);
 }
 
 /* ---------------------------------------------------------------- listas */
@@ -1891,6 +1975,91 @@
   border-radius: 999px;
   background: var(--accent);
   color: #fff;
+}
+
+.sdo-lists__new-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.sdo-lists__new {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sdo-lists__new:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.sdo-lists__new-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.sdo-kanban-footer {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+
+.sdo-kanban-newlist {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sdo-kanban-newlist:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.sdo-kanban-newlist-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.sdo-kanban-column__title-input {
+  grid-column: 2;
+  grid-row: 1;
+  flex: 1;
+  min-width: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: none;
 }
 
 .sdo-pill {
@@ -2581,6 +2750,7 @@
 .sdo-kanban {
   display: flex;
   align-items: flex-start;
+  justify-content: safe center;
   gap: 14px;
   padding: 2px 0 12px;
   overflow-x: auto;
@@ -2606,10 +2776,11 @@
 
 .sdo-kanban-column {
   display: flex;
-  flex: 0 0 340px;
+  flex: 1 1 0;
   flex-direction: column;
   gap: 8px;
-  width: 340px;
+  width: auto;
+  min-width: 180px;
   max-width: 340px;
   height: clamp(420px, calc(100vh - 200px), 900px);
   height: clamp(420px, calc(100dvh - 200px), 900px);
@@ -2629,11 +2800,13 @@
 }
 
 .sdo-kanban-column__head {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: 24px auto;
   align-items: center;
-  gap: 7px;
-  padding: 2px 2px 8px;
+  column-gap: 7px;
+  row-gap: 2px;
+  padding: 2px 2px 2px;
   color: var(--text);
   font-size: 15px;
   font-weight: 850;
@@ -2641,7 +2814,19 @@
   text-transform: uppercase;
 }
 
+.sdo-kanban-column__title {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sdo-kanban-column__dot {
+  grid-column: 1;
+  grid-row: 1;
+  flex: 0 0 auto;
   width: 8px;
   height: 8px;
   border-radius: 999px;
@@ -2650,6 +2835,9 @@
 
 .sdo-kanban-column__count {
   display: inline-flex;
+  grid-column: 3;
+  grid-row: 1;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   min-width: 20px;
@@ -2663,6 +2851,8 @@
 }
 
 .sdo-kanban-column__board {
+  grid-column: 1 / -1;
+  grid-row: 2;
   flex-basis: 100%;
   color: var(--muted);
   font-size: 10.5px;
@@ -2671,16 +2861,19 @@
 
 .sdo-kanban-column__actions {
   display: flex;
+  grid-column: 4;
+  grid-row: 1;
+  flex: 0 0 auto;
   gap: 2px;
-  margin-left: auto;
+  margin-left: 0;
 }
 
 .sdo-kanban-column__actions button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: 0;
   border-radius: 6px;
@@ -2705,7 +2898,10 @@
   flex-direction: column;
   gap: 14px;
   min-height: 0;
+  padding-top: 4px;
   padding-right: 2px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  box-shadow: inset 0 10px 12px -12px rgba(15, 23, 42, 0.5);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -2815,13 +3011,17 @@
   font-size: 12.5px;
 }
 
+.sdo-card--kanban .sdo-card__main {
+  min-width: 0;
+}
+
 .sdo-card--kanban .sdo-card__desc {
   margin-top: 5px;
   font-size: 11.5px;
 }
 
 .sdo-card--kanban .sdo-card__desc .sf-markdown--compact {
-  max-height: 4.5em;
+  max-height: 4.6em;
 }
 
 .sdo-card--kanban .sdo-meta-button,

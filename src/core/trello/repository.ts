@@ -61,7 +61,7 @@ import { TrelloClient, TrelloError, type TrelloCredentials } from './client';
 import { toCard, toCards } from './normalize';
 
 const CARD_FIELDS =
-  'id,name,desc,shortUrl,start,due,dueComplete,idBoard,idList,idChecklists,labels,dateLastActivity';
+  'id,name,desc,shortUrl,start,due,dueComplete,idBoard,idList,idChecklists,labels,dateLastActivity,badges';
 const BOARD_FIELDS = 'id,name';
 const LIST_FIELDS = 'id,name,pos';
 const LABEL_FIELDS = 'id,name,color';
@@ -138,6 +138,25 @@ export class TrelloRepository {
     });
     await cacheDelete('boards');
     return board;
+  }
+
+  async createList(boardId: string, name: string): Promise<TrelloList> {
+    const list = await this.client.post<TrelloList>(`/boards/${boardId}/lists`, {
+      name: name.trim(),
+      pos: 'bottom',
+    });
+    await cacheDelete(`lists:${boardId}`);
+    await cacheDeleteByPrefix('boardcards:');
+    return list;
+  }
+
+  async renameList(boardId: string, listId: string, name: string): Promise<TrelloList> {
+    const list = await this.client.put<TrelloList>(`/lists/${listId}`, {
+      name: name.trim(),
+    });
+    await cacheDelete(`lists:${boardId}`);
+    await cacheDeleteByPrefix('boardcards:');
+    return list;
   }
 
   async getLists(boardId: string, fresh = false): Promise<TrelloList[]> {
@@ -1289,6 +1308,20 @@ export class TrelloRepository {
     return label;
   }
 
+  async updateLabel(
+    boardId: string,
+    labelId: string,
+    patch: { name?: string; color?: string },
+  ): Promise<TrelloLabel> {
+    const body: Record<string, string> = {};
+    if (patch.name !== undefined) body.name = patch.name.trim();
+    if (patch.color !== undefined) body.color = patch.color;
+    const label = await this.client.put<TrelloLabel>(`/labels/${labelId}`, body);
+    await cacheDelete(`labels:${boardId}`);
+    await this.invalidateCardCaches();
+    return label;
+  }
+
   async addLabelToCard(cardId: string, labelId: string): Promise<TrelloCard> {
     await this.client.post(`/cards/${cardId}/idLabels`, { value: labelId });
     await this.invalidateCardCaches();
@@ -1312,11 +1345,7 @@ export class TrelloRepository {
     return (attachments ?? []).filter((attachment) => Boolean(attachment?.id));
   }
 
-  async addAttachmentUrl(
-    cardId: string,
-    url: string,
-    name?: string,
-  ): Promise<TrelloAttachment> {
+  async addAttachmentUrl(cardId: string, url: string, name?: string): Promise<TrelloAttachment> {
     return this.client.post<TrelloAttachment>(`/cards/${cardId}/attachments`, {
       url,
       name: name?.trim() || undefined,
@@ -1351,10 +1380,7 @@ export class TrelloRepository {
     return toCard(raw);
   }
 
-  async createCardMirror(
-    cardId: string,
-    listId: string,
-  ): Promise<{ card: TrelloCard; group: MirrorGroup }> {
+  async createCardMirror(cardId: string, listId: string): Promise<{ card: TrelloCard; group: MirrorGroup }> {
     const card = await this.copyCard(cardId, listId);
     const group = await addMirror(cardId, card.id);
     return { card, group };

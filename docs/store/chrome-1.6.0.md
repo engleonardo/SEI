@@ -76,7 +76,7 @@ Mantenha as três declarações marcadas (não vender, não usar para fins não 
 ### Política de Privacidade
 
 ```
-https://github.com/engleonardo/SEI/blob/main/PRIVACY.md
+https://engleonardo.github.io/SEI/privacy.html
 ```
 
 Clique em **Salvar rascunho**.

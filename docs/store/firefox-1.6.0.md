@@ -20,7 +20,7 @@ Em **Edit product page**:
 - **Description:** copie o bloco "Descrição completa" inteiro.
 - **Categories:** Productivity.
 - **Tags sugeridas:** `trello`, `sei`, `processos`, `produtividade`, `governo`.
-- **Privacy policy:** `https://github.com/engleonardo/SEI/blob/main/PRIVACY.md`
+- **Privacy policy:** `https://engleonardo.github.io/SEI/privacy.html`
 - **Homepage / Support:** `https://github.com/engleonardo/SEI`
 - **Screenshots:** envie as de `docs/store/screenshots-1280x800/`. Sugestão de ordem:
   1. `dashboard-1280x800.png`

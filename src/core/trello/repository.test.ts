@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toCard } from './normalize';
 import type { TrelloCardApi } from '../domain/types';
 import type { TrelloClient } from './client';
 import { cacheGet } from './cache';
@@ -378,10 +379,7 @@ describe('TrelloRepository', () => {
         enabled: true,
         boardId: 'board-1',
         trigger: { type: 'completed' },
-        actions: [
-          { type: 'moveToList', listId: 'list-done' },
-          { type: 'moveToTop' },
-        ],
+        actions: [{ type: 'moveToList', listId: 'list-done' }, { type: 'moveToTop' }],
       },
     ];
 
@@ -931,10 +929,7 @@ describe('TrelloRepository', () => {
         boardId: 'board-1',
         requiresSeiLink: true,
         trigger: { type: 'seiUpdated', listId: 'list-aguardando' },
-        actions: [
-          { type: 'moveToList', listId: 'list-demandas' },
-          { type: 'moveToTop' },
-        ],
+        actions: [{ type: 'moveToList', listId: 'list-demandas' }, { type: 'moveToTop' }],
       },
     ];
 
@@ -1210,6 +1205,48 @@ describe('TrelloRepository', () => {
     expect(board.name).toBe('Renomeado');
   });
 
+  it('cria lista no fim do quadro', async () => {
+    const client = fakeClient();
+    vi.mocked(client.post).mockResolvedValue({ id: 'list-new', name: 'Nova' });
+    const repo = repository(client);
+
+    const list = await repo.createList('board-1', '  Nova  ');
+
+    expect(client.post).toHaveBeenCalledWith('/boards/board-1/lists', {
+      name: 'Nova',
+      pos: 'bottom',
+    });
+    expect(list).toEqual({ id: 'list-new', name: 'Nova' });
+  });
+
+  it('renomeia lista', async () => {
+    const client = fakeClient();
+    vi.mocked(client.put).mockResolvedValue({ id: 'list-1', name: 'Renomeada' });
+    const repo = repository(client);
+
+    const list = await repo.renameList('board-1', 'list-1', '  Renomeada ');
+
+    expect(client.put).toHaveBeenCalledWith('/lists/list-1', { name: 'Renomeada' });
+    expect(list.name).toBe('Renomeada');
+  });
+
+  it('atualiza nome e cor da etiqueta', async () => {
+    const client = fakeClient();
+    vi.mocked(client.put).mockResolvedValue({ id: 'label-1', name: 'Nova', color: 'green' });
+    const repo = repository(client);
+
+    const label = await repo.updateLabel('board-1', 'label-1', {
+      name: '  Nova ',
+      color: 'green',
+    });
+
+    expect(client.put).toHaveBeenCalledWith('/labels/label-1', {
+      name: 'Nova',
+      color: 'green',
+    });
+    expect(label.color).toBe('green');
+  });
+
   it('entrega o cache do processo sem consultar o Trello', async () => {
     const client = fakeClient();
     const cached = [{ id: 'card-1' }] as never;
@@ -1221,5 +1258,17 @@ describe('TrelloRepository', () => {
     expect(result).toBe(cached);
     expect(cacheGet).toHaveBeenCalledWith(`process:${PROCESS}`, Number.POSITIVE_INFINITY);
     expect(client.get).not.toHaveBeenCalled();
+  });
+});
+
+describe('normalização de cartão', () => {
+  it('lê a contagem de anexos dos badges', () => {
+    const card = toCard({ id: 'card-1', name: 'Cartão', desc: '', badges: { attachments: 2 } });
+    expect(card.attachmentCount).toBe(2);
+  });
+
+  it('usa zero quando não há badges', () => {
+    const card = toCard({ id: 'card-2', name: 'Cartão', desc: '' });
+    expect(card.attachmentCount).toBe(0);
   });
 });

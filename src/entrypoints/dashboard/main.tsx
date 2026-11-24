@@ -117,17 +117,18 @@ function Dashboard() {
     }
   });
   const [moveHistory, setMoveHistory] = useState<MoveHistoryEntry[]>([]);
+  const [addingList, setAddingList] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [listBusy, setListBusy] = useState(false);
   const undoRef = useRef<() => void>(() => undefined);
 
   const version = browser.runtime.getManifest().version;
-  const [connected, setConnected] = useState(
-    Boolean(settings?.appKey && settings?.appToken),
-  );
+  const [connected, setConnected] = useState(Boolean(settings?.appKey && settings?.appToken));
   const [authAccount, setAuthAccount] = useState<{
     fullName: string;
     username: string;
   } | null>(null);
-  const [authMode, setAuthMode] = useState<'oauth' | 'token' | 'none' | null>(null);
+  const [authMode, setAuthMode] = useState<'oauth' | 'token' | 'demo' | 'none' | null>(null);
   const loadSeq = useRef(0);
   const defaultBoardApplied = useRef(false);
   const mirrorSynced = useRef(false);
@@ -149,17 +150,11 @@ function Dashboard() {
         if (seq !== loadSeq.current) return;
         setSettings(nextSettings);
 
-        const hasCredentials = auth
-          ? auth.connected
-          : Boolean(nextSettings.appKey && nextSettings.appToken);
+        const hasCredentials = auth ? auth.connected : Boolean(nextSettings.appKey && nextSettings.appToken);
         setConnected(hasCredentials);
-        setAuthMode(
-          auth?.mode ?? (nextSettings.appKey && nextSettings.appToken ? 'token' : 'none'),
-        );
+        setAuthMode(auth?.mode ?? (nextSettings.appKey && nextSettings.appToken ? 'token' : 'none'));
         setAuthAccount(
-          auth?.account
-            ? { fullName: auth.account.fullName, username: auth.account.username }
-            : null,
+          auth?.account ? { fullName: auth.account.fullName, username: auth.account.username } : null,
         );
 
         const [processRecords, nextLastTab, nextBoards] = await Promise.all([
@@ -208,9 +203,7 @@ function Dashboard() {
             });
             if (seq === loadSeq.current) {
               setCards(
-                filters.link === 'linked'
-                  ? boardCards.filter((card) => card.links.length > 0)
-                  : boardCards,
+                filters.link === 'linked' ? boardCards.filter((card) => card.links.length > 0) : boardCards,
               );
             }
           } else if (filters.link === 'all' && unlinkedBoardId) {
@@ -340,6 +333,19 @@ function Dashboard() {
       return next;
     });
   }, [settings]);
+
+  // No modo sem Trello, abre já no primeiro quadro de exemplo.
+  useEffect(() => {
+    if (authMode !== 'demo' || filters.boardId) return;
+    const first = trelloBoards[0]?.id;
+    if (!first) return;
+    setFilters((previous) => {
+      if (previous.boardId) return previous;
+      const next = { ...previous, boardId: first };
+      saveFilters(next);
+      return next;
+    });
+  }, [authMode, filters.boardId, trelloBoards]);
 
   useEffect(() => {
     if (!connected) {
@@ -552,21 +558,16 @@ function Dashboard() {
     () =>
       groups.map((group) => ({
         ...group,
-        cards: [...group.cards].sort(
-          (a, b) => Number(pinned.has(b.id)) - Number(pinned.has(a.id)),
-        ),
+        cards: [...group.cards].sort((a, b) => Number(pinned.has(b.id)) - Number(pinned.has(a.id))),
       })),
     [groups, pinned],
   );
 
   const kanbanGroups = useMemo(() => {
-    const sortPinned = (a: TrelloCard, b: TrelloCard) =>
-      Number(pinned.has(b.id)) - Number(pinned.has(a.id));
+    const sortPinned = (a: TrelloCard, b: TrelloCard) => Number(pinned.has(b.id)) - Number(pinned.has(a.id));
     if (filters.boardId && listCounts.length > 0) {
       const boardName =
-        boards.find((board) => board.id === filters.boardId)?.name ??
-        settings?.defaultBoardName ??
-        'Quadro';
+        boards.find((board) => board.id === filters.boardId)?.name ?? settings?.defaultBoardName ?? 'Quadro';
       return listCounts.map((list) => ({
         key: `${filters.boardId}:${list.id}`,
         title: list.name,
@@ -595,6 +596,53 @@ function Dashboard() {
     boards,
     settings?.defaultBoardName,
   ]);
+
+  const renameListById = async (listId: string, name: string) => {
+    const boardId = filters.boardId;
+    if (!boardId) return;
+    const updated = await callRpc('trello:rename-list', { boardId, listId, name });
+    setBoardLists((previous) =>
+      previous.map((list) => (list.id === updated.id ? { ...list, ...updated } : list)),
+    );
+    await load(true, true);
+  };
+
+  const createListByName = async (name: string) => {
+    const boardId = filters.boardId;
+    if (!boardId) return;
+    const created = await callRpc('trello:create-list', { boardId, name });
+    setBoardLists((previous) => [...previous, created]);
+    await load(true, true);
+  };
+
+  const createList = async () => {
+    const name = newListName.trim();
+    if (!name) return;
+    setListBusy(true);
+    try {
+      await createListByName(name);
+      setNewListName('');
+      setAddingList(false);
+      showToast('Lista criada.', 'success');
+    } catch (cause) {
+      showToast(errorMessage(cause), 'error');
+    } finally {
+      setListBusy(false);
+    }
+  };
+
+  const continueWithoutTrello = async () => {
+    try {
+      const next = await callRpc('settings:save', { skipTrello: true });
+      setSettings(next);
+      setConnected(true);
+      setAuthMode('demo');
+      void load(true, true);
+      showToast('Modo sem Trello ativado com quadros de exemplo.', 'success');
+    } catch (cause) {
+      showToast(errorMessage(cause), 'error');
+    }
+  };
 
   const exportCsv = () => {
     if (visibleCards.length === 0) {
@@ -691,8 +739,7 @@ function Dashboard() {
     if (!current || !target) return;
     const neighbor = boardLists[direction === 'left' ? index - 2 : index + 2];
     const targetPos = target.pos ?? targetIndex;
-    const neighborPos =
-      neighbor?.pos ?? (direction === 'left' ? targetPos - 1 : targetPos + 1);
+    const neighborPos = neighbor?.pos ?? (direction === 'left' ? targetPos - 1 : targetPos + 1);
     const newPos =
       direction === 'left'
         ? neighbor
@@ -715,7 +762,8 @@ function Dashboard() {
     }
   };
 
-  const undoLastMove = async () => {    const entry = moveHistory[moveHistory.length - 1];
+  const undoLastMove = async () => {
+    const entry = moveHistory[moveHistory.length - 1];
     if (!entry) return;
     const card = cards.find((item) => item.id === entry.cardId);
     if (!card) {
@@ -937,12 +985,15 @@ function Dashboard() {
               >
                 <span className="sdo-status__dot" />
                 <span className="sdo-status__label">
-                  Trello {connected ? 'conectado' : 'não conectado'}
-                  {connected && authAccount
-                    ? ` · ${authAccount.fullName}`
-                    : connected && authMode === 'token'
-                      ? ' · manual'
-                      : ''}
+                  {authMode === 'demo'
+                    ? 'Modo sem Trello'
+                    : `Trello ${connected ? 'conectado' : 'não conectado'}${
+                        connected && authAccount
+                          ? ` · ${authAccount.fullName}`
+                          : connected && authMode === 'token'
+                            ? ' · manual'
+                            : ''
+                      }`}
                 </span>
               </span>
               <span
@@ -1058,18 +1109,52 @@ function Dashboard() {
       )}
 
       {!connected && !loading && (
-        <div className="sdo-alert sdo-alert--warning">
-          <Icon name="settings" size={16} />
+        <div className={`sdo-alert ${settings?.skipTrello ? 'sdo-alert--info' : 'sdo-alert--warning'}`}>
+          <Icon name={settings?.skipTrello ? 'info' : 'settings'} size={16} />
           <div>
-            <strong>Conecte sua conta do Trello.</strong>
-            <span>Entre com sua conta do Trello para ver seus quadros e cartões.</span>
+            <strong>{settings?.skipTrello ? 'Modo sem Trello.' : 'Conecte sua conta do Trello.'}</strong>
+            <span>
+              {settings?.skipTrello
+                ? 'A extensão está pronta para usar; os quadros e cartões ficam vazios até você conectar.'
+                : 'Entre com sua conta do Trello para ver seus quadros e cartões. Você também pode continuar sem conectar.'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className={`sfo-btn sfo-btn--sm ${settings?.skipTrello ? '' : 'sfo-btn--primary'}`}
+              onClick={() => void openOptions('connection')}
+            >
+              {settings?.skipTrello ? 'Conectar quando quiser' : 'Conectar com Trello'}
+            </button>
+            {!settings?.skipTrello && (
+              <button
+                type="button"
+                className="sfo-btn sfo-btn--sm"
+                onClick={() => void continueWithoutTrello()}
+              >
+                Continuar sem Trello
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {authMode === 'demo' && !loading && (
+        <div className="sdo-alert sdo-alert--info">
+          <Icon name="info" size={16} />
+          <div>
+            <strong>Modo sem Trello.</strong>
+            <span>
+              Quadros de exemplo salvos neste navegador. Nada é enviado ao Trello.
+            </span>
           </div>
           <button
             type="button"
-            className="sfo-btn sfo-btn--sm sfo-btn--primary"
+            className="sfo-btn sfo-btn--sm"
             onClick={() => void openOptions('connection')}
           >
-            Conectar com Trello
+            Conectar quando quiser
           </button>
         </div>
       )}
@@ -1098,474 +1183,558 @@ function Dashboard() {
       {connected && (
         <>
           <section className="sdo-metrics" aria-label="Resumo dos cartões">
-        <button
-          type="button"
-          className={`sdo-metric sdo-metric--danger${filters.due === 'overdue' ? ' sdo-metric--active' : ''}`}
-          onClick={() => toggleDue('overdue')}
-          aria-pressed={filters.due === 'overdue'}
-          title={filters.due === 'overdue' ? 'Remover filtro de atrasados' : 'Filtrar atrasados'}
-        >
-          <span className="sdo-metric__icon">
-            <Icon name="alert" size={16} />
-          </span>
-          <span className="sdo-metric__body">
-            <span>Atrasados</span>
-            <strong>{summary.overdue}</strong>
-            <small>precisam de atenção</small>
-          </span>
-          {filters.due === 'overdue' && (
-            <span className="sdo-metric__flag" aria-hidden="true">
-              <Icon name="check" size={11} />
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          className={`sdo-metric sdo-metric--warning${filters.due === 'today' ? ' sdo-metric--active' : ''}`}
-          onClick={() => toggleDue('today')}
-          aria-pressed={filters.due === 'today'}
-          title={filters.due === 'today' ? 'Remover filtro de vencendo hoje' : 'Filtrar vencendo hoje'}
-        >
-          <span className="sdo-metric__icon">
-            <Icon name="calendar" size={16} />
-          </span>
-          <span className="sdo-metric__body">
-            <span>Vencem hoje</span>
-            <strong>{summary.today}</strong>
-            <small>prazos do dia</small>
-          </span>
-          {filters.due === 'today' && (
-            <span className="sdo-metric__flag" aria-hidden="true">
-              <Icon name="check" size={11} />
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          className={`sdo-metric sdo-metric--accent${filters.due === 'soon' ? ' sdo-metric--active' : ''}`}
-          onClick={() => toggleDue('soon')}
-          aria-pressed={filters.due === 'soon'}
-          title={filters.due === 'soon' ? 'Remover filtro dos próximos 7 dias' : 'Filtrar próximos 7 dias'}
-        >
-          <span className="sdo-metric__icon">
-            <Icon name="clock" size={16} />
-          </span>
-          <span className="sdo-metric__body">
-            <span>Próximos 7 dias</span>
-            <strong>{summary.soon}</strong>
-            <small>no radar</small>
-          </span>
-          {filters.due === 'soon' && (
-            <span className="sdo-metric__flag" aria-hidden="true">
-              <Icon name="check" size={11} />
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          className={`sdo-metric sdo-metric--updated${
-            filters.processUpdate === 'unread' ? ' sdo-metric--active' : ''
-          }`}
-          onClick={() => toggleProcessUpdate('unread')}
-          aria-pressed={filters.processUpdate === 'unread'}
-          title={
-            filters.processUpdate === 'unread'
-              ? 'Remover filtro de atualizações no SEI'
-              : 'Filtrar processos atualizados no SEI'
-          }
-        >
-          <span className="sdo-metric__icon">
-            <Icon name="refresh" size={16} />
-          </span>
-          <span className="sdo-metric__body">
-            <span>Atualizados</span>
-            <strong>{summary.unread}</strong>
-            <small>atualizações no SEI</small>
-          </span>
-          {filters.processUpdate === 'unread' && (
-            <span className="sdo-metric__flag" aria-hidden="true">
-              <Icon name="check" size={11} />
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          className="sdo-metric sdo-metric--total"
-          onClick={resetToScope}
-          title={
-            filters.boardId
-              ? `Mostrar todos os cartões do quadro ${scopeName}`
-              : 'Mostrar todos os cartões de todos os quadros'
-          }
-        >
-          <span className="sdo-metric__icon">
-            <Icon name="link" size={16} />
-          </span>
-          <span className="sdo-metric__body">
-            <span>
-              {filters.link === 'all'
-                ? 'Total de cartões'
-                : filters.link === 'unlinked'
-                  ? 'Total sem vínculo'
-                  : 'Total vinculado'}
-            </span>
-            <strong>{scopeTotal}</strong>
-            <small>{scopeName}</small>
-          </span>
-        </button>
-      </section>
-
-      <div className="sdo-mini-metrics">
-        <button
-          type="button"
-          className={filters.due === 'none' ? 'sdo-mini--active' : undefined}
-          onClick={() => toggleDue('none')}
-          aria-pressed={filters.due === 'none'}
-        >
-          <Icon name="calendar" size={12} /> Sem prazo <strong>{summary.none}</strong>
-        </button>
-        <button
-          type="button"
-          className={filters.due === 'complete' ? 'sdo-mini--active' : undefined}
-          onClick={() => toggleDue('complete')}
-          aria-pressed={filters.due === 'complete'}
-        >
-          <Icon name="check" size={12} /> Concluídos <strong>{summary.done}</strong>
-        </button>
-        <button
-          type="button"
-          className={filters.activity === '7d' ? 'sdo-mini--active' : undefined}
-          onClick={() => toggleActivity('7d')}
-          aria-pressed={filters.activity === '7d'}
-        >
-          <Icon name="refresh" size={12} /> Trello 7 dias <strong>{summary.updated7d}</strong>
-        </button>
-        <span>
-          <Icon name="link" size={12} /> {summary.processes} processos
-        </span>
-        <span>
-          <Icon name="tag" size={12} /> {summary.labels} etiquetas
-        </span>
-        <span>
-          <Icon name="board" size={12} /> {summary.boards} quadros
-        </span>
-      </div>
-
-      <section className="sdo-command" aria-label="Busca e filtros">
-        <label className="sdo-board-picker" title="Escolher o quadro exibido no painel">
-          <Icon name="board" size={15} />
-          <span className="sdo-board-picker__label">Quadro</span>
-          <select
-            className="sdo-board-picker__select"
-            value={filters.boardId}
-            onChange={(event) => updateFilters({ boardId: event.target.value, listId: '' })}
-            aria-label="Quadro"
-          >
-            <option value="">Todos os quadros</option>
-            {boards.map((board) => (
-              <option key={board.id} value={board.id}>
-                {board.name}
-              </option>
-            ))}
-            {filters.boardId && !boards.some((board) => board.id === filters.boardId) && (
-              <option value={filters.boardId}>
-                {settings?.defaultBoardId === filters.boardId && settings.defaultBoardName
-                  ? settings.defaultBoardName
-                  : 'Quadro selecionado'}
-              </option>
-            )}
-          </select>
-        </label>
-        <div className="sdo-search">
-          <Icon name="search" size={16} />
-          <input
-            id="sdo-search"
-            className="sdo-search__input"
-            value={filters.search}
-            onChange={(event) => updateFilters({ search: event.target.value })}
-            placeholder="Buscar cartão, processo, tipo, etiqueta, quadro ou lista…"
-            aria-label="Buscar cartão, processo, tipo, etiqueta, quadro ou lista"
-            title="Atalho: / ou Ctrl+K"
-          />
-          {filters.search && (
             <button
               type="button"
-              className="sdo-search__clear"
-              onClick={() => updateFilters({ search: '' })}
-              aria-label="Limpar busca"
+              className={`sdo-metric sdo-metric--danger${filters.due === 'overdue' ? ' sdo-metric--active' : ''}`}
+              onClick={() => toggleDue('overdue')}
+              aria-pressed={filters.due === 'overdue'}
+              title={filters.due === 'overdue' ? 'Remover filtro de atrasados' : 'Filtrar atrasados'}
             >
-              <Icon name="close" size={14} />
+              <span className="sdo-metric__icon">
+                <Icon name="alert" size={16} />
+              </span>
+              <span className="sdo-metric__body">
+                <span>Atrasados</span>
+                <strong>{summary.overdue}</strong>
+                <small>precisam de atenção</small>
+              </span>
+              {filters.due === 'overdue' && (
+                <span className="sdo-metric__flag" aria-hidden="true">
+                  <Icon name="check" size={11} />
+                </span>
+              )}
             </button>
-          )}
-        </div>
-        <button
-          type="button"
-          className={`sdo-filter-toggle${showFilters ? ' sdo-filter-toggle--open' : ''}`}
-          onClick={() => setShowFilters((current) => !current)}
-          aria-expanded={showFilters}
-        >
-          <Icon name="filter" size={15} />
-          Filtros
-          {active > 0 && <span className="sdo-filter-count">{active}</span>}
-        </button>
-        <label className="sdo-sort" title="Ordenar cartões">
-          <Icon name="list" size={15} />
-          <select
-            id="sdo-sort"
-            className="sdo-sort__select"
-            value={filters.sort}
-            onChange={(event) => updateFilters({ sort: event.target.value as Filters['sort'] })}
-            aria-label="Ordenar cartões"
-          >
-            {SORT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="sdo-view-toggle" role="group" aria-label="Modo de visualização">
-          <button
-            type="button"
-            className={view === 'list' ? 'is-active' : ''}
-            onClick={() => changeView('list')}
-            aria-pressed={view === 'list'}
-            title="Visão em lista"
-            aria-label="Visão em lista"
-          >
-            <Icon name="list" size={14} />
-          </button>
-          <button
-            type="button"
-            className={view === 'board' ? 'is-active' : ''}
-            onClick={() => changeView('board')}
-            aria-pressed={view === 'board'}
-            title="Visão em quadro (Kanban)"
-            aria-label="Visão em quadro (Kanban)"
-          >
-            <Icon name="columns" size={14} />
-          </button>
-        </div>
-        {view === 'board' && moveHistory.length > 0 && (
-          <button
-            type="button"
-            className="sdo-icon-action"
-            onClick={() => void undoLastMove()}
-            title="Desfazer última movimentação (Ctrl+Z)"
-            aria-label="Desfazer última movimentação"
-          >
-            <Icon name="undo" size={15} />
-          </button>
-        )}
-        <button
-          type="button"
-          className="sdo-icon-action"
-          onClick={exportCsv}
-          title="Exportar CSV"
-          aria-label="Exportar CSV"
-        >
-          <Icon name="external" size={15} />
-        </button>
-      </section>
-
-      {showFilters && (
-        <DashboardFilters
-          filters={filters}
-          boards={boards}
-          lists={lists}
-          labels={labels}
-          types={types}
-          visibleCount={visibleCards.length}
-          totalCount={cards.length}
-          lastVisit={lastVisit}
-          onChange={updateFilters}
-          onClear={clearFilters}
-          onMarkSeen={markSeen}
-          onExport={exportCsv}
-          onCollapse={() => setShowFilters(false)}
-          showSearch={false}
-        />
-      )}
-
-      {activeChips.length > 0 && (
-        <div className="sdo-active-chips">
-          <span className="sdo-active-chips__label">Filtros ativos</span>
-          {activeChips.map((chip) => (
             <button
-              key={chip.key}
               type="button"
-              className="sdo-chip sdo-chip--removable"
-              onClick={() => updateFilters(chip.clear)}
-              title={`Remover filtro: ${chip.label}`}
+              className={`sdo-metric sdo-metric--warning${filters.due === 'today' ? ' sdo-metric--active' : ''}`}
+              onClick={() => toggleDue('today')}
+              aria-pressed={filters.due === 'today'}
+              title={filters.due === 'today' ? 'Remover filtro de vencendo hoje' : 'Filtrar vencendo hoje'}
             >
-              {chip.label}
-              <Icon name="close" size={10} />
+              <span className="sdo-metric__icon">
+                <Icon name="calendar" size={16} />
+              </span>
+              <span className="sdo-metric__body">
+                <span>Vencem hoje</span>
+                <strong>{summary.today}</strong>
+                <small>prazos do dia</small>
+              </span>
+              {filters.due === 'today' && (
+                <span className="sdo-metric__flag" aria-hidden="true">
+                  <Icon name="check" size={11} />
+                </span>
+              )}
             </button>
-          ))}
-          <button type="button" className="sdo-chip sdo-chip--clear" onClick={clearFilters}>
-            <Icon name="close" size={11} /> Limpar
-          </button>
-        </div>
-      )}
-
-      {view === 'list' && filters.boardId && listCounts.length > 0 && (
-        <section className="sdo-lists" aria-label="Cartões por lista">
-          <div className="sdo-lists__head">
-            <span className="sdo-lists__title">
-              <Icon name="list" size={14} />
-              Listas do quadro
-            </span>
-            <div className="sdo-lists__tools">
-              <button
-                type="button"
-                className={`sdo-unlinked-toggle${
-                  filters.link === 'linked' ? ' sdo-unlinked-toggle--on' : ''
-                }`}
-                onClick={() => toggleLinkFilter('linked')}
-                aria-pressed={filters.link === 'linked'}
-                title="Mostrar apenas cartões com vínculo com o SEI"
-              >
-                <Icon name="link" size={13} />
-                Com vínculo
-                {filters.link === 'linked' && (
-                  <span className="sdo-unlinked-toggle__count">{cards.length}</span>
-                )}
-              </button>
-              <button
-                type="button"
-                className={`sdo-unlinked-toggle${
-                  filters.link === 'unlinked' ? ' sdo-unlinked-toggle--on' : ''
-                }`}
-                onClick={() => toggleLinkFilter('unlinked')}
-                aria-pressed={filters.link === 'unlinked'}
-                title="Mostrar apenas cartões sem vínculo com o SEI"
-              >
-                <Icon name="unlink" size={13} />
-                Sem vínculo
-                {filters.link === 'unlinked' && (
-                  <span className="sdo-unlinked-toggle__count">{cards.length}</span>
-                )}
-              </button>
-              <button
-                type="button"
-                className={`sdo-lists__all${
-                  filters.listId || filters.link !== 'all' ? ' sdo-lists__all--clear' : ''
-                }`}
-                onClick={() => updateFilters({ listId: '', link: 'all' })}
-                title={
-                  filters.listId || filters.link !== 'all'
-                    ? 'Mostrar todas as listas e remover o filtro de vínculo'
-                    : 'Mostrar todas as listas do quadro'
-                }
-              >
-                {filters.listId ? <Icon name="close" size={12} /> : null}
-                Todas as listas
-                <span className="sdo-lists__all-count">{listTotal}</span>
-              </button>
-            </div>
-          </div>
-          <div className="sdo-lists__grid">
-            {listCounts.map((list) => {
-              const selected = filters.listId === list.id;
-              return (
-                <button
-                  key={list.id}
-                  type="button"
-                  className={`sdo-list-card${selected ? ' sdo-list-card--on' : ''}`}
-                  onClick={() => updateFilters({ listId: selected ? '' : list.id })}
-                  aria-pressed={selected}
-                  title={`Filtrar por ${list.name}`}
-                >
-                  <span className="sdo-list-card__icon">
-                    <Icon name="list" size={16} />
-                  </span>
-                  <span className="sdo-list-card__body">
-                    <span className="sdo-list-card__name">{list.name}</span>
-                    <strong>{list.count}</strong>
-                    <small>{list.count === 1 ? 'cartão' : 'cartões'}</small>
-                  </span>
-                  {selected && (
-                    <span className="sdo-list-card__check" aria-hidden="true">
-                      <Icon name="check" size={12} />
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-
-
-      {loading ? (
-        <div className="sdo-loading">
-          <span className="sfo-spinner" />
-          <span>Carregando cartões do Trello…</span>
-        </div>
-      ) : visibleCards.length === 0 ? (
-        <div className="sdo-empty">
-          <Icon name="search" size={26} />
-          <strong>Nenhum cartão encontrado</strong>
-          <span>
-            {cards.length === 0
-              ? filters.link === 'unlinked'
-                ? 'Nenhum cartão sem vínculo neste quadro. Crie um em "Novo cartão".'
-                : filters.link === 'linked'
-                  ? 'Vincule cartões aos processos do SEI para vê-los aqui.'
-                  : 'Nenhum cartão neste quadro. Crie um em "Novo cartão".'
-              : 'Ajuste os filtros para ampliar os resultados.'}
-          </span>
-          {active > 0 && (
-            <button type="button" className="sfo-btn sfo-btn--sm" onClick={clearFilters}>
-              Limpar filtros
+            <button
+              type="button"
+              className={`sdo-metric sdo-metric--accent${filters.due === 'soon' ? ' sdo-metric--active' : ''}`}
+              onClick={() => toggleDue('soon')}
+              aria-pressed={filters.due === 'soon'}
+              title={
+                filters.due === 'soon' ? 'Remover filtro dos próximos 7 dias' : 'Filtrar próximos 7 dias'
+              }
+            >
+              <span className="sdo-metric__icon">
+                <Icon name="clock" size={16} />
+              </span>
+              <span className="sdo-metric__body">
+                <span>Próximos 7 dias</span>
+                <strong>{summary.soon}</strong>
+                <small>no radar</small>
+              </span>
+              {filters.due === 'soon' && (
+                <span className="sdo-metric__flag" aria-hidden="true">
+                  <Icon name="check" size={11} />
+                </span>
+              )}
             </button>
-          )}
-        </div>
-      ) : view === 'board' ? (
-        <KanbanBoard
-          groups={kanbanGroups}
-          catalog={catalog}
-          pinned={pinned}
-          onChanged={handleChanged}
-          onRemoved={handleRemoved}
-          onToggleLabel={handleToggleLabel}
-          onProcessesRead={handleProcessesRead}
-          onTogglePin={togglePin}
-          onMoveCard={moveCardToList}
-          onMoveColumn={moveColumn}
-          canMoveColumns={Boolean(filters.boardId)}
-          onAddCard={(boardId, listId) => openCreate({ boardId, listId })}
-        />
-      ) : (
-        orderedGroups.map((group) => (
-          <section key={group.key} className="sdo-section">
-            {group.title && (
-              <h2>
-                <span className={`sdo-dot sdo-dot--${group.tone ?? 'accent'}`} />
-                {group.title}
-                <span className="sdo-count">{group.cards.length}</span>
-                {group.subtitle && <span className="sdo-section__subtitle">{group.subtitle}</span>}
-              </h2>
-            )}
-            <div className="sdo-list">
-              {group.cards.map((card) => (
-                <DashboardCard
-                  key={`${group.key}:${card.id}`}
-                  card={card}
-                  catalog={catalog}
-                  pinned={pinned.has(card.id)}
-                  onChanged={handleChanged}
-                  onRemoved={handleRemoved}
-                  onToggleLabel={handleToggleLabel}
-                  onProcessesRead={handleProcessesRead}
-                  onTogglePin={togglePin}
-                />
-              ))}
-            </div>
+            <button
+              type="button"
+              className={`sdo-metric sdo-metric--updated${
+                filters.processUpdate === 'unread' ? ' sdo-metric--active' : ''
+              }`}
+              onClick={() => toggleProcessUpdate('unread')}
+              aria-pressed={filters.processUpdate === 'unread'}
+              title={
+                filters.processUpdate === 'unread'
+                  ? 'Remover filtro de atualizações no SEI'
+                  : 'Filtrar processos atualizados no SEI'
+              }
+            >
+              <span className="sdo-metric__icon">
+                <Icon name="refresh" size={16} />
+              </span>
+              <span className="sdo-metric__body">
+                <span>Atualizados</span>
+                <strong>{summary.unread}</strong>
+                <small>atualizações no SEI</small>
+              </span>
+              {filters.processUpdate === 'unread' && (
+                <span className="sdo-metric__flag" aria-hidden="true">
+                  <Icon name="check" size={11} />
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              className="sdo-metric sdo-metric--total"
+              onClick={resetToScope}
+              title={
+                filters.boardId
+                  ? `Mostrar todos os cartões do quadro ${scopeName}`
+                  : 'Mostrar todos os cartões de todos os quadros'
+              }
+            >
+              <span className="sdo-metric__icon">
+                <Icon name="link" size={16} />
+              </span>
+              <span className="sdo-metric__body">
+                <span>
+                  {filters.link === 'all'
+                    ? 'Total de cartões'
+                    : filters.link === 'unlinked'
+                      ? 'Total sem vínculo'
+                      : 'Total vinculado'}
+                </span>
+                <strong>{scopeTotal}</strong>
+                <small>{scopeName}</small>
+              </span>
+            </button>
           </section>
-        ))
-      )}
+
+          <div className="sdo-mini-metrics">
+            <button
+              type="button"
+              className={filters.due === 'none' ? 'sdo-mini--active' : undefined}
+              onClick={() => toggleDue('none')}
+              aria-pressed={filters.due === 'none'}
+            >
+              <Icon name="calendar" size={12} /> Sem prazo <strong>{summary.none}</strong>
+            </button>
+            <button
+              type="button"
+              className={filters.due === 'complete' ? 'sdo-mini--active' : undefined}
+              onClick={() => toggleDue('complete')}
+              aria-pressed={filters.due === 'complete'}
+            >
+              <Icon name="check" size={12} /> Concluídos <strong>{summary.done}</strong>
+            </button>
+            <button
+              type="button"
+              className={filters.activity === '7d' ? 'sdo-mini--active' : undefined}
+              onClick={() => toggleActivity('7d')}
+              aria-pressed={filters.activity === '7d'}
+            >
+              <Icon name="refresh" size={12} /> Trello 7 dias <strong>{summary.updated7d}</strong>
+            </button>
+            <span>
+              <Icon name="link" size={12} /> {summary.processes} processos
+            </span>
+            <span>
+              <Icon name="tag" size={12} /> {summary.labels} etiquetas
+            </span>
+            <span>
+              <Icon name="board" size={12} /> {summary.boards} quadros
+            </span>
+          </div>
+
+          <section className="sdo-command" aria-label="Busca e filtros">
+            <label className="sdo-board-picker" title="Escolher o quadro exibido no painel">
+              <Icon name="board" size={15} />
+              <span className="sdo-board-picker__label">Quadro</span>
+              <select
+                className="sdo-board-picker__select"
+                value={filters.boardId}
+                onChange={(event) => updateFilters({ boardId: event.target.value, listId: '' })}
+                aria-label="Quadro"
+              >
+                <option value="">Todos os quadros</option>
+                {boards.map((board) => (
+                  <option key={board.id} value={board.id}>
+                    {board.name}
+                  </option>
+                ))}
+                {filters.boardId && !boards.some((board) => board.id === filters.boardId) && (
+                  <option value={filters.boardId}>
+                    {settings?.defaultBoardId === filters.boardId && settings.defaultBoardName
+                      ? settings.defaultBoardName
+                      : 'Quadro selecionado'}
+                  </option>
+                )}
+              </select>
+            </label>
+            <div className="sdo-search">
+              <Icon name="search" size={16} />
+              <input
+                id="sdo-search"
+                className="sdo-search__input"
+                value={filters.search}
+                onChange={(event) => updateFilters({ search: event.target.value })}
+                placeholder="Buscar cartão, processo, tipo, etiqueta, quadro ou lista…"
+                aria-label="Buscar cartão, processo, tipo, etiqueta, quadro ou lista"
+                title="Atalho: / ou Ctrl+K"
+              />
+              {filters.search && (
+                <button
+                  type="button"
+                  className="sdo-search__clear"
+                  onClick={() => updateFilters({ search: '' })}
+                  aria-label="Limpar busca"
+                >
+                  <Icon name="close" size={14} />
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              className={`sdo-filter-toggle${showFilters ? ' sdo-filter-toggle--open' : ''}`}
+              onClick={() => setShowFilters((current) => !current)}
+              aria-expanded={showFilters}
+            >
+              <Icon name="filter" size={15} />
+              Filtros
+              {active > 0 && <span className="sdo-filter-count">{active}</span>}
+            </button>
+            <label className="sdo-sort" title="Ordenar cartões">
+              <Icon name="list" size={15} />
+              <select
+                id="sdo-sort"
+                className="sdo-sort__select"
+                value={filters.sort}
+                onChange={(event) => updateFilters({ sort: event.target.value as Filters['sort'] })}
+                aria-label="Ordenar cartões"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="sdo-view-toggle" role="group" aria-label="Modo de visualização">
+              <button
+                type="button"
+                className={view === 'list' ? 'is-active' : ''}
+                onClick={() => changeView('list')}
+                aria-pressed={view === 'list'}
+                title="Visão em lista"
+                aria-label="Visão em lista"
+              >
+                <Icon name="list" size={14} />
+              </button>
+              <button
+                type="button"
+                className={view === 'board' ? 'is-active' : ''}
+                onClick={() => changeView('board')}
+                aria-pressed={view === 'board'}
+                title="Visão em quadro (Kanban)"
+                aria-label="Visão em quadro (Kanban)"
+              >
+                <Icon name="columns" size={14} />
+              </button>
+            </div>
+            {view === 'board' && moveHistory.length > 0 && (
+              <button
+                type="button"
+                className="sdo-icon-action"
+                onClick={() => void undoLastMove()}
+                title="Desfazer última movimentação (Ctrl+Z)"
+                aria-label="Desfazer última movimentação"
+              >
+                <Icon name="undo" size={15} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="sdo-icon-action"
+              onClick={exportCsv}
+              title="Exportar CSV"
+              aria-label="Exportar CSV"
+            >
+              <Icon name="external" size={15} />
+            </button>
+          </section>
+
+          {showFilters && (
+            <DashboardFilters
+              filters={filters}
+              boards={boards}
+              lists={lists}
+              labels={labels}
+              types={types}
+              visibleCount={visibleCards.length}
+              totalCount={cards.length}
+              lastVisit={lastVisit}
+              onChange={updateFilters}
+              onClear={clearFilters}
+              onMarkSeen={markSeen}
+              onExport={exportCsv}
+              onCollapse={() => setShowFilters(false)}
+              showSearch={false}
+            />
+          )}
+
+          {activeChips.length > 0 && (
+            <div className="sdo-active-chips">
+              <span className="sdo-active-chips__label">Filtros ativos</span>
+              {activeChips.map((chip) => (
+                <button
+                  key={chip.key}
+                  type="button"
+                  className="sdo-chip sdo-chip--removable"
+                  onClick={() => updateFilters(chip.clear)}
+                  title={`Remover filtro: ${chip.label}`}
+                >
+                  {chip.label}
+                  <Icon name="close" size={10} />
+                </button>
+              ))}
+              <button type="button" className="sdo-chip sdo-chip--clear" onClick={clearFilters}>
+                <Icon name="close" size={11} /> Limpar
+              </button>
+            </div>
+          )}
+
+          {view === 'list' && filters.boardId && (
+            <section className="sdo-lists" aria-label="Cartões por lista">
+              <div className="sdo-lists__head">
+                <span className="sdo-lists__title">
+                  <Icon name="list" size={14} />
+                  Listas do quadro
+                </span>
+                <div className="sdo-lists__tools">
+                  <button
+                    type="button"
+                    className={`sdo-unlinked-toggle${
+                      filters.link === 'linked' ? ' sdo-unlinked-toggle--on' : ''
+                    }`}
+                    onClick={() => toggleLinkFilter('linked')}
+                    aria-pressed={filters.link === 'linked'}
+                    title="Mostrar apenas cartões com vínculo com o SEI"
+                  >
+                    <Icon name="link" size={13} />
+                    Com vínculo
+                    {filters.link === 'linked' && (
+                      <span className="sdo-unlinked-toggle__count">{cards.length}</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className={`sdo-unlinked-toggle${
+                      filters.link === 'unlinked' ? ' sdo-unlinked-toggle--on' : ''
+                    }`}
+                    onClick={() => toggleLinkFilter('unlinked')}
+                    aria-pressed={filters.link === 'unlinked'}
+                    title="Mostrar apenas cartões sem vínculo com o SEI"
+                  >
+                    <Icon name="unlink" size={13} />
+                    Sem vínculo
+                    {filters.link === 'unlinked' && (
+                      <span className="sdo-unlinked-toggle__count">{cards.length}</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className={`sdo-lists__all${
+                      filters.listId || filters.link !== 'all' ? ' sdo-lists__all--clear' : ''
+                    }`}
+                    onClick={() => updateFilters({ listId: '', link: 'all' })}
+                    title={
+                      filters.listId || filters.link !== 'all'
+                        ? 'Mostrar todas as listas e remover o filtro de vínculo'
+                        : 'Mostrar todas as listas do quadro'
+                    }
+                  >
+                    {filters.listId ? <Icon name="close" size={12} /> : null}
+                    Todas as listas
+                    <span className="sdo-lists__all-count">{listTotal}</span>
+                  </button>
+                </div>
+              </div>
+              <div className="sdo-lists__grid">
+                {listCounts.map((list) => {
+                  const selected = filters.listId === list.id;
+                  return (
+                    <button
+                      key={list.id}
+                      type="button"
+                      className={`sdo-list-card${selected ? ' sdo-list-card--on' : ''}`}
+                      onClick={() => updateFilters({ listId: selected ? '' : list.id })}
+                      aria-pressed={selected}
+                      title={`Filtrar por ${list.name}`}
+                    >
+                      <span className="sdo-list-card__icon">
+                        <Icon name="list" size={16} />
+                      </span>
+                      <span className="sdo-list-card__body">
+                        <span className="sdo-list-card__name">{list.name}</span>
+                        <strong>{list.count}</strong>
+                        <small>{list.count === 1 ? 'cartão' : 'cartões'}</small>
+                      </span>
+                      {selected && (
+                        <span className="sdo-list-card__check" aria-hidden="true">
+                          <Icon name="check" size={12} />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {addingList ? (
+                <div
+                  className="sdo-lists__new-form"
+                  onBlur={(event) => {
+                    const next = event.relatedTarget as Node | null;
+                    if (next && event.currentTarget.contains(next)) return;
+                    setAddingList(false);
+                    setNewListName('');
+                  }}
+                >
+                  <input
+                    className="sdo-inline-input"
+                    value={newListName}
+                    onChange={(event) => setNewListName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        void createList();
+                      }
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        setAddingList(false);
+                        setNewListName('');
+                      }
+                    }}
+                    placeholder="Nome da nova lista"
+                    autoFocus
+                    disabled={listBusy}
+                    aria-label="Nome da nova lista"
+                  />
+                  <button
+                    type="button"
+                    className="sfo-btn sfo-btn--sm sfo-btn--primary"
+                    onClick={() => void createList()}
+                    disabled={listBusy || !newListName.trim()}
+                  >
+                    {listBusy ? <span className="sfo-spinner" /> : <Icon name="plus" size={12} />}
+                    Criar
+                  </button>
+                  <button
+                    type="button"
+                    className="sfo-btn sfo-btn--sm"
+                    onClick={() => {
+                      setAddingList(false);
+                      setNewListName('');
+                    }}
+                    disabled={listBusy}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <div className="sdo-lists__new-row">
+                  <button
+                    type="button"
+                    className="sdo-lists__new"
+                    onClick={() => {
+                      setAddingList(true);
+                      setNewListName('');
+                    }}
+                    title="Adicionar lista neste quadro"
+                  >
+                    <Icon name="plus" size={12} />
+                    Nova lista
+                  </button>
+                </div>
+              )}
+            </section>
+          )}
+
+          {loading ? (
+            <div className="sdo-loading">
+              <span className="sfo-spinner" />
+              <span>Carregando cartões do Trello…</span>
+            </div>
+          ) : visibleCards.length === 0 ? (
+            <div className="sdo-empty">
+              <Icon name="search" size={26} />
+              <strong>Nenhum cartão encontrado</strong>
+              <span>
+                {cards.length === 0
+                  ? filters.link === 'unlinked'
+                    ? 'Nenhum cartão sem vínculo neste quadro. Crie um em "Novo cartão".'
+                    : filters.link === 'linked'
+                      ? 'Vincule cartões aos processos do SEI para vê-los aqui.'
+                      : 'Nenhum cartão neste quadro. Crie um em "Novo cartão".'
+                  : 'Ajuste os filtros para ampliar os resultados.'}
+              </span>
+              {active > 0 && (
+                <button type="button" className="sfo-btn sfo-btn--sm" onClick={clearFilters}>
+                  Limpar filtros
+                </button>
+              )}
+            </div>
+          ) : view === 'board' ? (
+            <KanbanBoard
+              groups={kanbanGroups}
+              catalog={catalog}
+              pinned={pinned}
+              onChanged={handleChanged}
+              onRemoved={handleRemoved}
+              onToggleLabel={handleToggleLabel}
+              onProcessesRead={handleProcessesRead}
+              onTogglePin={togglePin}
+              onMoveCard={moveCardToList}
+              onMoveColumn={moveColumn}
+              canMoveColumns={Boolean(filters.boardId)}
+              onAddCard={(boardId, listId) => openCreate({ boardId, listId })}
+              canManageLists={Boolean(filters.boardId)}
+              onRenameList={async (listId, name) => {
+                try {
+                  await renameListById(listId, name);
+                  showToast('Lista renomeada.', 'success');
+                } catch (cause) {
+                  showToast(errorMessage(cause), 'error');
+                }
+              }}
+              onCreateList={async (name) => {
+                try {
+                  await createListByName(name);
+                  showToast('Lista criada.', 'success');
+                } catch (cause) {
+                  showToast(errorMessage(cause), 'error');
+                }
+              }}
+            />
+          ) : (
+            orderedGroups.map((group) => (
+              <section key={group.key} className="sdo-section">
+                {group.title && (
+                  <h2>
+                    <span className={`sdo-dot sdo-dot--${group.tone ?? 'accent'}`} />
+                    {group.title}
+                    <span className="sdo-count">{group.cards.length}</span>
+                    {group.subtitle && <span className="sdo-section__subtitle">{group.subtitle}</span>}
+                  </h2>
+                )}
+                <div className="sdo-list">
+                  {group.cards.map((card) => (
+                    <DashboardCard
+                      key={`${group.key}:${card.id}`}
+                      card={card}
+                      catalog={catalog}
+                      pinned={pinned.has(card.id)}
+                      onChanged={handleChanged}
+                      onRemoved={handleRemoved}
+                      onToggleLabel={handleToggleLabel}
+                      onProcessesRead={handleProcessesRead}
+                      onTogglePin={togglePin}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))
+          )}
         </>
       )}
 
@@ -1577,9 +1746,7 @@ function Dashboard() {
       {showCreate && (
         <CreateCardDialog
           defaultName=""
-          initialBoardId={
-            createTarget?.boardId || filters.boardId || settings?.defaultBoardId
-          }
+          initialBoardId={createTarget?.boardId || filters.boardId || settings?.defaultBoardId}
           initialListId={createTarget?.listId || filters.listId || settings?.defaultListId}
           onClose={closeCreate}
           onCreated={(card) => {

@@ -1,15 +1,5 @@
 export type TrelloColor =
-  | 'green'
-  | 'yellow'
-  | 'orange'
-  | 'red'
-  | 'purple'
-  | 'blue'
-  | 'sky'
-  | 'lime'
-  | 'pink'
-  | 'black'
-  | 'null';
+  'green' | 'yellow' | 'orange' | 'red' | 'purple' | 'blue' | 'sky' | 'lime' | 'pink' | 'black' | 'null';
 
 export interface TrelloLabel {
   id: string;
@@ -68,6 +58,13 @@ export interface TrelloCardApi {
   dateLastActivity?: string | null;
   board?: { id: string; name: string } | null;
   list?: { id: string; name: string; pos?: number } | null;
+  badges?: {
+    attachments?: number;
+    checkItems?: number;
+    checkItemsChecked?: number;
+    comments?: number;
+    description?: boolean;
+  } | null;
   closed?: boolean;
 }
 
@@ -88,6 +85,11 @@ export interface TrelloCard {
   list: TrelloList | null;
   links: string[];
   hasChecklist: boolean;
+  /** Itens do checklist e quantos estão concluídos (badges do Trello). */
+  checklistItems?: number;
+  checklistChecked?: number;
+  /** Quantidade de anexos informada pelos badges do Trello. */
+  attachmentCount?: number;
   lastActivity: string | null;
 }
 
@@ -123,6 +125,8 @@ export interface Settings {
   theme: ThemePreference;
   compact: boolean;
   notificationsEnabled: boolean;
+  /** Usuário escolheu seguir sem conectar o Trello. */
+  skipTrello?: boolean;
   autoRefreshMinutes: number;
 }
 

@@ -43,8 +43,52 @@ import {
 import { loadTrelloCredentials } from '../auth/credentials';
 import { clearOAuthResult, readOAuthResult, startLoginTab, logout } from '../auth/oauth';
 import { readSession } from '../auth/session';
+import * as demo from '../demo/store';
 
 const repository = new TrelloRepository(loadTrelloCredentials);
+
+/**
+ * Fecha o login: recupera o backup local (se houver) e puxa a configuração
+ * sincronizada do Trello. Roda no background, sem depender da tela de Opções.
+ */
+async function clearDemoConfig(): Promise<void> {
+  // Dados do modo sem Trello nunca podem ir para a conta: limpa regras,
+  // destino e metadados de sync antes de qualquer leitura/gravação real.
+  await clearRules();
+  await clearRuleStats();
+  await clearRuleLog();
+  await clearRuleRuns();
+  await clearSyncSnapshot();
+  await clearConfigSyncMeta();
+  await saveSettings({
+    defaultBoardId: '',
+    defaultBoardName: '',
+    defaultListId: '',
+    defaultListName: '',
+  });
+}
+
+export async function finishAuth(): Promise<void> {
+  const session = await readSession();
+  const settings = await getSettings();
+  if (settings.skipTrello) {
+    if (!session) return;
+    // Login concluído enquanto o modo sem Trello estava ativo: sai do modo e
+    // descarta os dados de exemplo antes de puxar a configuração real.
+    await saveSettings({ skipTrello: false });
+    cancelConfigSync();
+    await clearDemoConfig();
+  }
+  try {
+    await restoreLocalConfig(session?.account?.id);
+  } catch {
+    // backup é best-effort
+  }
+  await Promise.race([
+    syncConfig({ force: true }),
+    new Promise<void>((resolve) => setTimeout(resolve, 6_000)),
+  ]).catch(() => undefined);
+}
 
 type HandlerMap = {
   [T in RpcType]: (payload: RpcMap[T]['payload']) => Promise<RpcMap[T]['result']>;
@@ -55,15 +99,26 @@ const handlers = {
 
   'settings:save': async (payload) => {
     const previous = await getSettings();
-    const next = await saveSettings(payload);
+    let next = await saveSettings(payload);
     if (previous.appKey !== next.appKey || previous.appToken !== next.appToken) {
       await cacheClear();
     }
+    if (!previous.skipTrello && next.skipTrello) {
+      // Entrando no modo sem Trello: nenhum push pendente pode escapar.
+      cancelConfigSync();
+    }
+    if (previous.skipTrello && !next.skipTrello) {
+      // Ao sair do modo sem Trello, começa limpo: o login/sync traz o que é real.
+      cancelConfigSync();
+      await clearDemoConfig();
+      next = await getSettings();
+    }
     if (
-      'defaultBoardId' in payload ||
-      'defaultBoardName' in payload ||
-      'defaultListId' in payload ||
-      'defaultListName' in payload
+      !next.skipTrello &&
+      ('defaultBoardId' in payload ||
+        'defaultBoardName' in payload ||
+        'defaultListId' in payload ||
+        'defaultListName' in payload)
     ) {
       queueConfigSync();
     }
@@ -73,6 +128,10 @@ const handlers = {
   'settings:test-connection': () => repository.testConnection(),
 
   'auth:status': async () => {
+    const settings = await getSettings();
+    if (settings.skipTrello) {
+      return { connected: true, mode: 'demo' as const };
+    }
     const session = await readSession();
     if (session) {
       // Uma sessão válida vence qualquer resultado antigo de login em outra aba
@@ -89,7 +148,6 @@ const handlers = {
       result && !result.ok && Date.now() - result.at < 10 * 60_000
         ? (result.error ?? 'Falha no login com o Trello.')
         : undefined;
-    const settings = await getSettings();
     if (settings.appKey && settings.appToken) {
       return { connected: true, mode: 'token' as const, error };
     }
@@ -102,16 +160,7 @@ const handlers = {
   },
 
   'auth:finish': async () => {
-    const session = await readSession();
-    try {
-      await restoreLocalConfig(session?.account?.id);
-    } catch {
-      // backup é best-effort
-    }
-    await Promise.race([
-      syncConfig({ force: true }),
-      new Promise<void>((resolve) => setTimeout(resolve, 4_000)),
-    ]).catch(() => undefined);
+    await finishAuth();
     return undefined;
   },
 
@@ -249,6 +298,8 @@ const handlers = {
   'trello:copy-board': ({ boardId, name }) => repository.copyBoard(boardId, name),
   'trello:create-board': ({ name }) => repository.createBoard(name),
   'trello:rename-board': ({ boardId, name }) => repository.renameBoard(boardId, name),
+  'trello:create-list': ({ boardId, name }) => repository.createList(boardId, name),
+  'trello:rename-list': ({ boardId, listId, name }) => repository.renameList(boardId, listId, name),
   'trello:mirror-card': ({ cardId, listId }) => repository.createCardMirror(cardId, listId),
   'mirrors:status': ({ cardId }) => getMirrorGroup(cardId),
   'mirrors:remove': async ({ cardId }) => {
@@ -256,7 +307,10 @@ const handlers = {
     return undefined;
   },
   'mirrors:sync': () => repository.syncMirrors(),
-  'trello:create-label': ({ boardId, name, color }) => repository.createLabel(boardId, name, color),
+  'trello:create-label': ({ boardId, name, color }) =>
+    repository.createLabel(boardId, name, color),
+  'trello:update-label': ({ boardId, labelId, name, color }) =>
+    repository.updateLabel(boardId, labelId, { name, color }),
   'trello:add-label': ({ cardId, labelId }) => repository.addLabelToCard(cardId, labelId),
   'trello:remove-label': ({ cardId, labelId }) => repository.removeLabelFromCard(cardId, labelId),
   'trello:checklists': ({ cardId, fresh }) => repository.getChecklists(cardId, fresh),
@@ -334,7 +388,8 @@ const handlers = {
 
   'rules:save': async ({ rules }) => {
     const saved = await saveRules(rules);
-    queueConfigSync();
+    const settings = await getSettings();
+    if (!settings.skipTrello) queueConfigSync();
     return saved;
   },
 
@@ -377,37 +432,76 @@ const handlers = {
   },
 } satisfies HandlerMap;
 
-export interface DueSummary {
-  total: number;
-  overdue: number;
-  dueToday: number;
-  dueSoon: number;
-}
-
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-export async function getDueSummary(): Promise<DueSummary> {
-  const cards = await repository.getAllLinkedCards();
-  const today = startOfDay(new Date());
-  const soonLimit = new Date(today);
-  soonLimit.setDate(soonLimit.getDate() + 7);
-
-  let overdue = 0;
-  let dueToday = 0;
-  let dueSoon = 0;
-
-  for (const card of cards) {
-    if (!card.due || card.dueComplete) continue;
-    const due = startOfDay(new Date(card.due));
-    if (due.getTime() < today.getTime()) overdue += 1;
-    else if (due.getTime() === today.getTime()) dueToday += 1;
-    else if (due.getTime() <= soonLimit.getTime()) dueSoon += 1;
-  }
-
-  return { total: cards.length, overdue, dueToday, dueSoon };
-}
+/** RPCs do "Modo sem Trello": dados de exemplo locais, sem API. */
+const demoHandlers = {
+  'trello:boards': () => demo.demoBoards(),
+  'trello:lists': ({ boardId }) => demo.demoLists(boardId),
+  'trello:board-cards': ({ boardId }) => demo.demoBoardCards(boardId),
+  'trello:card': ({ cardId }) => demo.demoCard(cardId),
+  'trello:cards-for-process': ({ processNumber }) => demo.demoCardsForProcess(processNumber),
+  'trello:cards-for-process-cache': ({ processNumber }) =>
+    demo.demoCardsForProcess(processNumber),
+  'trello:all-linked-cards': () => demo.demoAllLinked(),
+  'trello:search-cards': ({ query }) => demo.demoSearchCards(query),
+  'trello:unlinked-candidates': async () => [],
+  'trello:create-card': (payload) => demo.demoCreateCard(payload),
+  'trello:update-card': ({ cardId, patch }) => demo.demoUpdateCard(cardId, patch),
+  'trello:delete-card': async ({ cardId }) => {
+    await demo.demoDeleteCard(cardId);
+    return undefined;
+  },
+  'trello:link-cards': ({ cardIds, processNumber }) =>
+    demo.demoLinkCards(cardIds, processNumber),
+  'trello:link-cards-bulk': ({ cardIds, processNumbers }) =>
+    demo.demoLinkCardsBulk(cardIds, processNumbers),
+  'trello:unlink-card': ({ cardId, processNumber }) =>
+    demo.demoUnlinkCard(cardId, processNumber),
+  'trello:board-labels': ({ boardId }) => demo.demoBoardLabels(boardId),
+  'trello:create-board': ({ name }) => demo.demoCreateBoard(name),
+  'trello:rename-board': ({ boardId, name }) => demo.demoRenameBoard(boardId, name),
+  'trello:create-list': ({ boardId, name }) => demo.demoCreateList(boardId, name),
+  'trello:rename-list': ({ boardId, listId, name }) =>
+    demo.demoRenameList(boardId, listId, name),
+  'trello:update-list': ({ listId, pos }) => demo.demoUpdateList(listId, pos),
+  'trello:create-label': ({ boardId, name, color }) =>
+    demo.demoCreateLabel(boardId, name, color),
+  'trello:update-label': ({ boardId, labelId, name, color }) =>
+    demo.demoUpdateLabel(boardId, labelId, { name, color }),
+  'trello:add-label': ({ cardId, labelId }) => demo.demoAddLabel(cardId, labelId),
+  'trello:remove-label': ({ cardId, labelId }) => demo.demoRemoveLabel(cardId, labelId),
+  'trello:attachments': ({ cardId }) => demo.demoAttachments(cardId),
+  'trello:add-attachment-url': ({ cardId, url, name }) =>
+    demo.demoAddAttachmentUrl(cardId, url, name),
+  'trello:delete-attachment': async ({ cardId }) => {
+    await demo.demoDeleteAttachment(cardId);
+    return undefined;
+  },
+  'trello:copy-card': ({ cardId, listId }) => demo.demoCopyCard(cardId, listId),
+  'trello:copy-board': ({ boardId, name }) => demo.demoCopyBoard(boardId, name),
+  'trello:checklists': ({ cardId }) => demo.demoChecklists(cardId),
+  'trello:create-checklist': async () => [],
+  'trello:add-check-item': async ({ name }) => ({
+    id: `demo-check-${Date.now().toString(36)}`,
+    name,
+    state: 'incomplete' as const,
+  }),
+  'trello:update-check-item': async () => undefined,
+  'trello:delete-check-item': async () => undefined,
+  'trello:delete-checklist': async () => undefined,
+  'trello:mirror-card': ({ cardId, listId }) => demo.demoMirrorCard(cardId, listId),
+  'mirrors:status': async () => null,
+  'mirrors:remove': async () => undefined,
+  'mirrors:sync': async () => ({ updated: 0 }),
+  'settings:test-connection': async () => ({
+    id: 'demo',
+    username: 'demo',
+    fullName: 'Modo sem Trello',
+    boardCount: 2,
+  }),
+  'sync:config': async () => ({ pulled: false, pushed: false, skipped: true, updatedAt: 0 }),
+  'rules:apply-now': async () => ({ applied: 0, total: 0 }),
+  'rules:undo': async () => ({ reverted: 0, total: 0, cards: 0 }),
+} satisfies Partial<HandlerMap>;
 
 export async function handleRpc(request: RpcRequest): Promise<RpcResponse<unknown>> {
   const handler = (handlers as Record<string, unknown>)[request.rpc] as
@@ -421,6 +515,16 @@ export async function handleRpc(request: RpcRequest): Promise<RpcResponse<unknow
   }
 
   try {
+    const settings = await getSettings();
+    if (settings.skipTrello) {
+      const demoHandler = (
+        demoHandlers as unknown as Record<string, ((payload: unknown) => Promise<unknown>) | undefined>
+      )[request.rpc];
+      if (demoHandler) {
+        const data = await demoHandler(request.payload);
+        return { ok: true, data };
+      }
+    }
     const data = await handler(request.payload);
     return { ok: true, data };
   } catch (error) {

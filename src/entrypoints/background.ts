@@ -2,7 +2,7 @@ import { defineBackground } from 'wxt/utils/define-background';
 import { browser } from 'wxt/browser';
 import { injectSeiScript } from '../core/activation/inject';
 import { openDashboardTab } from '../core/extension/dashboard-tab';
-import { handleRpc, getDueSummary } from '../core/messaging/handlers';
+import { handleRpc, finishAuth } from '../core/messaging/handlers';
 import { isRpcRequest } from '../core/messaging/contract';
 import {
   getSettings,
@@ -49,10 +49,7 @@ async function onInstalled(details: { reason: string }): Promise<void> {
   }
 }
 
-const DUE_ALARM = 'sei-flow:due-check';
 const CONFIG_ALARM = 'sei-flow:config-sync';
-const NOTIFICATION_ID = 'sei-flow:due';
-const LAST_NOTIFICATION_KEY = 'sei-flow:last-due-notification';
 
 /** Alterações feitas dentro do SEI avisam o painel para recarregar. */
 const SYNC_MUTATION_RPCS = new Set([
@@ -70,6 +67,8 @@ const SYNC_MUTATION_RPCS = new Set([
   'trello:update-check-item',
   'trello:delete-check-item',
   'trello:delete-checklist',
+  'trello:create-list',
+  'trello:rename-list',
   'processes:upsert',
   'rules:save',
   'rules:apply-now',
@@ -78,7 +77,8 @@ const SYNC_MUTATION_RPCS = new Set([
 
 async function setupAlarms(): Promise<void> {
   try {
-    await browser.alarms.create(DUE_ALARM, { periodInMinutes: 60 });
+    // Remove o alarme antigo de notificações de prazos (1.7.0 e anteriores).
+    await browser.alarms.clear('sei-flow:due-check').catch(() => false);
     await browser.alarms.create(CONFIG_ALARM, { periodInMinutes: 30 });
   } catch (error) {
     console.debug('[SEI Flow] Falha ao criar alarmes.', error);
@@ -89,31 +89,6 @@ async function setupAlarms(): Promise<void> {
 async function clearBadge(): Promise<void> {
   await browser.action.setBadgeText({ text: '' }).catch(() => undefined);
   await browser.action.setTitle({ title: 'SEI Flow' }).catch(() => undefined);
-}
-
-async function notifyDue(): Promise<void> {
-  try {
-    const settings = await getSettings();
-    if (!settings.notificationsEnabled) return;
-    const summary = await getDueSummary();
-    const count = summary.overdue + summary.dueToday;
-    if (count === 0) return;
-
-    const todayKey = new Date().toISOString().slice(0, 10);
-    const stored = await browser.storage.local.get(LAST_NOTIFICATION_KEY);
-    if (stored[LAST_NOTIFICATION_KEY] === todayKey) return;
-
-    await browser.notifications.create(NOTIFICATION_ID, {
-      type: 'basic',
-      iconUrl: browser.runtime.getURL('/icon-128.png'),
-      title: 'SEI Flow - prazos',
-      message: `${summary.overdue} atrasado(s) e ${summary.dueToday} vencendo hoje.`,
-      priority: 1,
-    });
-    await browser.storage.local.set({ [LAST_NOTIFICATION_KEY]: todayKey });
-  } catch (error) {
-    console.debug('[SEI Flow] Falha ao notificar prazos.', error);
-  }
 }
 
 async function onPermissionsRemoved(details: { origins?: string[] }): Promise<void> {
@@ -152,18 +127,8 @@ export default defineBackground(() => {
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === CONFIG_ALARM) {
-      void syncConfig().catch(() => undefined);
-      return;
-    }
-    if (alarm.name !== DUE_ALARM) return;
-    void notifyDue();
-  });
-
-  browser.notifications.onClicked.addListener((notificationId) => {
-    if (notificationId !== NOTIFICATION_ID) return;
-    void browser.notifications.clear(notificationId);
-    void openDashboardTab();
+    if (alarm.name !== CONFIG_ALARM) return;
+    void syncConfig().catch(() => undefined);
   });
 
   // O dashboard é a página inicial: o ícone da extensão abre o painel.
@@ -206,7 +171,11 @@ export default defineBackground(() => {
         errorDescription?: unknown;
       },
       { url: sender.url, tab: sender.tab ? { id: sender.tab.id } : undefined },
-    );
+    )
+      .then((finished) => {
+        if (finished) void finishAuth();
+      })
+      .catch(() => undefined);
     return false;
   });
 
@@ -214,11 +183,7 @@ export default defineBackground(() => {
     if (!isRpcRequest(message)) return false;
     handleRpc(message)
       .then((response) => {
-        if (
-          response.ok &&
-          sender.tab &&
-          SYNC_MUTATION_RPCS.has(message.rpc)
-        ) {
+        if (response.ok && sender.tab && SYNC_MUTATION_RPCS.has(message.rpc)) {
           void markSyncChanged();
         }
         sendResponse(response);

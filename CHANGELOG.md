@@ -3,6 +3,41 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.8.0] - em teste local (2026-11-23)
+
+### Adicionado
+
+- **Criar e renomear listas**: “Nova lista” discreto no rodapé e renomear com duplo clique no nome da coluna do Kanban.
+- **Três pontinhos (•••)** no fim do texto, centralizados, expandem a descrição no próprio cartão, sem popup.
+- **Destaque no ícone de anexo** quando o cartão tem anexos.
+- **Checklist dentro do texto** do cartão, com o progresso (ex.: 1/2), sem chip na linha de informações.
+- **Checklist no editor de texto**: botão na barra de formatação insere uma lista de tarefas.
+- **Editar etiquetas existentes**: nome e cor, inclusive as já criadas.
+- **Quadro das regras no topo**: seletor único; as listas/etiquetas de cada regra são desse quadro, e o seletor por regra saiu. As etiquetas aparecem nas cores do Trello.
+- **Sincronizar agora** em Regras, para puxar a configuração da conta do Trello.
+- **Continuar sem Trello**: a extensão abre com quadros, listas e cartões de exemplo salvos localmente; dá para criar, editar e mover sem conectar.
+- **Vincular pelo cartão**: cartões sem processo mostram **“Sem vínculo”**; clicar abre um diálogo com sugestões de processos do SEI para vincular na hora.
+- **Edição por clique fora**: nomes, descrições e listas salvam ao clicar em outro local; o formulário de nova lista fecha ao sair.
+
+### Alterado
+
+- **Pino do cartão** ao lado do número do processo, no mesmo tamanho dos ícones do rodapé.
+- **Traço sutil** entre o conteúdo do cartão e a linha de informações (processo/prazo).
+- **Mover e clonar** no início do rodapé do cartão (no Kanban, ao lado do arrastar).
+- **Atualizado**: a data relativa aparece ao lado do processo, sem o texto “Atualizado”; a data/hora exata fica no tooltip.
+- **Sem prazo**: cartões sem prazo mostram um botão discreto no lado direito, que abre o diálogo de prazo (antes o espaço ficava vazio).
+- **Espaço antes dos três pontinhos** e descrição compacta sem o degradê que apagava a 3ª linha; a linha de dados do processo voltou ao espaçamento anterior.
+- **Colunas do Kanban** espremidas para caber na tela e centralizadas; a largura atual virou o máximo, com limite de 180px por coluna e rolagem horizontal depois disso. Nomes longos truncam com tooltip, as setas de mover coluna ficaram menores e o nome do quadro fica sempre na mesma linha.
+- **Linha e sombra** antes de iniciar os cartões, próximas do nome do quadro, separando o cabeçalho da coluna do conteúdo.
+- **Editor de descrição** sem o espaçamento extra entre linhas que aparecia ao abrir o cartão.
+- **Notificações do navegador removidas**: permissão `notifications`, alarme de prazos e opção nas Preferências.
+
+### Corrigido
+
+- **Regras no login**: o background sincroniza a configuração logo após o callback, sem depender da aba de Opções; a tela de Regras recarrega quando a configuração é puxada.
+- **Modo sem Trello isolado**: nenhum push é feito enquanto o modo está ativo; ao conectar, os dados de exemplo são descartados e a configuração real é puxada do Trello.
+- **Cópia de regras**: etiqueta nomeada associa somente por nome (não cai para a mesma cor) e o quadro de destino já aparece com listas/etiquetas carregadas.
+
 ## [1.7.0] - 2026-11-23
 
 ### Adicionado

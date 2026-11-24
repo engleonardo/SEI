@@ -41,6 +41,14 @@ function placeCaretAtEnd(element: HTMLElement): void {
   selection?.addRange(range);
 }
 
+/** O `checked` do HTML não acompanha o clique; sincroniza antes de virar Markdown. */
+function syncCheckboxAttributes(element: HTMLElement): void {
+  element.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input) => {
+    if (input.checked) input.setAttribute('checked', '');
+    else input.removeAttribute('checked');
+  });
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -95,6 +103,7 @@ export function DescriptionEditor({
   const emit = () => {
     const element = editorRef.current;
     if (!element) return;
+    syncCheckboxAttributes(element);
     const markdown = editorHtmlToMarkdown(element.innerHTML);
     lastValue.current = markdown;
     onChange(markdown);
@@ -121,8 +130,7 @@ export function DescriptionEditor({
 
   const openLink = () => {
     const selection = selectionFor(editorRef.current);
-    savedRange.current =
-      selection && selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+    savedRange.current = selection && selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
     setLinkUrl('');
     setLinkOpen(true);
   };
@@ -144,11 +152,7 @@ export function DescriptionEditor({
     if (selection && !selection.isCollapsed) {
       document.execCommand('createLink', false, url);
     } else {
-      document.execCommand(
-        'insertHTML',
-        false,
-        `<a href="${escapeHtml(url)}">${escapeHtml(url)}</a>`,
-      );
+      document.execCommand('insertHTML', false, `<a href="${escapeHtml(url)}">${escapeHtml(url)}</a>`);
     }
     setLinkOpen(false);
     setLinkUrl('');
@@ -174,6 +178,18 @@ export function DescriptionEditor({
     </button>
   );
 
+  const insertTaskList = () => {
+    if (disabled) return;
+    const element = editorRef.current;
+    if (!element) return;
+    element.focus();
+    document.execCommand('insertHTML', false, '<ul><li><input type="checkbox"> </li></ul>');
+    const lists = element.querySelectorAll('ul');
+    const lastItem = lists[lists.length - 1]?.querySelector('li');
+    if (lastItem) placeCaretAtEnd(lastItem as HTMLElement);
+    emit();
+  };
+
   return (
     <div className={classNames('sf-editor', disabled && 'sf-editor--disabled')}>
       <div className="sf-editor__toolbar" role="toolbar" aria-label="Formatação da descrição">
@@ -184,12 +200,11 @@ export function DescriptionEditor({
         )}
         {toolbarButton('H2', 'Título', () => toggleBlock('h2'))}
         {toolbarButton('H3', 'Subtítulo', () => toggleBlock('h3'))}
-        {toolbarButton(
-          <Icon name="list" size={13} />,
-          'Lista com marcadores',
-          () => run('insertUnorderedList'),
+        {toolbarButton(<Icon name="list" size={13} />, 'Lista com marcadores', () =>
+          run('insertUnorderedList'),
         )}
         {toolbarButton('1.', 'Lista numerada', () => run('insertOrderedList'))}
+        {toolbarButton(<Icon name="checklist" size={13} />, 'Lista de tarefas', insertTaskList)}
         {toolbarButton('❝', 'Citação', () => toggleBlock('blockquote'))}
         {toolbarButton(<Icon name="link" size={13} />, 'Inserir link', openLink)}
       </div>
@@ -221,11 +236,7 @@ export function DescriptionEditor({
           >
             Aplicar
           </button>
-          <button
-            type="button"
-            className="sf-editor__link-btn"
-            onClick={() => setLinkOpen(false)}
-          >
+          <button type="button" className="sf-editor__link-btn" onClick={() => setLinkOpen(false)}>
             Cancelar
           </button>
         </div>
@@ -241,6 +252,9 @@ export function DescriptionEditor({
         aria-label={ariaLabel}
         data-placeholder={placeholder}
         onInput={emit}
+        onChange={(event) => {
+          if ((event.target as HTMLElement).closest('input[type="checkbox"]')) emit();
+        }}
         onBlur={emit}
         onPaste={(event) => {
           event.preventDefault();
@@ -250,6 +264,7 @@ export function DescriptionEditor({
         }}
         onClick={(event) => {
           if ((event.target as HTMLElement).closest('a')) event.preventDefault();
+          if ((event.target as HTMLElement).closest('input[type="checkbox"]')) emit();
         }}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {

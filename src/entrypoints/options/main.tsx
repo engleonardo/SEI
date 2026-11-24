@@ -69,6 +69,7 @@ function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [boards, setBoards] = useState<TrelloBoard[]>([]);
   const [connected, setConnected] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
   const [sitePermission, setSitePermission] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice>(null);
@@ -122,6 +123,7 @@ function App() {
       const isConnected = status
         ? status.connected
         : Boolean(current.appKey && current.appToken);
+      setDemoMode(status?.mode === 'demo');
       setConnected(isConnected);
       if (!isConnected) {
         setBoards([]);
@@ -293,7 +295,7 @@ function App() {
 
         {notice && <div className={`sfo-alert sfo-alert--${notice.kind}`}>{notice.text}</div>}
 
-        {connected && (
+        {connected && !demoMode && (
           <SetupChecklist
             settings={settings}
             connected={connected}
@@ -325,7 +327,9 @@ function App() {
           />
         )}
 
-        {tab === 'rules' && <RulesSection boards={boards} notify={notify} />}
+        {tab === 'rules' && (
+          <RulesSection boards={boards} notify={notify} demoMode={demoMode} />
+        )}
 
         {tab === 'sites' && (
           <SitesSection

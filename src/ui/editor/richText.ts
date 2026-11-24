@@ -83,7 +83,8 @@ export function markdownToEditorHtml(markdown: string): string {
     breaks: true,
     async: false,
   }) as string;
-  return sanitizeHtml(html);
+  // No editor, os checkboxes de lista de tarefas precisam ser clicáveis.
+  return sanitizeHtml(html).replace(/<input([^>]*?) disabled(?:="[^"]*")?([^>]*?)>/gi, '<input$1$2>');
 }
 
 /** HTML do editor -> Markdown aceito pelo Trello. */

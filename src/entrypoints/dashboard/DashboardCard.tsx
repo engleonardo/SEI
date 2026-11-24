@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type FocusEvent, type ReactNode } from 'react';
 import type { CardPatch, TrelloCard } from '../../core/domain/types';
 import { callRpc, errorCode, errorMessage } from '../../core/messaging/client';
 import type { ProcessCatalog } from '../../core/storage/processes';
@@ -14,6 +14,7 @@ import { ShareDialog } from '../../ui/components/dialogs/ShareDialog';
 import { DeleteCardDialog } from '../../ui/components/dialogs/DeleteCardDialog';
 import { DueDialog } from '../../ui/components/dialogs/DueDialog';
 import { LabelsDialog } from '../../ui/components/dialogs/LabelsDialog';
+import { LinkProcessDialog } from '../../ui/components/dialogs/LinkProcessDialog';
 import { cardHasUnreadProcess, formatActivity, processRecordsFor, processTypesFor } from './model';
 
 export interface DashboardCardProps {
@@ -49,8 +50,11 @@ export function DashboardCard({
   const [nameDraft, setNameDraft] = useState(card.name);
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState(card.description);
+  const descDraftRef = useRef(card.description);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [linkProcessOpen, setLinkProcessOpen] = useState(false);
 
   const due = formatDue(card.due, card.dueComplete);
   const unread = cardHasUnreadProcess(card, catalog);
@@ -90,14 +94,30 @@ export function DashboardCard({
   };
 
   const saveDescription = async () => {
-    if (descDraft === card.description) {
+    const next = descDraftRef.current;
+    if (next === card.description) {
       setEditingDesc(false);
       return;
     }
-    if (await update({ description: descDraft })) {
+    if (await update({ description: next })) {
       setEditingDesc(false);
       showToast('Descrição atualizada.', 'success');
     }
+  };
+
+  const handleNameBlur = () => {
+    if (!nameDraft.trim()) {
+      setNameDraft(card.name);
+      setEditingName(false);
+      return;
+    }
+    void saveName();
+  };
+
+  const handleDescriptionBlur = (event: FocusEvent<HTMLDivElement>) => {
+    const next = event.relatedTarget as Node | null;
+    if (next && event.currentTarget.contains(next)) return;
+    void saveDescription();
   };
 
   const markProcessesRead = async (numbers: string[]) => {
@@ -171,6 +191,7 @@ export function DashboardCard({
                       setEditingName(false);
                     }
                   }}
+                  onBlur={handleNameBlur}
                   autoFocus
                   disabled={busy}
                   aria-label="Nome do cartão"
@@ -178,6 +199,7 @@ export function DashboardCard({
                 <button
                   type="button"
                   className="sfo-btn sfo-btn--sm sfo-btn--primary"
+                  onMouseDown={(event) => event.preventDefault()}
                   onClick={() => void saveName()}
                   disabled={busy}
                 >
@@ -186,6 +208,7 @@ export function DashboardCard({
                 <button
                   type="button"
                   className="sfo-btn sfo-btn--sm"
+                  onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
                     setNameDraft(card.name);
                     setEditingName(false);
@@ -222,53 +245,43 @@ export function DashboardCard({
                 Atualizado
               </button>
             )}
-            {card.hasChecklist && (
-              <button
-                type="button"
-                className="sdo-badge"
-                onClick={() => setDialog('checklist')}
-                title="Abrir checklist"
-              >
-                <Icon name="checklist" size={11} />
-                Checklist
-              </button>
-            )}
           </div>
 
-          {card.labels.length > 0 && (
-            <div className="sdo-card__labels">
-              {card.labels.map((label) => (
-                <button
-                  type="button"
-                  key={label.id}
-                  className="sdo-label"
-                  style={{
-                    backgroundColor: labelColorHex(label.color),
-                    color: labelTextColor(label.color),
-                  }}
-                  onClick={() => onToggleLabel(label.id)}
-                  title={`Filtrar por ${label.name || label.color || 'etiqueta'}`}
-                >
-                  {label.name || label.color || 'Etiqueta'}
-                </button>
-              ))}
+          <div className="sdo-card__labels">
+            {card.labels.map((label) => (
               <button
                 type="button"
-                className="sdo-label sdo-label--add"
-                onClick={() => setDialog('labels')}
-                title="Editar etiquetas"
-                aria-label="Editar etiquetas"
+                key={label.id}
+                className="sdo-label"
+                style={{
+                  backgroundColor: labelColorHex(label.color),
+                  color: labelTextColor(label.color),
+                }}
+                onClick={() => onToggleLabel(label.id)}
+                title={`Filtrar por ${label.name || label.color || 'etiqueta'}`}
               >
-                <Icon name="tag" size={11} />
+                {label.name || label.color || 'Etiqueta'}
               </button>
-            </div>
-          )}
+            ))}
+            <button
+              type="button"
+              className="sdo-label sdo-label--add"
+              onClick={() => setDialog('labels')}
+              title="Editar etiquetas"
+              aria-label="Editar etiquetas"
+            >
+              <Icon name="tag" size={11} />
+            </button>
+          </div>
 
           {editingDesc ? (
-            <div className="sdo-card__desc-edit">
+            <div className="sdo-card__desc-edit" onBlur={handleDescriptionBlur}>
               <DescriptionEditor
                 value={descDraft}
-                onChange={setDescDraft}
+                onChange={(value) => {
+                  setDescDraft(value);
+                  descDraftRef.current = value;
+                }}
                 disabled={busy}
                 autoFocus
                 placeholder="Escreva a descrição…"
@@ -278,6 +291,7 @@ export function DashboardCard({
                 <button
                   type="button"
                   className="sfo-btn sfo-btn--sm sfo-btn--primary"
+                  onMouseDown={(event) => event.preventDefault()}
                   onClick={() => void saveDescription()}
                   disabled={busy}
                 >
@@ -286,7 +300,9 @@ export function DashboardCard({
                 <button
                   type="button"
                   className="sfo-btn sfo-btn--sm"
+                  onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
+                    descDraftRef.current = card.description;
                     setDescDraft(card.description);
                     setEditingDesc(false);
                   }}
@@ -303,6 +319,7 @@ export function DashboardCard({
               tabIndex={0}
               onClick={(event) => {
                 if ((event.target as HTMLElement).closest('a')) return;
+                descDraftRef.current = card.description;
                 setDescDraft(card.description);
                 setEditingDesc(true);
               }}
@@ -310,12 +327,13 @@ export function DashboardCard({
                 if ((event.target as HTMLElement).closest('a')) return;
                 if (event.key !== 'Enter' && event.key !== ' ') return;
                 event.preventDefault();
+                descDraftRef.current = card.description;
                 setDescDraft(card.description);
                 setEditingDesc(true);
               }}
               title="Editar descrição"
             >
-              <CardDescription text={card.description} compact />
+              <CardDescription text={card.description} compact={!descExpanded} />
             </div>
           ) : (
             <button
@@ -331,6 +349,40 @@ export function DashboardCard({
             </button>
           )}
 
+          {card.hasChecklist && (
+            <button
+              type="button"
+              className="sdo-card__checklist"
+              onClick={() => setDialog('checklist')}
+              title="Abrir checklist"
+            >
+              <Icon name="checklist" size={11} />
+              Checklist
+              {card.checklistItems
+                ? ` · ${card.checklistChecked ?? 0}/${card.checklistItems}`
+                : ''}
+            </button>
+          )}
+
+          {card.description &&
+            (descExpanded || card.description.length > 90 || card.description.includes('\n')) && (
+              <div className="sdo-card__expand-row">
+                <button
+                  type="button"
+                  className={classNames(
+                    'sdo-card__expand',
+                    descExpanded && 'sdo-card__expand--on',
+                  )}
+                  onClick={() => setDescExpanded((current) => !current)}
+                  aria-expanded={descExpanded}
+                  aria-label={descExpanded ? 'Recolher descrição' : 'Expandir descrição'}
+                  title={descExpanded ? 'Recolher descrição' : 'Expandir descrição'}
+                >
+                  <Icon name="more" size={13} />
+                </button>
+              </div>
+            )}
+
           <div className="sdo-card__meta">
             <button
               type="button"
@@ -340,6 +392,18 @@ export function DashboardCard({
             >
               <Icon name="board" size={12} /> {locationLabel(card)}
             </button>
+
+            {card.links.length === 0 && (
+              <button
+                type="button"
+                className="sdo-link-missing"
+                onClick={() => setLinkProcessOpen(true)}
+                title="Vincular a um processo do SEI"
+              >
+                <Icon name="link" size={11} />
+                Sem vínculo
+              </button>
+            )}
 
             {card.links.map((processNumber) => {
               const record = processByNumber.get(processNumber);
@@ -372,17 +436,38 @@ export function DashboardCard({
               );
             })}
 
+            {onTogglePin && (
+              <button
+                type="button"
+                className={classNames(
+                  'sfo-icon-btn',
+                  'sdo-card__pin-inline',
+                  pinned && 'sfo-icon-btn--pinned',
+                )}
+                onClick={() => onTogglePin(card.id)}
+                aria-pressed={pinned}
+                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
+              >
+                <Icon name="pin" size={13} />
+              </button>
+            )}
+
+            {activity && (
+              <span
+                className="sdo-card__activity"
+                title={`Atualizado em ${new Date(card.lastActivity!).toLocaleString('pt-BR')}`}
+                aria-label={`Atualizado em ${new Date(card.lastActivity!).toLocaleString('pt-BR')}`}
+              >
+                <Icon name="clock" size={11} /> {activity}
+              </span>
+            )}
+
             {types.map((type) => (
               <span key={type} className="sdo-type">
                 <Icon name="tag" size={11} /> {type}
               </span>
             ))}
-
-            {activity && (
-              <span title={card.lastActivity ? new Date(card.lastActivity).toLocaleString('pt-BR') : ''}>
-                <Icon name="clock" size={11} /> Atualizado {activity}
-              </span>
-            )}
           </div>
 
           {locationOpen && (
@@ -407,27 +492,23 @@ export function DashboardCard({
               <Icon name="calendar" size={11} />
               {due.label}
             </button>
+          ) : card.dueComplete ? (
+            <span className="sdo-pill sdo-pill--success">
+              <Icon name="check" size={11} />
+              Concluído
+            </span>
           ) : (
-            card.dueComplete && (
-              <span className="sdo-pill sdo-pill--success">
-                <Icon name="check" size={11} />
-                Concluído
-              </span>
-            )
+            <button
+              type="button"
+              className="sdo-pill sdo-pill--neutral"
+              onClick={() => setDialog('due')}
+              title="Definir prazo"
+            >
+              <Icon name="calendar" size={11} />
+              Sem prazo
+            </button>
           )}
           <div className="sdo-card__side-actions">
-            {onTogglePin && (
-              <button
-                type="button"
-                className={classNames('sfo-icon-btn', pinned && 'sfo-icon-btn--pinned')}
-                onClick={() => onTogglePin(card.id)}
-                aria-pressed={pinned}
-                aria-label={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
-                title={pinned ? 'Desafixar cartão' : 'Fixar cartão no topo'}
-              >
-                <Icon name="pin" size={14} />
-              </button>
-            )}
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
@@ -458,6 +539,28 @@ export function DashboardCard({
             <button
               type="button"
               className="sfo-btn sfo-btn--sm sfo-btn--ghost"
+              onClick={() => setLocationOpen((current) => !current)}
+              disabled={busy}
+              title="Mover"
+              aria-label="Mover"
+            >
+              <Icon name="board" size={13} />
+              <span className="sdo-card__action-label">Mover</span>
+            </button>
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
+              onClick={() => setDialog('share')}
+              disabled={busy}
+              title="Compartilhar e clonar"
+              aria-label="Compartilhar e clonar"
+            >
+              <Icon name="copy" size={13} />
+              <span className="sdo-card__action-label">Clonar</span>
+            </button>
+            <button
+              type="button"
+              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
               onClick={() => setDialog('labels')}
               disabled={busy}
               title="Etiquetas"
@@ -479,25 +582,17 @@ export function DashboardCard({
             </button>
             <button
               type="button"
-              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
+              className={classNames(
+                'sfo-btn sfo-btn--sm sfo-btn--ghost',
+                Boolean(card.attachmentCount) && 'sdo-card__attachment--on',
+              )}
               onClick={() => setDialog('attachments')}
               disabled={busy}
-              title="Anexos"
+              title={card.attachmentCount ? `Anexos (${card.attachmentCount})` : 'Anexos'}
               aria-label="Anexos"
             >
               <Icon name="paperclip" size={13} />
               <span className="sdo-card__action-label">Anexos</span>
-            </button>
-            <button
-              type="button"
-              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
-              onClick={() => setDialog('share')}
-              disabled={busy}
-              title="Compartilhar e clonar"
-              aria-label="Compartilhar e clonar"
-            >
-              <Icon name="copy" size={13} />
-              <span className="sdo-card__action-label">Compartilhar</span>
             </button>
             <button
               type="button"
@@ -512,17 +607,6 @@ export function DashboardCard({
             </button>
             <button
               type="button"
-              className="sfo-btn sfo-btn--sm sfo-btn--ghost"
-              onClick={() => setLocationOpen((current) => !current)}
-              disabled={busy}
-              title="Mover"
-              aria-label="Mover"
-            >
-              <Icon name="board" size={13} />
-              <span className="sdo-card__action-label">Mover</span>
-            </button>
-            <button
-              type="button"
               className={classNames(
                 'sfo-btn sfo-btn--sm sfo-btn--ghost',
                 !card.dueComplete && 'sdo-card__complete',
@@ -533,9 +617,7 @@ export function DashboardCard({
               aria-label={card.dueComplete ? 'Reabrir' : 'Concluir'}
             >
               <Icon name={card.dueComplete ? 'refresh' : 'check'} size={13} />
-              <span className="sdo-card__action-label">
-                {card.dueComplete ? 'Reabrir' : 'Concluir'}
-              </span>
+              <span className="sdo-card__action-label">{card.dueComplete ? 'Reabrir' : 'Concluir'}</span>
             </button>
           </div>
           <div className="sdo-card__footer-danger">
@@ -560,9 +642,7 @@ export function DashboardCard({
       {dialog === 'checklist' && (
         <ChecklistDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
       )}
-      {dialog === 'attachments' && (
-        <AttachmentsDialog card={card} onClose={() => setDialog(null)} />
-      )}
+      {dialog === 'attachments' && <AttachmentsDialog card={card} onClose={() => setDialog(null)} />}
       {dialog === 'share' && <ShareDialog card={card} onClose={() => setDialog(null)} />}
       {confirmDelete && (
         <DeleteCardDialog
@@ -571,6 +651,15 @@ export function DashboardCard({
           onDeleted={(ids) => {
             for (const id of ids) onRemoved(id);
           }}
+        />
+      )}
+
+      {linkProcessOpen && (
+        <LinkProcessDialog
+          card={card}
+          catalog={catalog}
+          onClose={() => setLinkProcessOpen(false)}
+          onChanged={onChanged}
         />
       )}
     </>

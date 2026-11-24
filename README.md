@@ -12,8 +12,8 @@ O **Painel SEI Flow** é a página inicial da extensão: reúne prazos, etiqueta
 
 ## Baixar e instalar
 
-- **Chrome / Edge:** [sei-flow-1.7.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.7.0/sei-flow-1.7.0-chrome.zip)
-- **Firefox:** [sei-flow-1.7.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.7.0/sei-flow-1.7.0-firefox.zip)
+- **Chrome / Edge:** [sei-flow-1.8.0-chrome.zip](https://github.com/engleonardo/SEI/releases/download/v1.8.0/sei-flow-1.8.0-chrome.zip)
+- **Firefox:** [sei-flow-1.8.0-firefox.zip](https://github.com/engleonardo/SEI/releases/download/v1.8.0/sei-flow-1.8.0-firefox.zip)
 - **Todas as versões:** [Releases](https://github.com/engleonardo/SEI/releases)
 
 Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` (ou `edge://extensions`) com o **Modo desenvolvedor** ativado. No Firefox, use `about:debugging` -> **Carregar extensão temporária** e selecione o `manifest.json` da pasta extraída.
@@ -104,7 +104,6 @@ Depois de baixar, **extraia o zip** e carregue a pasta em `chrome://extensions` 
 | Métricas do painel refletem os filtros aplicados                                     | Sim      |
 | Links dos processos abrem a página correspondente no SEI                             | Sim      |
 | Atualizações do Trello (7/30 dias e desde a última visita)                           | Sim      |
-| Notificações diárias de prazos                                                       | Sim      |
 | Barra fixa, atalho de busca e filtros persistidos                                    | Sim      |
 | Exportação CSV dos cartões filtrados                                                 | Sim      |
 
@@ -219,7 +218,7 @@ Em **Opções -> Backup** você exporta e importa as configurações gerais:
 
 - quadro e lista padrão;
 - sites do SEI autorizados (a permissão do navegador precisa ser concedida de novo no destino);
-- tema, modo compacto, notificações e intervalo de atualização automática;
+- tema, modo compacto e intervalo de atualização automática;
 - **todas as regras**, na ordem atual (opcional, marcado por padrão);
 - opcionalmente, a APP-KEY e o TOKEN do Trello.
 

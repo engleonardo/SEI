@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AuthStatus } from '../../../core/auth/session';
 import type { ConnectionInfo, Settings } from '../../../core/domain/types';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
+import { openDashboard } from '../../../core/messaging/actions';
 import { Icon } from '../../../ui/icons';
 import { ConfirmDialog } from '../../../ui/components/Modal';
 import { SectionCard, Spinner, StatusPill, type Notice } from './shared';
@@ -48,7 +49,7 @@ export function ConnectionSection({
     return () => {
       active = false;
     };
-  }, []);
+  }, [settings.appKey, settings.appToken, settings.skipTrello]);
 
   const keyForUrl = appKey.trim();
   const tokenUrl = `https://trello.com/1/authorize?expiration=never&scope=read,write&response_type=token&name=SEI%20Flow&key=${encodeURIComponent(
@@ -57,6 +58,7 @@ export function ConnectionSection({
   const dirty = appKey !== settings.appKey || appToken !== settings.appToken;
   const oauth = auth?.mode === 'oauth';
   const manual = auth?.mode === 'token';
+  const demo = auth?.mode === 'demo';
   const connected = Boolean(auth?.connected);
 
   const openAuthorization = () => {
@@ -95,6 +97,7 @@ export function ConnectionSection({
         text: status.account ? `Conectado como ${status.account.fullName}.` : 'Login com o Trello concluído.',
       });
 
+      await save({ skipTrello: false }).catch(() => null);
       await callRpc('auth:finish', undefined).catch(() => null);
       const fresh = await callRpc('settings:get', undefined).catch(() => null);
       onLoginComplete?.(fresh);
@@ -151,7 +154,7 @@ export function ConnectionSection({
   const saveConnection = async () => {
     setBusy(true);
     try {
-      await save({ appKey: appKey.trim(), appToken: appToken.trim() });
+      await save({ appKey: appKey.trim(), appToken: appToken.trim(), skipTrello: false });
       notify({ kind: 'success', text: 'Credenciais salvas neste navegador.' });
       setAuth(await callRpc('auth:status', undefined));
       await reloadBoards();
@@ -167,7 +170,7 @@ export function ConnectionSection({
     setConnection(null);
     try {
       if (!oauth && dirty) {
-        await save({ appKey: appKey.trim(), appToken: appToken.trim() });
+        await save({ appKey: appKey.trim(), appToken: appToken.trim(), skipTrello: false });
       }
       const info = await callRpc('settings:test-connection', undefined);
       setConnection(info);
@@ -179,6 +182,37 @@ export function ConnectionSection({
     }
   };
 
+  const continueWithoutTrello = async () => {
+    setBusy(true);
+    try {
+      await save({ skipTrello: true });
+      setAuth(await callRpc('auth:status', undefined));
+      notify({
+        kind: 'info',
+        text: 'Modo sem Trello ativado com quadros de exemplo.',
+      });
+      await openDashboard();
+    } catch (cause) {
+      notify({ kind: 'error', text: errorMessage(cause) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const disableDemo = async () => {
+    setBusy(true);
+    try {
+      await save({ skipTrello: false });
+      notify({ kind: 'success', text: 'Modo sem Trello desativado.' });
+      setAuth(await callRpc('auth:status', undefined));
+      await reloadBoards();
+    } catch (cause) {
+      notify({ kind: 'error', text: errorMessage(cause) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
       <SectionCard
@@ -186,7 +220,24 @@ export function ConnectionSection({
         subtitle="Conecte sua conta do Trello. A sessão fica apenas neste navegador."
         icon="settings"
         footer={
-          oauth ? (
+          demo ? (
+            <>
+              <button
+                type="button"
+                className="sfo-btn"
+                onClick={() => void disableDemo()}
+                disabled={busy}
+              >
+                {busy ? <Spinner /> : <Icon name="arrowRight" size={14} />}
+                Desativar modo sem Trello
+              </button>
+              <span style={{ flex: 1 }} />
+              <StatusPill tone="warning">
+                <Icon name="info" size={11} />
+                Modo sem Trello
+              </StatusPill>
+            </>
+          ) : oauth ? (
             <>
               <button
                 type="button"
@@ -230,7 +281,38 @@ export function ConnectionSection({
           )
         }
       >
-        {oauth ? (
+        {demo ? (
+          <div className="sfo-alert sfo-alert--info">
+            <Icon name="info" size={16} />
+            <div style={{ flex: 1 }}>
+              <strong>Modo sem Trello</strong>
+              <p style={{ margin: '4px 0 10px', color: 'var(--text-soft)', fontSize: 13 }}>
+                Você está usando quadros de exemplo salvos neste navegador. Nada é enviado ao
+                Trello. Conecte sua conta para usar os seus quadros e cartões reais.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <button
+                  type="button"
+                  className="sfo-btn sfo-btn--primary"
+                  onClick={() => void login()}
+                  disabled={authBusy}
+                >
+                  {authBusy ? <Spinner /> : <Icon name="external" size={14} />}
+                  Conectar com Trello
+                </button>
+                <button
+                  type="button"
+                  className="sfo-btn"
+                  onClick={() => void disableDemo()}
+                  disabled={busy}
+                >
+                  <Icon name="arrowRight" size={14} />
+                  Desativar modo sem Trello
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : oauth ? (
           <div className="sfo-alert sfo-alert--success">
             <Icon name="check" size={16} />
             <div style={{ flex: 1 }}>
@@ -250,15 +332,34 @@ export function ConnectionSection({
                 Abre a tela oficial do Trello e autoriza somente a sua conta. Você pode revogar o acesso
                 quando quiser nas configurações do Trello.
               </p>
-              <button
-                type="button"
-                className="sfo-btn sfo-btn--primary"
-                onClick={() => void login()}
-                disabled={authBusy}
-              >
-                {authBusy ? <Spinner /> : <Icon name="external" size={14} />}
-                Conectar com Trello
-              </button>
+              {settings.skipTrello && (
+                <div className="sfo-hint" style={{ marginBottom: 10 }}>
+                  Modo sem Trello ativo. Os quadros e cartões ficam vazios até você conectar.
+                </div>
+              )}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <button
+                  type="button"
+                  className="sfo-btn sfo-btn--primary"
+                  onClick={() => void login()}
+                  disabled={authBusy}
+                >
+                  {authBusy ? <Spinner /> : <Icon name="external" size={14} />}
+                  Conectar com Trello
+                </button>
+                {!connected && (
+                  <button
+                    type="button"
+                    className="sfo-btn"
+                    onClick={() => void continueWithoutTrello()}
+                    disabled={busy || authBusy}
+                    title="Usar a extensão sem conectar o Trello"
+                  >
+                    <Icon name="arrowRight" size={14} />
+                    Continuar sem Trello
+                  </button>
+                )}
+              </div>
               {manual && (
                 <div className="sfo-hint" style={{ marginTop: 8 }}>
                   Há uma APP-KEY/TOKEN manual configurada. Ao entrar, o login passa a ser usado.
