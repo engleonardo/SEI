@@ -5,6 +5,7 @@ import type {
   TrelloBoard,
   TrelloCard,
   TrelloChecklist,
+  TrelloComment,
   TrelloLabel,
   TrelloList,
 } from '../domain/types';
@@ -637,6 +638,68 @@ export async function demoChecklists(cardId: string): Promise<TrelloChecklist[]>
       ],
     },
   ];
+}
+
+const demoCommentStore: Record<string, TrelloComment[]> = {};
+
+export async function demoCardComments(cardId: string): Promise<TrelloComment[]> {
+  const data = await getDemoData();
+  const card = requireCard(data, cardId);
+  const stored = demoCommentStore[cardId];
+  if (stored) return [...stored];
+  if (!card.commentCount) return [];
+  const sample: TrelloComment[] = [
+    {
+      id: 'demo-comment-1',
+      date: new Date().toISOString(),
+      text: 'Comentário de exemplo do modo sem Trello.',
+      author: { fullName: 'Usuário de exemplo', username: 'exemplo', initials: 'UE' },
+    },
+  ];
+  demoCommentStore[cardId] = sample;
+  return [...sample];
+}
+
+export async function demoAddComment(cardId: string, text: string): Promise<TrelloComment> {
+  const data = await getDemoData();
+  const card = requireCard(data, cardId);
+  const clean = text.trim();
+  if (!clean) throw new TrelloError('validation', 'Escreva o comentário.');
+  const comment: TrelloComment = {
+    id: newId('demo-comment'),
+    date: new Date().toISOString(),
+    text: clean,
+    author: { fullName: 'Você (exemplo)', username: 'voce', initials: 'VC' },
+  };
+  demoCommentStore[cardId] = [...(demoCommentStore[cardId] ?? []), comment];
+  card.commentCount = (card.commentCount ?? 0) + 1;
+  await persist(data);
+  return comment;
+}
+
+export async function demoApplyChecklistTemplate(
+  cardId: string,
+  name: string,
+  items: string[],
+): Promise<TrelloChecklist[]> {
+  const data = await getDemoData();
+  const card = requireCard(data, cardId);
+  card.hasChecklist = true;
+  card.checklistItems = (card.checklistItems ?? 0) + items.length;
+  await persist(data);
+  const existing = await demoChecklists(cardId);
+  const created: TrelloChecklist = {
+    id: newId('demo-checklist'),
+    name,
+    idCard: cardId,
+    checkItems: items.map((item, index) => ({
+      id: newId('demo-check'),
+      name: item,
+      state: 'incomplete' as const,
+      pos: index + 1,
+    })),
+  };
+  return [...existing, created];
 }
 
 export async function demoMirrorCard(

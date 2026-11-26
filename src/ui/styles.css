@@ -382,6 +382,18 @@
   justify-self: end;
 }
 
+/* No processo, desvincular/excluir abre a linha à esquerda. */
+.sf-detail-strip .sf-card__footer--danger-start {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.sf-detail-strip .sf-card__footer--danger-start .sf-card__footer-actions {
+  flex: 1 1 auto;
+  justify-content: flex-start;
+}
+
 .sf-card--overdue {
   border-left-color: var(--sf-danger);
 }
@@ -632,15 +644,30 @@
 }
 
 .sf-card__desc {
-  margin: 8px 0 0;
-  font-size: 12.5px;
+  margin: 7px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
   color: var(--sf-text-soft);
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Mesma leitura da descrição do dashboard, sem linhas extras. */
+.sf-card__desc .sf-markdown {
+  line-height: 1.45;
+}
+
+.sf-card__desc .sf-markdown p {
+  margin: 0 0 0.45em;
+}
+
+.sf-card__desc .sf-markdown ul,
+.sf-card__desc .sf-markdown ol {
+  margin: 0.3em 0 0.45em;
+  padding-left: 1.2em;
 }
 
 .sf-card__desc-button {
@@ -972,6 +999,23 @@
   align-items: center;
   gap: 2px;
   margin-left: auto;
+}
+
+/* Desvincular/excluir no processo: à esquerda, menores e discretos. */
+.sf-card__footer-danger {
+  width: 22px;
+  height: 22px;
+  color: var(--sf-muted);
+  opacity: 0.65;
+}
+
+.sf-card__footer-danger:hover:not(:disabled),
+.sf-card__footer-danger:focus-visible {
+  opacity: 1;
+}
+
+.sf-card__footer-danger.sf-icon-btn--danger:hover:not(:disabled) {
+  color: var(--sf-danger);
 }
 
 .sf-location-picker {
@@ -1576,6 +1620,14 @@
   font-weight: 800;
 }
 
+.sf-toolbar__count {
+  padding: 0 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--sf-muted);
+  white-space: nowrap;
+}
+
 .sf-filter-group {
   display: flex;
   flex-direction: column;
@@ -1778,6 +1830,123 @@
 
 .sf-checklist__add .sf-input {
   min-height: 30px;
+}
+
+.sf-checklist__templates {
+  background: var(--sf-bg);
+}
+
+.sf-checklist__template-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.sf-checklist__template {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--sf-border);
+  border-radius: 8px;
+  background: var(--sf-bg-soft);
+}
+
+.sf-checklist__template-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sf-comments {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sf-comments__compose {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sf-comments__compose-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sf-comments__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sf-comments__item {
+  display: flex;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--sf-border);
+  border-radius: 10px;
+  background: var(--sf-bg-soft);
+}
+
+.sf-comments__avatar {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--sf-accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.sf-comments__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sf-comments__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.sf-comments__head strong {
+  font-weight: 700;
+}
+
+.sf-comments__date {
+  color: var(--sf-muted);
+  font-size: 11px;
+}
+
+.sf-comments__text {
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.sf-comments__text p {
+  margin: 0 0 0.45em;
+}
+
+.sf-comments__text p:last-child {
+  margin-bottom: 0;
 }
 
 /* ---------------------------------------------------------------- due/labels/location */

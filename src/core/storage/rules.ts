@@ -21,6 +21,7 @@ const ACTION_TYPES: ReadonlySet<RuleActionType> = new Set([
   'setDueDate',
   'clearDates',
   'addComment',
+  'applyChecklist',
   'markComplete',
   'reopenCard',
 ]);
@@ -46,17 +47,23 @@ function sanitizeAction(value: unknown): RuleAction | null {
   if (typeof type !== 'string' || !ACTION_TYPES.has(type as RuleActionType)) {
     return null;
   }
-  return {
+  const text =
+    typeof action.text === 'string' ? action.text.slice(0, MAX_COMMENT_LENGTH) : undefined;
+  const result: RuleAction = {
     type: type as RuleActionType,
     listId: typeof action.listId === 'string' ? action.listId : undefined,
     labelId: typeof action.labelId === 'string' ? action.labelId : undefined,
     labelName: typeof action.labelName === 'string' ? action.labelName : undefined,
-    days: sanitizeDays(action.days),
-    text:
-      typeof action.text === 'string' && action.text.trim()
-        ? action.text.trim().slice(0, MAX_COMMENT_LENGTH)
+    templateId:
+      typeof action.templateId === 'string' && action.templateId.trim()
+        ? action.templateId.trim()
         : undefined,
+    days: sanitizeDays(action.days),
+    // Preserva o texto exatamente como digitado (espaços inclusive); só
+    // descarta comentário vazio.
+    text: text && text.trim() ? text : undefined,
   };
+  return result;
 }
 
 /** Migra regras antigas (sem quadro fixo) aproveitando o quadro que estiver salvo. */

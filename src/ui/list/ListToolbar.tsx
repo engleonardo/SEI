@@ -4,6 +4,7 @@ import { BrandMark } from '../BrandMark';
 import { Icon } from '../icons';
 import { useStore } from '../store';
 import { activeFilterCount, type DueFilter } from '../filters';
+import { classNames } from '../utils';
 import { openDashboard, openOptionsPage } from '../../core/messaging/actions';
 import { FilterDialog, type FilterOption, type ListOption } from './FilterDialog';
 import { BulkLinkDialog } from '../components/BulkLinkDialog';
@@ -59,6 +60,13 @@ export function ListToolbar() {
   }, [state.cards]);
 
   const active = activeFilterCount(state.filters);
+  const hasActive = active > 0 || Boolean(state.filters.search.trim());
+  const counts = state.rowCounts;
+  const totalLabel = `${counts.total} ${counts.total === 1 ? 'processo' : 'processos'}`;
+  const visibleLabel = `${counts.visible} de ${counts.total} ${
+    counts.total === 1 ? 'processo' : 'processos'
+  }`;
+  const cardsLabel = `${counts.cards} ${counts.cards === 1 ? 'cartão' : 'cartões'}`;
   const brandTitle = state.lastUpdated
     ? `${state.cards.length} ${state.cards.length === 1 ? 'cartão' : 'cartões'} · atualizado às ${new Date(
         state.lastUpdated,
@@ -113,6 +121,23 @@ export function ListToolbar() {
 
       <button
         type="button"
+        className={classNames(
+          'sf-btn',
+          'sf-btn--sm',
+          state.filters.withCard && 'sf-btn--primary',
+        )}
+        onClick={() =>
+          setFilters({ withCard: !state.filters.withCard, noCard: false })
+        }
+        aria-pressed={state.filters.withCard}
+        title="Mostrar apenas processos com cartões no Trello"
+      >
+        <Icon name="link" size={12} />
+        Com cartão
+      </button>
+
+      <button
+        type="button"
         className="sf-btn sf-btn--sm"
         onClick={() => setShowFilters(true)}
         aria-label="Abrir filtros"
@@ -121,6 +146,17 @@ export function ListToolbar() {
         Filtros
         {active > 0 && <span className="sf-filter-count">{active}</span>}
       </button>
+
+      {hasActive && (
+        <span
+          className="sf-toolbar__count"
+          title={`${totalLabel} na página`}
+          role="status"
+          aria-live="polite"
+        >
+          {visibleLabel} · {cardsLabel}
+        </span>
+      )}
 
       {active > 0 && (
         <button

@@ -9,6 +9,7 @@ export type IconName =
   | 'trash'
   | 'tag'
   | 'checklist'
+  | 'comment'
   | 'calendar'
   | 'edit'
   | 'close'
@@ -90,6 +91,9 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M4 12l1.5 1.5L8 11" />
       <path d="M4 18l1.5 1.5L8 17" />
     </>
+  ),
+  comment: (
+    <path d="M20 15a3 3 0 0 1-3 3H8l-4 3V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3z" />
   ),
   calendar: (
     <>

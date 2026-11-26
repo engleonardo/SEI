@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { TrelloCard, TrelloChecklist } from '../../../core/domain/types';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
+import type { ChecklistTemplate } from '../../../core/storage/checklist-templates';
 import { Icon } from '../../icons';
 import { showToast } from '../../toast';
 import { ErrorState, Spinner } from '../common';
@@ -22,6 +23,25 @@ export function ChecklistDialog({
   const [newChecklist, setNewChecklist] = useState('');
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<TrelloChecklist | null>(null);
+  const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
+  const [saveSource, setSaveSource] = useState<{ name: string; items: string[] } | null>(null);
+  const [templateName, setTemplateName] = useState('');
+  const [creatingTemplate, setCreatingTemplate] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplateItems, setNewTemplateItems] = useState('');
+  const [deleteTemplate, setDeleteTemplate] = useState<ChecklistTemplate | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    callRpc('checklists:templates', undefined)
+      .then((value) => {
+        if (active) setTemplates(value);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -166,6 +186,109 @@ export function ChecklistDialog({
     }
   };
 
+  const applyTemplate = async (template: ChecklistTemplate) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const value = await callRpc('trello:apply-checklist-template', {
+        cardId: card.id,
+        name: template.name,
+        items: template.items,
+      });
+      setChecklists(value);
+      await refreshCard();
+      showToast(`Modelo “${template.name}” aplicado.`, 'success');
+    } catch (cause) {
+      const message = errorMessage(cause);
+      setError(message);
+      showToast(message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openSaveTemplate = (checklist: TrelloChecklist) => {
+    const items = checklist.checkItems.map((item) => item.name).filter(Boolean);
+    if (items.length === 0) {
+      showToast('Adicione pelo menos um item antes de salvar o modelo.', 'error');
+      return;
+    }
+    setSaveSource({ name: checklist.name, items });
+    setTemplateName(checklist.name);
+    setCreatingTemplate(false);
+  };
+
+  const saveTemplate = async () => {
+    const name = templateName.trim();
+    if (!saveSource || !name) return;
+    setBusy(true);
+    try {
+      const existing = templates.find(
+        (template) => template.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'),
+      );
+      const value = await callRpc('checklists:template-save', {
+        id: existing?.id,
+        name,
+        items: saveSource.items,
+      });
+      setTemplates(value);
+      setSaveSource(null);
+      setTemplateName('');
+      showToast('Modelo de checklist salvo.', 'success');
+    } catch (cause) {
+      showToast(errorMessage(cause), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveNewTemplate = async () => {
+    const name = newTemplateName.trim();
+    const items = newTemplateItems
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (!name || items.length === 0) {
+      showToast('Informe o nome e pelo menos um item por linha.', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      const existing = templates.find(
+        (template) => template.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'),
+      );
+      const value = await callRpc('checklists:template-save', {
+        id: existing?.id,
+        name,
+        items,
+      });
+      setTemplates(value);
+      setCreatingTemplate(false);
+      setNewTemplateName('');
+      setNewTemplateItems('');
+      showToast('Modelo de checklist salvo.', 'success');
+    } catch (cause) {
+      showToast(errorMessage(cause), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeTemplate = async () => {
+    if (!deleteTemplate) return;
+    setBusy(true);
+    try {
+      const value = await callRpc('checklists:template-delete', { id: deleteTemplate.id });
+      setTemplates(value);
+      setDeleteTemplate(null);
+      showToast('Modelo removido.', 'success');
+    } catch (cause) {
+      showToast(errorMessage(cause), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
       <Modal
@@ -186,6 +309,149 @@ export function ChecklistDialog({
         ) : (
           <div className="sf-checklist">
             {error && <ErrorState message={error} />}
+
+            <div className="sf-checklist__box sf-checklist__templates">
+              <div className="sf-checklist__head">
+                <h3 className="sf-checklist__name">Modelos salvos</h3>
+                <button
+                  type="button"
+                  className="sf-btn sf-btn--sm"
+                  onClick={() => {
+                    setCreatingTemplate((current) => !current);
+                    setSaveSource(null);
+                  }}
+                  disabled={busy}
+                >
+                  <Icon name="plus" size={13} />
+                  Novo modelo
+                </button>
+              </div>
+              {templates.length === 0 ? (
+                <span className="sf-hint">
+                  Salve uma checklist como modelo para reutilizar em outros cartões.
+                </span>
+              ) : (
+                <div className="sf-checklist__template-list">
+                  {templates.map((template) => {
+                    const applied = checklists.some(
+                      (checklist) =>
+                        checklist.name.trim().toLocaleLowerCase('pt-BR') ===
+                        template.name.trim().toLocaleLowerCase('pt-BR'),
+                    );
+                    return (
+                      <div key={template.id} className="sf-checklist__template">
+                        <span className="sf-checklist__template-name">{template.name}</span>
+                        <span className="sf-chip">
+                          {template.items.length} {template.items.length === 1 ? 'item' : 'itens'}
+                        </span>
+                        <button
+                          type="button"
+                          className="sf-btn sf-btn--sm"
+                          onClick={() => void applyTemplate(template)}
+                          disabled={busy || applied}
+                          title={
+                            applied
+                              ? 'O cartão já tem uma checklist com este nome'
+                              : 'Aplicar este modelo ao cartão'
+                          }
+                        >
+                          {applied ? 'Aplicado' : 'Aplicar'}
+                        </button>
+                        <button
+                          type="button"
+                          className="sf-icon-btn sf-icon-btn--danger"
+                          onClick={() => setDeleteTemplate(template)}
+                          disabled={busy}
+                          aria-label={`Remover modelo ${template.name}`}
+                          title="Remover modelo"
+                        >
+                          <Icon name="trash" size={13} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {creatingTemplate && (
+                <div className="sf-field" style={{ marginTop: 10 }}>
+                  <span className="sf-label">Novo modelo</span>
+                  <input
+                    className="sf-input"
+                    value={newTemplateName}
+                    onChange={(event) => setNewTemplateName(event.target.value)}
+                    placeholder="Nome do modelo"
+                    disabled={busy}
+                  />
+                  <textarea
+                    className="sf-input"
+                    value={newTemplateItems}
+                    onChange={(event) => setNewTemplateItems(event.target.value)}
+                    placeholder={'Um item por linha…\nConferir documento\nRegistrar andamento'}
+                    rows={4}
+                    disabled={busy}
+                    aria-label="Itens do modelo, um por linha"
+                    style={{ resize: 'vertical' }}
+                  />
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      type="button"
+                      className="sf-btn sf-btn--sm sf-btn--primary"
+                      onClick={() => void saveNewTemplate()}
+                      disabled={busy || !newTemplateName.trim() || !newTemplateItems.trim()}
+                    >
+                      Salvar modelo
+                    </button>
+                    <button
+                      type="button"
+                      className="sf-btn sf-btn--sm"
+                      onClick={() => setCreatingTemplate(false)}
+                      disabled={busy}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {saveSource && (
+                <div className="sf-field" style={{ marginTop: 10 }}>
+                  <span className="sf-label">Salvar “{saveSource.name}” como modelo</span>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      className="sf-input"
+                      value={templateName}
+                      onChange={(event) => setTemplateName(event.target.value)}
+                      placeholder="Nome do modelo"
+                      disabled={busy}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          void saveTemplate();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="sf-btn sf-btn--sm sf-btn--primary"
+                      onClick={() => void saveTemplate()}
+                      disabled={busy || !templateName.trim()}
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      type="button"
+                      className="sf-btn sf-btn--sm"
+                      onClick={() => setSaveSource(null)}
+                      disabled={busy}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {checklists.length === 0 && <span className="sf-hint">Nenhuma checklist ainda.</span>}
 
             {checklists.map((checklist) => {
@@ -199,6 +465,15 @@ export function ChecklistDialog({
                     <span className="sf-chip">
                       {done}/{total}
                     </span>
+                    <button
+                      type="button"
+                      className="sf-icon-btn"
+                      onClick={() => openSaveTemplate(checklist)}
+                      aria-label={`Salvar checklist ${checklist.name} como modelo`}
+                      title="Salvar como modelo"
+                    >
+                      <Icon name="copy" size={13} />
+                    </button>
                     <button
                       type="button"
                       className="sf-icon-btn sf-icon-btn--danger"
@@ -313,6 +588,18 @@ export function ChecklistDialog({
           busy={busy}
           onConfirm={() => void deleteChecklist()}
           onClose={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {deleteTemplate && (
+        <ConfirmDialog
+          title="Remover modelo"
+          message={`O modelo “${deleteTemplate.name}” será removido deste navegador. As checklists já aplicadas não mudam.`}
+          confirmLabel="Remover"
+          tone="danger"
+          busy={busy}
+          onConfirm={() => void removeTemplate()}
+          onClose={() => setDeleteTemplate(null)}
         />
       )}
     </>

@@ -9,6 +9,7 @@ import { showToast } from '../../ui/toast';
 import { classNames, formatDue, labelColorHex, labelTextColor, locationLabel } from '../../ui/utils';
 import { InlineLocationPicker } from '../../ui/components/InlineLocationPicker';
 import { ChecklistDialog } from '../../ui/components/dialogs/ChecklistDialog';
+import { CommentsDialog } from '../../ui/components/dialogs/CommentsDialog';
 import { AttachmentsDialog } from '../../ui/components/dialogs/AttachmentsDialog';
 import { ShareDialog } from '../../ui/components/dialogs/ShareDialog';
 import { DeleteCardDialog } from '../../ui/components/dialogs/DeleteCardDialog';
@@ -30,7 +31,7 @@ export interface DashboardCardProps {
   onTogglePin?: (cardId: string) => void;
 }
 
-type DialogKind = 'due' | 'labels' | 'checklist' | 'attachments' | 'share' | null;
+type DialogKind = 'due' | 'labels' | 'checklist' | 'attachments' | 'share' | 'comments' | null;
 
 export function DashboardCard({
   card,
@@ -584,6 +585,22 @@ export function DashboardCard({
               type="button"
               className={classNames(
                 'sfo-btn sfo-btn--sm sfo-btn--ghost',
+                Boolean(card.commentCount) && 'sdo-card__attachment--on',
+              )}
+              onClick={() => setDialog('comments')}
+              disabled={busy}
+              title={card.commentCount ? `Comentários (${card.commentCount})` : 'Comentários'}
+              aria-label="Comentários"
+            >
+              <Icon name="comment" size={13} />
+              <span className="sdo-card__action-label">
+                Comentários{card.commentCount ? ` (${card.commentCount})` : ''}
+              </span>
+            </button>
+            <button
+              type="button"
+              className={classNames(
+                'sfo-btn sfo-btn--sm sfo-btn--ghost',
                 Boolean(card.attachmentCount) && 'sdo-card__attachment--on',
               )}
               onClick={() => setDialog('attachments')}
@@ -643,6 +660,9 @@ export function DashboardCard({
         <ChecklistDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
       )}
       {dialog === 'attachments' && <AttachmentsDialog card={card} onClose={() => setDialog(null)} />}
+      {dialog === 'comments' && (
+        <CommentsDialog card={card} onClose={() => setDialog(null)} onChanged={onChanged} />
+      )}
       {dialog === 'share' && <ShareDialog card={card} onClose={() => setDialog(null)} />}
       {confirmDelete && (
         <DeleteCardDialog

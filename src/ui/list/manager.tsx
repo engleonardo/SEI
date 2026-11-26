@@ -10,7 +10,7 @@ import { matchesProcess } from '../filters';
 import { ListToolbar } from './ListToolbar';
 import { ProcessRowCards } from './ProcessRowCards';
 import { RowAction } from './RowAction';
-import { listStore, loadList } from './store';
+import { listStore, loadList, setRowCounts } from './store';
 
 interface RowEntry {
   row: HTMLTableRowElement;
@@ -485,6 +485,8 @@ export class ListManager {
 
   private sync(): void {
     const state = listStore.get();
+    let visibleRows = 0;
+    let visibleCards = 0;
 
     for (const entry of this.entries.values()) {
       const cards = state.cards.filter((card) => card.links.includes(entry.processNumber));
@@ -496,6 +498,11 @@ export class ListManager {
         },
         state.filters,
       );
+
+      if (visible) {
+        visibleRows += 1;
+        visibleCards += cards.length;
+      }
 
       const highlight = isHighlighted(entry.row, entry.anchor);
       if (highlight !== entry.highlight) {
@@ -540,6 +547,12 @@ export class ListManager {
         this.cardObserver?.unobserve(entry.cardRow);
       }
     }
+
+    setRowCounts({
+      total: this.entries.size,
+      visible: visibleRows,
+      cards: visibleCards,
+    });
   }
 
   private mountCardsForRow(cardRow: HTMLTableRowElement): void {

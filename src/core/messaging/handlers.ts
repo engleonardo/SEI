@@ -27,6 +27,11 @@ import { clearRuleRuns, getLastRuleRun } from '../storage/rule-runs';
 import { clearRuleStats, getRuleStats } from '../storage/rule-stats';
 import { clearRuleLog, getRuleLog } from '../storage/rule-log';
 import { clearPins } from '../storage/pins';
+import {
+  deleteChecklistTemplate,
+  listChecklistTemplates,
+  saveChecklistTemplate,
+} from '../storage/checklist-templates';
 import { clearSyncSnapshot } from '../storage/sync';
 import { markSyncChanged } from '../storage/sync-tick';
 import { setOptionsTarget } from '../storage/options-target';
@@ -328,6 +333,14 @@ const handlers = {
     await repository.deleteChecklist(checklistId);
     return undefined;
   },
+  'trello:apply-checklist-template': ({ cardId, name, items }) =>
+    repository.createChecklistWithItems(cardId, name, items),
+  'checklists:templates': () => listChecklistTemplates(),
+  'checklists:template-save': ({ id, name, items }) =>
+    saveChecklistTemplate({ id, name, items }),
+  'checklists:template-delete': ({ id }) => deleteChecklistTemplate(id),
+  'trello:card-comments': ({ cardId }) => repository.getComments(cardId),
+  'trello:add-comment': ({ cardId, text }) => repository.addComment(cardId, text),
 
   'activation:add-origin': async ({ origin }) => {
     const normalized = normalizeOrigin(origin);
@@ -488,6 +501,10 @@ const demoHandlers = {
   'trello:update-check-item': async () => undefined,
   'trello:delete-check-item': async () => undefined,
   'trello:delete-checklist': async () => undefined,
+  'trello:apply-checklist-template': ({ cardId, name, items }) =>
+    demo.demoApplyChecklistTemplate(cardId, name, items),
+  'trello:card-comments': ({ cardId }) => demo.demoCardComments(cardId),
+  'trello:add-comment': ({ cardId, text }) => demo.demoAddComment(cardId, text),
   'trello:mirror-card': ({ cardId, listId }) => demo.demoMirrorCard(cardId, listId),
   'mirrors:status': async () => null,
   'mirrors:remove': async () => undefined,

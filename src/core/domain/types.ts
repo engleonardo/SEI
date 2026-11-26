@@ -33,6 +33,22 @@ export interface TrelloChecklist {
   checkItems: TrelloChecklistItem[];
 }
 
+export interface TrelloCommentAuthor {
+  id?: string;
+  fullName: string;
+  username?: string;
+  initials?: string;
+  avatarUrl?: string | null;
+}
+
+/** Comentário do cartão (ação `commentCard` do Trello). */
+export interface TrelloComment {
+  id: string;
+  date: string;
+  text: string;
+  author: TrelloCommentAuthor | null;
+}
+
 export interface TrelloAttachment {
   id: string;
   name: string;
@@ -90,6 +106,8 @@ export interface TrelloCard {
   checklistChecked?: number;
   /** Quantidade de anexos informada pelos badges do Trello. */
   attachmentCount?: number;
+  /** Quantidade de comentários informada pelos badges do Trello. */
+  commentCount?: number;
   lastActivity: string | null;
 }
 

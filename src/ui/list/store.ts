@@ -4,6 +4,12 @@ import { markSyncChanged } from '../../core/storage/sync-tick';
 import { EMPTY_FILTERS, type ListFilters } from '../filters';
 import { Store } from '../store';
 
+export interface ListRowCounts {
+  total: number;
+  visible: number;
+  cards: number;
+}
+
 export interface ListState {
   loading: boolean;
   error: string | null;
@@ -11,6 +17,7 @@ export interface ListState {
   settings: Settings | null;
   filters: ListFilters;
   lastUpdated: number | null;
+  rowCounts: ListRowCounts;
 }
 
 const FILTERS_STORAGE_KEY = 'sei-flow:filters:v1';
@@ -39,6 +46,7 @@ export const listStore = new Store<ListState>({
   settings: null,
   filters: loadFilters(),
   lastUpdated: null,
+  rowCounts: { total: 0, visible: 0, cards: 0 },
 });
 
 let pending: Promise<void> | null = null;
@@ -117,6 +125,18 @@ export function addCards(newCards: TrelloCard[]): void {
     }
     return { ...previous, cards: Array.from(map.values()) };
   });
+}
+
+export function setRowCounts(counts: ListRowCounts): void {
+  const previous = listStore.get().rowCounts;
+  if (
+    previous.total === counts.total &&
+    previous.visible === counts.visible &&
+    previous.cards === counts.cards
+  ) {
+    return;
+  }
+  listStore.set((state) => ({ ...state, rowCounts: counts }));
 }
 
 export function toggleLabelFilter(labelId: string): void {

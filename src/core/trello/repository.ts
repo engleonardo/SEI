@@ -8,6 +8,7 @@ import type {
   TrelloCardApi,
   TrelloChecklist,
   TrelloChecklistItem,
+  TrelloComment,
   TrelloLabel,
   TrelloList,
 } from '../domain/types';
@@ -46,6 +47,7 @@ import { recordRuleApplications } from '../storage/rule-stats';
 import { pushRuleLog, type RuleLogEntry } from '../storage/rule-log';
 import { getSettings } from '../storage/settings';
 import { getProcessCatalog } from '../storage/processes';
+import { listChecklistTemplates } from '../storage/checklist-templates';
 import {
   addMirror,
   getMirrorGroup,
@@ -782,6 +784,9 @@ export class TrelloRepository {
     const comments = rule.actions.filter(
       (action) => action.type === 'addComment' && Boolean(action.text?.trim()),
     );
+    const checklistActions = rule.actions.filter(
+      (action) => action.type === 'applyChecklist' && Boolean(action.templateId),
+    );
     const markComplete = rule.actions.some((action) => action.type === 'markComplete');
     const reopen = rule.actions.some((action) => action.type === 'reopenCard');
 
@@ -873,6 +878,23 @@ export class TrelloRepository {
         touched = true;
         actions.push('Adicionar comentário');
         createdComments.push({ text, actionId: response?.id });
+      }
+    }
+
+    if (checklistActions.length > 0) {
+      const templates = await listChecklistTemplates().catch(() => []);
+      const existing: TrelloChecklist[] = await this.getChecklists(card.id, true).catch(() => []);
+      for (const action of checklistActions) {
+        const template = templates.find((item) => item.id === action.templateId);
+        if (!template) continue;
+        const nameKey = template.name.trim().toLocaleLowerCase('pt-BR');
+        if (existing.some((item) => item.name.trim().toLocaleLowerCase('pt-BR') === nameKey)) {
+          continue;
+        }
+        await this.createChecklistWithItems(card.id, template.name, template.items);
+        existing.push({ id: '', name: template.name, idCard: card.id, checkItems: [] });
+        touched = true;
+        actions.push(`Aplicar checklist "${template.name}"`);
       }
     }
 
@@ -1508,6 +1530,103 @@ export class TrelloRepository {
     });
     await this.invalidateCardCaches();
     return item;
+  }
+
+  /** Cria uma checklist já com os itens de um modelo (uma única invalidação). */
+  async createChecklistWithItems(
+    cardId: string,
+    name: string,
+    items: string[],
+  ): Promise<TrelloChecklist[]> {
+    const created = await this.client.post<TrelloChecklist>('/checklists', {
+      idCard: cardId,
+      name: name.trim() || 'Checklist',
+      pos: 'bottom',
+    });
+    const checklistId = created?.id;
+    if (checklistId) {
+      for (const item of items) {
+        const clean = item.trim();
+        if (!clean) continue;
+        await this.client.post(`/checklists/${checklistId}/checkItems`, {
+          name: clean,
+          pos: 'bottom',
+        });
+      }
+    }
+    await this.invalidateCardCaches();
+    return this.getChecklists(cardId, true);
+  }
+
+  async getComments(cardId: string): Promise<TrelloComment[]> {
+    type Action = {
+      id: string;
+      date: string;
+      data?: { text?: string };
+      memberCreator?: {
+        id?: string;
+        fullName?: string;
+        username?: string;
+        initials?: string;
+        avatarUrl?: string | null;
+      } | null;
+    };
+    const actions = await this.client.get<Action[]>(`/cards/${cardId}/actions`, {
+      filter: 'commentCard',
+      limit: 100,
+      fields: 'id,date,data',
+      memberCreator: 'true',
+      memberCreator_fields: 'id,fullName,username,initials,avatarUrl',
+    });
+    return (actions ?? [])
+      .filter((action) => typeof action.data?.text === 'string' && action.data.text.trim())
+      .map((action) => ({
+        id: action.id,
+        date: action.date,
+        text: action.data?.text ?? '',
+        author: action.memberCreator
+          ? {
+              id: action.memberCreator.id,
+              fullName: action.memberCreator.fullName || action.memberCreator.username || 'Membro',
+              username: action.memberCreator.username,
+              initials: action.memberCreator.initials,
+              avatarUrl: action.memberCreator.avatarUrl ?? null,
+            }
+          : null,
+      }))
+      .reverse();
+  }
+
+  async addComment(cardId: string, text: string): Promise<TrelloComment> {
+    const clean = text.trim();
+    if (!clean) throw new TrelloError('validation', 'Escreva o comentário.');
+    const action = await this.client.post<{
+      id: string;
+      date: string;
+      data?: { text?: string };
+      memberCreator?: {
+        id?: string;
+        fullName?: string;
+        username?: string;
+        initials?: string;
+        avatarUrl?: string | null;
+      } | null;
+    }>(`/cards/${cardId}/actions/comments`, { text: clean });
+    await this.invalidateCardCaches();
+    return {
+      id: action?.id ?? `comment_${Date.now().toString(36)}`,
+      date: action?.date ?? new Date().toISOString(),
+      text: action?.data?.text ?? clean,
+      author: action?.memberCreator
+        ? {
+            id: action.memberCreator.id,
+            fullName: action.memberCreator.fullName || action.memberCreator.username || 'Membro',
+            username: action.memberCreator.username,
+            initials: action.memberCreator.initials,
+            avatarUrl: action.memberCreator.avatarUrl ?? null,
+          }
+        : null,
+    };
   }
 
   async updateCheckItem(
