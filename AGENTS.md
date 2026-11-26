@@ -55,7 +55,8 @@ Antes de concluir qualquer mudança, rode `npm run verify`. Para mudanças de UI
 
 - O planejamento vivo, decisões, escopo, riscos e diário de rodadas ficam em `H:\My Drive\Vault\Vault_SEIFlow`.
 - **O Vault nunca entra no GitHub**: não copie, versione, faça backup no repositório, commit ou push do conteúdo do Vault. Ele é um diretório privado/externo ao projeto.
-- Antes de começar uma rodada, leia `00 - Início/SEI Flow.md`, `00 - Início/Decisões.md`, `00 - Início/Roadmap.md` e a rodada aberta em `03 - Rodadas`.
+- Antes de começar uma rodada, leia `00 - Início/SEI Flow.md`, `00 - Início/Decisões.md`, `00 - Início/Roadmap.md`, `00 - Início/Guia para novas conversas.md` e a rodada aberta em `03 - Rodadas`.
+- Para publicar ou diagnosticar lojas, leia `02 - Técnico/Lojas e publicação automática.md`.
 - Registre no Vault: decisões, o que foi feito, testes, pendências e próximos passos.
 - O Vault é a fonte de verdade do planejamento; o repositório guarda código e documentação publicável.
 
@@ -81,6 +82,7 @@ Antes de concluir qualquer mudança, rode `npm run verify`. Para mudanças de UI
 - Zips em `.output/` após `npm run zip*`.
 - CI em `.github/workflows/ci.yml`; release por tag `v*` em `release.yml`.
 - Envio automático à Chrome Web Store/AMO em `publish-store.yml` quando os segredos existirem.
+- O Edge publica automaticamente em `publish-edge.yml` (Publish API, `/v1/products/...`); `InProgressSubmission` é aviso, não falha.
 - Passos de loja, justificativa de permissões e auto-publicação em `docs/publicacao.md` e `docs/store/`.
 
 ## Git
