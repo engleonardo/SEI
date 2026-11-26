@@ -321,8 +321,8 @@ const handlers = {
   'trello:checklists': ({ cardId, fresh }) => repository.getChecklists(cardId, fresh),
   'trello:create-checklist': ({ cardId, name }) => repository.createChecklist(cardId, name),
   'trello:add-check-item': ({ checklistId, name }) => repository.addCheckItem(checklistId, name),
-  'trello:update-check-item': async ({ cardId, checkItemId, state }) => {
-    await repository.updateCheckItem(cardId, checkItemId, state);
+  'trello:update-check-item': async ({ cardId, checkItemId, state, name, pos }) => {
+    await repository.updateCheckItem(cardId, checkItemId, { state, name, pos });
     return undefined;
   },
   'trello:delete-check-item': async ({ checklistId, checkItemId }) => {

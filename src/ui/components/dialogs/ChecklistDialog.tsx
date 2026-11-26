@@ -30,6 +30,12 @@ export function ChecklistDialog({
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateItems, setNewTemplateItems] = useState('');
   const [deleteTemplate, setDeleteTemplate] = useState<ChecklistTemplate | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<ChecklistTemplate | null>(null);
+  const [editingItem, setEditingItem] = useState<{
+    checklistId: string;
+    itemId: string;
+    name: string;
+  } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -154,6 +160,87 @@ export function ChecklistDialog({
     }
   };
 
+  const moveItem = async (checklist: TrelloChecklist, index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= checklist.checkItems.length) return;
+    const items = checklist.checkItems;
+    const current = items[index];
+    const target = items[targetIndex];
+    if (!current || !target) return;
+
+    const positionOf = (item: { pos?: number }, position: number) =>
+      typeof item.pos === 'number' ? item.pos : position + 1;
+    const targetPos = positionOf(target, targetIndex);
+    const neighborIndex = index + direction * 2;
+    const neighbor = items[neighborIndex];
+    const newPos = neighbor
+      ? (targetPos + positionOf(neighbor, neighborIndex)) / 2
+      : targetPos + (direction === -1 ? -0.5 : 0.5);
+
+    const reordered = [...items];
+    reordered.splice(index, 1);
+    reordered.splice(targetIndex, 0, { ...current, pos: newPos });
+    setChecklists((previous) =>
+      previous.map((item) =>
+        item.id === checklist.id ? { ...item, checkItems: reordered } : item,
+      ),
+    );
+
+    setBusy(true);
+    try {
+      await callRpc('trello:update-check-item', {
+        cardId: card.id,
+        checkItemId: current.id,
+        pos: newPos,
+      });
+    } catch (cause) {
+      showToast(errorMessage(cause), 'error');
+      setChecklists(await callRpc('trello:checklists', { cardId: card.id, fresh: true }));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveItemName = async () => {
+    if (!editingItem || busy) return;
+    const name = editingItem.name.trim();
+    if (!name) {
+      setEditingItem(null);
+      return;
+    }
+    const checklist = checklists.find((item) => item.id === editingItem.checklistId);
+    const item = checklist?.checkItems.find((entry) => entry.id === editingItem.itemId);
+    if (!item || item.name === name) {
+      setEditingItem(null);
+      return;
+    }
+    setBusy(true);
+    try {
+      await callRpc('trello:update-check-item', {
+        cardId: card.id,
+        checkItemId: item.id,
+        name,
+      });
+      setChecklists((previous) =>
+        previous.map((entry) =>
+          entry.id === editingItem.checklistId
+            ? {
+                ...entry,
+                checkItems: entry.checkItems.map((checkItem) =>
+                  checkItem.id === item.id ? { ...checkItem, name } : checkItem,
+                ),
+              }
+            : entry,
+        ),
+      );
+      setEditingItem(null);
+    } catch (cause) {
+      showToast(errorMessage(cause), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const deleteItem = async (checklistId: string, itemId: string) => {
     setChecklists((previous) =>
       previous.map((checklist) =>
@@ -216,6 +303,33 @@ export function ChecklistDialog({
     setSaveSource({ name: checklist.name, items });
     setTemplateName(checklist.name);
     setCreatingTemplate(false);
+    setEditingTemplate(null);
+  };
+
+  const openNewTemplate = () => {
+    const next = !creatingTemplate;
+    setCreatingTemplate(next);
+    setEditingTemplate(null);
+    setSaveSource(null);
+    if (next) {
+      setNewTemplateName('');
+      setNewTemplateItems('');
+    }
+  };
+
+  const openEditTemplate = (template: ChecklistTemplate) => {
+    setEditingTemplate(template);
+    setCreatingTemplate(false);
+    setSaveSource(null);
+    setNewTemplateName(template.name);
+    setNewTemplateItems(template.items.join('\n'));
+  };
+
+  const closeTemplateForm = () => {
+    setCreatingTemplate(false);
+    setEditingTemplate(null);
+    setNewTemplateName('');
+    setNewTemplateItems('');
   };
 
   const saveTemplate = async () => {
@@ -252,21 +366,23 @@ export function ChecklistDialog({
       showToast('Informe o nome e pelo menos um item por linha.', 'error');
       return;
     }
+    const editingId = editingTemplate?.id;
     setBusy(true);
     try {
-      const existing = templates.find(
-        (template) => template.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'),
-      );
+      const existing = editingId
+        ? undefined
+        : templates.find(
+            (template) =>
+              template.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'),
+          );
       const value = await callRpc('checklists:template-save', {
-        id: existing?.id,
+        id: editingId ?? existing?.id,
         name,
         items,
       });
       setTemplates(value);
-      setCreatingTemplate(false);
-      setNewTemplateName('');
-      setNewTemplateItems('');
-      showToast('Modelo de checklist salvo.', 'success');
+      closeTemplateForm();
+      showToast(editingId ? 'Modelo atualizado.' : 'Modelo de checklist salvo.', 'success');
     } catch (cause) {
       showToast(errorMessage(cause), 'error');
     } finally {
@@ -280,6 +396,7 @@ export function ChecklistDialog({
     try {
       const value = await callRpc('checklists:template-delete', { id: deleteTemplate.id });
       setTemplates(value);
+      if (editingTemplate?.id === deleteTemplate.id) closeTemplateForm();
       setDeleteTemplate(null);
       showToast('Modelo removido.', 'success');
     } catch (cause) {
@@ -316,14 +433,12 @@ export function ChecklistDialog({
                 <button
                   type="button"
                   className="sf-btn sf-btn--sm"
-                  onClick={() => {
-                    setCreatingTemplate((current) => !current);
-                    setSaveSource(null);
-                  }}
+                  onClick={openNewTemplate}
                   disabled={busy}
+                  aria-expanded={creatingTemplate}
                 >
-                  <Icon name="plus" size={13} />
-                  Novo modelo
+                  <Icon name={creatingTemplate ? 'close' : 'plus'} size={13} />
+                  {creatingTemplate ? 'Fechar' : 'Novo modelo'}
                 </button>
               </div>
               {templates.length === 0 ? (
@@ -359,6 +474,16 @@ export function ChecklistDialog({
                         </button>
                         <button
                           type="button"
+                          className="sf-icon-btn"
+                          onClick={() => openEditTemplate(template)}
+                          disabled={busy}
+                          aria-label={`Editar modelo ${template.name}`}
+                          title="Editar modelo"
+                        >
+                          <Icon name="edit" size={13} />
+                        </button>
+                        <button
+                          type="button"
                           className="sf-icon-btn sf-icon-btn--danger"
                           onClick={() => setDeleteTemplate(template)}
                           disabled={busy}
@@ -373,9 +498,11 @@ export function ChecklistDialog({
                 </div>
               )}
 
-              {creatingTemplate && (
+              {(creatingTemplate || editingTemplate) && (
                 <div className="sf-field" style={{ marginTop: 10 }}>
-                  <span className="sf-label">Novo modelo</span>
+                  <span className="sf-label">
+                    {editingTemplate ? `Editar modelo “${editingTemplate.name}”` : 'Novo modelo'}
+                  </span>
                   <input
                     className="sf-input"
                     value={newTemplateName}
@@ -400,12 +527,12 @@ export function ChecklistDialog({
                       onClick={() => void saveNewTemplate()}
                       disabled={busy || !newTemplateName.trim() || !newTemplateItems.trim()}
                     >
-                      Salvar modelo
+                      {editingTemplate ? 'Salvar alterações' : 'Salvar modelo'}
                     </button>
                     <button
                       type="button"
                       className="sf-btn sf-btn--sm"
-                      onClick={() => setCreatingTemplate(false)}
+                      onClick={closeTemplateForm}
                       disabled={busy}
                     >
                       Cancelar
@@ -472,7 +599,7 @@ export function ChecklistDialog({
                       aria-label={`Salvar checklist ${checklist.name} como modelo`}
                       title="Salvar como modelo"
                     >
-                      <Icon name="copy" size={13} />
+                      <Icon name="download" size={13} />
                     </button>
                     <button
                       type="button"
@@ -488,7 +615,7 @@ export function ChecklistDialog({
                     <span style={{ width: `${percent}%` }} />
                   </div>
                   <div className="sf-checklist__items">
-                    {checklist.checkItems.map((item) => (
+                    {checklist.checkItems.map((item, index) => (
                       <div key={item.id} className="sf-checklist__item">
                         <input
                           type="checkbox"
@@ -497,25 +624,87 @@ export function ChecklistDialog({
                           aria-label={item.name}
                           style={{ accentColor: 'var(--sf-accent)' }}
                         />
-                        <span
-                          className={
-                            item.state === 'complete'
-                              ? 'sf-checklist__item-name sf-checklist__item-name--done'
-                              : 'sf-checklist__item-name'
-                          }
-                        >
-                          {item.name}
-                        </span>
-                        <button
-                          type="button"
-                          className="sf-icon-btn"
-                          style={{ width: 24, height: 24 }}
-                          onClick={() => void deleteItem(checklist.id, item.id)}
-                          aria-label={`Remover item ${item.name}`}
-                          title="Remover item"
-                        >
-                          <Icon name="close" size={12} />
-                        </button>
+                        {editingItem?.itemId === item.id ? (
+                          <input
+                            className="sf-input sf-checklist__item-input"
+                            value={editingItem.name}
+                            onChange={(event) =>
+                              setEditingItem({ ...editingItem, name: event.target.value })
+                            }
+                            onBlur={() => void saveItemName()}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.preventDefault();
+                                void saveItemName();
+                              }
+                              if (event.key === 'Escape') {
+                                event.preventDefault();
+                                setEditingItem(null);
+                              }
+                            }}
+                            aria-label={`Editar item ${item.name}`}
+                            disabled={busy}
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className={
+                              item.state === 'complete'
+                                ? 'sf-checklist__item-name sf-checklist__item-name--done'
+                                : 'sf-checklist__item-name'
+                            }
+                          >
+                            {item.name}
+                          </span>
+                        )}
+                        <div className="sf-checklist__item-actions">
+                          <button
+                            type="button"
+                            className="sf-icon-btn"
+                            onClick={() => void moveItem(checklist, index, -1)}
+                            disabled={busy || index === 0}
+                            aria-label={`Mover ${item.name} para cima`}
+                            title="Mover para cima"
+                          >
+                            <Icon name="chevronUp" size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            className="sf-icon-btn"
+                            onClick={() => void moveItem(checklist, index, 1)}
+                            disabled={busy || index === checklist.checkItems.length - 1}
+                            aria-label={`Mover ${item.name} para baixo`}
+                            title="Mover para baixo"
+                          >
+                            <Icon name="chevronDown" size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            className="sf-icon-btn"
+                            onClick={() =>
+                              setEditingItem({
+                                checklistId: checklist.id,
+                                itemId: item.id,
+                                name: item.name,
+                              })
+                            }
+                            disabled={busy}
+                            aria-label={`Editar item ${item.name}`}
+                            title="Editar texto"
+                          >
+                            <Icon name="edit" size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            className="sf-icon-btn"
+                            onClick={() => void deleteItem(checklist.id, item.id)}
+                            disabled={busy}
+                            aria-label={`Remover item ${item.name}`}
+                            title="Remover item"
+                          >
+                            <Icon name="close" size={12} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -1632,9 +1632,14 @@ export class TrelloRepository {
   async updateCheckItem(
     cardId: string,
     checkItemId: string,
-    state: 'complete' | 'incomplete',
+    patch: { state?: 'complete' | 'incomplete'; name?: string; pos?: number },
   ): Promise<void> {
-    await this.client.put(`/cards/${cardId}/checkItem/${checkItemId}`, { state });
+    const body: Record<string, string | number> = {};
+    if (patch.state) body.state = patch.state;
+    if (typeof patch.name === 'string' && patch.name.trim()) body.name = patch.name.trim();
+    if (typeof patch.pos === 'number' && Number.isFinite(patch.pos)) body.pos = patch.pos;
+    if (Object.keys(body).length === 0) return;
+    await this.client.put(`/cards/${cardId}/checkItem/${checkItemId}`, body);
     await this.invalidateCardCaches();
   }
 

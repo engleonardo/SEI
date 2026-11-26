@@ -264,6 +264,17 @@ test('dashboard é a página inicial, filtra por etiqueta/tipo e edita cartão i
     await expect(footer.getByRole('button', { name: 'Excluir cartão' })).toBeVisible();
     await expect(dashboard.getByRole('button', { name: 'Detalhes' })).toHaveCount(0);
 
+    // A lixeira fica na linha de baixo, alinhada à esquerda e discreta.
+    const dashboardDanger = footer.locator('.sdo-card__footer-danger');
+    await expect(dashboardDanger).toBeVisible();
+    const footerActionsBox = await footer.locator('.sdo-card__footer-actions').boundingBox();
+    const dangerRowBox = await dashboardDanger.boundingBox();
+    const footerBox = await footer.boundingBox();
+    expect(Boolean(footerActionsBox && dangerRowBox && dangerRowBox.y > footerActionsBox.y + 2)).toBe(
+      true,
+    );
+    expect(Boolean(footerBox && dangerRowBox && dangerRowBox.x <= footerBox.x + 8)).toBe(true);
+
     await footer.getByRole('button', { name: 'Excluir cartão' }).click();
     const deleteDialog = dashboard.getByRole('dialog');
     await expect(deleteDialog.getByText('Excluir cartão')).toBeVisible();

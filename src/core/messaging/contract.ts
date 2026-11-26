@@ -135,7 +135,13 @@ export interface RpcMap {
     result: TrelloChecklistItem;
   };
   'trello:update-check-item': {
-    payload: { cardId: string; checkItemId: string; state: 'complete' | 'incomplete' };
+    payload: {
+      cardId: string;
+      checkItemId: string;
+      state?: 'complete' | 'incomplete';
+      name?: string;
+      pos?: number;
+    };
     result: undefined;
   };
   'trello:delete-check-item': {

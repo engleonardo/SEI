@@ -508,32 +508,6 @@ export function CardItem({
           )}
         >
           <div className="sf-card__footer-actions">
-            {dangerStart && (
-              <>
-                {processNumber && (
-                  <button
-                    type="button"
-                    className="sf-icon-btn sf-card__footer-danger"
-                    onClick={() => setConfirmUnlink(true)}
-                    disabled={busy}
-                    aria-label="Desvincular deste processo"
-                    title="Desvincular deste processo"
-                  >
-                    <Icon name="unlink" size={12} />
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="sf-icon-btn sf-icon-btn--danger sf-card__footer-danger"
-                  onClick={() => setConfirmDelete(true)}
-                  disabled={busy}
-                  aria-label="Excluir cartão"
-                  title="Excluir cartão"
-                >
-                  <Icon name="trash" size={12} />
-                </button>
-              </>
-            )}
             <button
               type="button"
               className="sf-btn sf-btn--ghost sf-btn--sm"
@@ -642,6 +616,33 @@ export function CardItem({
                 title="Excluir cartão"
               >
                 <Icon name="trash" size={15} />
+              </button>
+            </div>
+          )}
+
+          {dangerStart && (
+            <div className="sf-card__footer-danger-row">
+              {processNumber && (
+                <button
+                  type="button"
+                  className="sf-icon-btn sf-card__footer-danger"
+                  onClick={() => setConfirmUnlink(true)}
+                  disabled={busy}
+                  aria-label="Desvincular deste processo"
+                  title="Desvincular deste processo"
+                >
+                  <Icon name="unlink" size={12} />
+                </button>
+              )}
+              <button
+                type="button"
+                className="sf-icon-btn sf-icon-btn--danger sf-card__footer-danger"
+                onClick={() => setConfirmDelete(true)}
+                disabled={busy}
+                aria-label="Excluir cartão"
+                title="Excluir cartão"
+              >
+                <Icon name="trash" size={12} />
               </button>
             </div>
           )}

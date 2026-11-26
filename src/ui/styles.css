@@ -382,7 +382,7 @@
   justify-self: end;
 }
 
-/* No processo, desvincular/excluir abre a linha à esquerda. */
+/* No processo, desvincular/excluir fica na linha de baixo, à esquerda. */
 .sf-detail-strip .sf-card__footer--danger-start {
   display: flex;
   flex-wrap: wrap;
@@ -390,8 +390,16 @@
 }
 
 .sf-detail-strip .sf-card__footer--danger-start .sf-card__footer-actions {
-  flex: 1 1 auto;
+  flex: 1 1 100%;
   justify-content: flex-start;
+}
+
+.sf-card__footer-danger-row {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  gap: 2px;
+  margin-top: 2px;
 }
 
 .sf-card--overdue {
@@ -1820,6 +1828,24 @@
 .sf-checklist__item-name--done {
   text-decoration: line-through;
   color: var(--sf-muted);
+}
+
+.sf-checklist__item-input {
+  flex: 1;
+  min-height: 26px;
+  font-size: 12.5px;
+}
+
+.sf-checklist__item-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0;
+}
+
+.sf-checklist__item-actions .sf-icon-btn {
+  width: 22px;
+  height: 22px;
 }
 
 .sf-checklist__add {

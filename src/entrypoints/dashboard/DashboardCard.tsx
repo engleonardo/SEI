@@ -646,7 +646,7 @@ export function DashboardCard({
               title="Excluir cartão"
               aria-label="Excluir cartão"
             >
-              <Icon name="trash" size={14} />
+              <Icon name="trash" size={12} />
             </button>
           </div>
         </div>

@@ -281,6 +281,17 @@ test('processo aberto mostra o painel completo', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Vincular cartões' })).toBeVisible();
   await expect(page.locator('.sf-process-panel .sf-markdown--roomy').first()).toBeVisible();
 
+  // Desvincular/excluir ficam numa linha própria, abaixo das demais ações.
+  const processActions = page.locator('.sf-process-panel .sf-card__footer-actions').first();
+  const processDanger = page.locator('.sf-process-panel .sf-card__footer-danger-row').first();
+  await expect(processDanger).toBeVisible();
+  const actionsBox = await processActions.boundingBox();
+  const dangerBox = await processDanger.boundingBox();
+  expect(Boolean(actionsBox && dangerBox && dangerBox.y > actionsBox.y + 2)).toBe(true);
+  expect(
+    Boolean(actionsBox && dangerBox && dangerBox.x <= actionsBox.x + 8),
+  ).toBe(true);
+
   // Etiqueta clicável aplica filtro dentro do painel do processo.
   const chip = page.locator('.sf-label-chip--button').first();
   await chip.click();
