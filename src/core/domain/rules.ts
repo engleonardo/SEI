@@ -19,6 +19,7 @@ export type RuleActionType =
   | 'setDueDate'
   | 'clearDates'
   | 'addComment'
+  | 'applyChecklist'
   | 'markComplete'
   | 'reopenCard';
 
@@ -37,6 +38,8 @@ export interface RuleAction {
    * `{processo}`, `{cartao}`, `{data}`, `{hora}`, `{lista}`, `{quadro}` e `{regra}`.
    */
   text?: string;
+  /** Modelo de checklist (`applyChecklist`) salvo no storage local. */
+  templateId?: string;
 }
 
 export interface Rule {
@@ -72,6 +75,7 @@ export const RULE_ACTION_LABELS: Record<RuleActionType, string> = {
   setDueDate: 'Definir data de término',
   clearDates: 'Limpar início e término',
   addComment: 'Adicionar comentário',
+  applyChecklist: 'Aplicar modelo de checklist',
   markComplete: 'Marcar como concluído',
   reopenCard: 'Reabrir cartão',
 };
@@ -212,6 +216,11 @@ export function ruleIssue(rule: Rule): string | null {
   const comments = rule.actions.filter((action) => action.type === 'addComment');
   if (comments.length > 1) return 'Use apenas um comentário por regra.';
   if (comments.some((action) => !action.text?.trim())) return 'Escreva o texto do comentário.';
+
+  const checklists = rule.actions.filter((action) => action.type === 'applyChecklist');
+  if (checklists.some((action) => !action.templateId)) {
+    return 'Escolha o modelo de checklist da ação.';
+  }
 
   const completes = rule.actions.filter(
     (action) => action.type === 'markComplete' || action.type === 'reopenCard',
@@ -449,6 +458,10 @@ export function ruleWouldChange(rule: Rule, card: RuleCardState): boolean {
     }
     if (action.type === 'addComment') {
       // Comentários são cumulativos: sempre há o que registrar.
+      return true;
+    }
+    if (action.type === 'applyChecklist') {
+      // A execução ignora modelos já aplicados (mesmo nome de checklist).
       return true;
     }
     if (action.type === 'markComplete') {

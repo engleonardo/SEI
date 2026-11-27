@@ -1673,8 +1673,21 @@
 
 .sdo-card__footer-danger {
   display: flex;
+  flex-basis: 100%;
   align-items: center;
-  margin-left: auto;
+  justify-content: flex-start;
+  gap: 2px;
+}
+
+.sdo-card__footer-danger .sfo-icon-btn {
+  width: 22px;
+  height: 22px;
+  opacity: 0.6;
+}
+
+.sdo-card__footer-danger .sfo-icon-btn:hover:not(:disabled),
+.sdo-card__footer-danger .sfo-icon-btn:focus-visible {
+  opacity: 1;
 }
 
 .sdo-card__complete {

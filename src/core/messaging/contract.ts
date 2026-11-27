@@ -8,6 +8,7 @@ import type {
   TrelloCard,
   TrelloChecklist,
   TrelloChecklistItem,
+  TrelloComment,
   TrelloLabel,
   TrelloList,
 } from '../domain/types';
@@ -17,8 +18,9 @@ import type { Rule, RuleRun } from '../domain/rules';
 import type { RuleStats } from '../storage/rule-stats';
 import type { RuleLogEntry } from '../storage/rule-log';
 import type { LinkCandidate } from '../link/scan';
-import type { SettingsBackup } from '../storage/backup';
+import type { ImportResult, SettingsBackup } from '../storage/backup';
 import type { MirrorGroup } from '../storage/mirrors';
+import type { ChecklistTemplate } from '../storage/checklist-templates';
 import type { AuthStatus } from '../auth/session';
 import type { SyncResult } from '../sync/config';
 
@@ -38,7 +40,7 @@ export interface RpcMap {
   };
   'settings:import': {
     payload: { data: unknown; importRules?: boolean };
-    result: { rules: number; settings: Settings };
+    result: ImportResult;
   };
   'options:open': { payload: { tab?: string } | undefined; result: undefined };
   'dashboard:open': { payload: undefined; result: undefined };
@@ -133,7 +135,13 @@ export interface RpcMap {
     result: TrelloChecklistItem;
   };
   'trello:update-check-item': {
-    payload: { cardId: string; checkItemId: string; state: 'complete' | 'incomplete' };
+    payload: {
+      cardId: string;
+      checkItemId: string;
+      state?: 'complete' | 'incomplete';
+      name?: string;
+      pos?: number;
+    };
     result: undefined;
   };
   'trello:delete-check-item': {
@@ -141,6 +149,21 @@ export interface RpcMap {
     result: undefined;
   };
   'trello:delete-checklist': { payload: { checklistId: string }; result: undefined };
+  'trello:apply-checklist-template': {
+    payload: { cardId: string; name: string; items: string[] };
+    result: TrelloChecklist[];
+  };
+  'checklists:templates': { payload: undefined; result: ChecklistTemplate[] };
+  'checklists:template-save': {
+    payload: { id?: string; name: string; items: string[] };
+    result: ChecklistTemplate[];
+  };
+  'checklists:template-delete': { payload: { id: string }; result: ChecklistTemplate[] };
+  'trello:card-comments': { payload: { cardId: string }; result: TrelloComment[] };
+  'trello:add-comment': {
+    payload: { cardId: string; text: string };
+    result: TrelloComment;
+  };
   'activation:add-origin': { payload: { origin: string }; result: Settings };
   'activation:remove-origin': { payload: { origin: string }; result: Settings };
   'activation:set-all-sites': { payload: { enabled: boolean }; result: Settings };

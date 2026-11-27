@@ -3,7 +3,27 @@
 Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto usa [SemVer](https://semver.org/lang/pt-BR/).
 
-## [1.8.0] - em teste local (2026-11-23)
+## [1.8.1] - 2026-11-27
+
+### Adicionado
+
+- **Modelos de checklist reutilizáveis**: salve uma checklist como modelo ou crie um modelo novo (nome + itens) e aplique em outros cartões.
+- **Ação de regra “Aplicar modelo de checklist”**: aplica o modelo automaticamente quando o cartão atende aos critérios, sem duplicar uma checklist com o mesmo nome.
+- **Edição de checklist**: modelos podem ser editados (nome, textos e ordem); itens da checklist do cartão podem ter o texto editado e ser reordenados com setas, refletindo no Trello.
+- **Comentários no dashboard**: leia autor, data e texto e comente no cartão sem abrir o Trello; o contador usa os badges do cartão.
+- **Filtro rápido “Com cartão”** no “Controle de processos”, com contagem “X de Y processos · Z cartões” quando há filtro ativo.
+
+### Alterado
+
+- **Descrição no painel do processo** com a mesma formatação do dashboard (12px, linha 1.45 e margens de parágrafo), sem linhas extras.
+- **Ações destrutivas discretas**: lixeira sozinha na linha de baixo à esquerda no dashboard; desvincular/excluir em linha própria abaixo das demais ações no painel do processo.
+
+### Corrigido
+
+- **Comentário da regra não perde mais espaços**: o texto é salvo exatamente como digitado e a tela não recarrega durante a digitação.
+- **Checklist automática**: a regra não cria uma checklist duplicada quando o cartão já tem uma com o mesmo nome.
+
+## [1.8.0] - 2026-11-23
 
 ### Adicionado
 

@@ -68,6 +68,16 @@ Privacidade: sem servidor próprio, sem telemetria e sem anúncios. Suas credenc
 O SEI Flow é um projeto independente, sem afiliação ao Trello/Atlassian ou ao SEI. Licença MIT.
 ```
 
+## Atualização 1.8.1 (checklist, comentários e ajustes)
+
+Guias específicos por loja:
+
+- **Chrome Web Store:** `docs/store/chrome-1.8.1.md`.
+- **Firefox (AMO):** `docs/store/firefox-1.8.1.md`.
+- **Microsoft Edge:** `docs/store/edge-1.8.1.md`.
+
+> A 1.8.1 **não adiciona permissões novas** em relação à 1.8.0. Entram modelos de checklist reutilizáveis (com ação de regra), edição/reordenação de itens, comentários no dashboard, correção dos espaços no comentário da regra, descrição do processo igual ao dashboard, ações destrutivas discretas e filtro “Com cartão” no controle de processos.
+
 ## Atualização 1.8.0 (listas, regras, sem Trello e sem notificações)
 
 Guias específicos por loja:

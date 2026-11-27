@@ -2,6 +2,10 @@ import { browser } from 'wxt/browser';
 import { loadTrelloCredentials } from '../auth/credentials';
 import type { Settings } from '../domain/types';
 import { getRules, saveRules } from '../storage/rules';
+import {
+  listChecklistTemplates,
+  replaceChecklistTemplates,
+} from '../storage/checklist-templates';
 import { getSettings, saveSettings } from '../storage/settings';
 import { markSyncChanged } from '../storage/sync-tick';
 import { TrelloClient } from '../trello/client';
@@ -61,6 +65,7 @@ interface RemoteConfig {
   updatedAt: number;
   rules: unknown;
   settings?: Partial<Settings>;
+  templates?: unknown;
 }
 
 export interface SyncResult {
@@ -155,6 +160,7 @@ function parseRemote(json: string): RemoteConfig | null {
       updatedAt: parsed.updatedAt,
       rules: Array.isArray(parsed.rules) ? parsed.rules : [],
       settings: parsed.settings && typeof parsed.settings === 'object' ? parsed.settings : {},
+      templates: Array.isArray(parsed.templates) ? parsed.templates : [],
     };
   } catch {
     return null;
@@ -216,12 +222,16 @@ async function writeRemote(
 }
 
 async function localSnapshot(): Promise<RemoteConfig> {
-  const [rules, settings] = await Promise.all([getRules(), getSettings()]);
+  const [rules, settings, templates] = await Promise.all([
+    getRules(),
+    getSettings(),
+    listChecklistTemplates(),
+  ]);
   const destination: Partial<Settings> = {};
   for (const key of DESTINATION_KEYS) {
     if (typeof settings[key] === 'string') destination[key] = settings[key] as string;
   }
-  return { v: 1, updatedAt: Date.now(), rules, settings: destination };
+  return { v: 1, updatedAt: Date.now(), rules, settings: destination, templates };
 }
 
 function isDefaultSeed(rules: RemoteConfig['rules']): boolean {
@@ -235,6 +245,7 @@ interface ConfigBackup {
   at: number;
   rules: unknown;
   settings: Partial<Settings>;
+  templates?: unknown;
 }
 
 /**
@@ -248,6 +259,7 @@ export async function backupLocalConfig(owner?: string): Promise<void> {
     at: Date.now(),
     rules: snapshot.rules,
     settings: snapshot.settings ?? {},
+    templates: snapshot.templates,
   };
   await browser.storage.local.set({ [BACKUP_KEY]: backup });
 }
@@ -266,6 +278,9 @@ export async function restoreLocalConfig(owner?: string): Promise<boolean> {
     return false;
   }
   await saveRules(Array.isArray(backup.rules) ? backup.rules : []);
+  if (Array.isArray(backup.templates)) {
+    await replaceChecklistTemplates(backup.templates);
+  }
   const patch: Partial<Settings> = {};
   for (const key of DESTINATION_KEYS) {
     const value = backup.settings?.[key];
@@ -284,12 +299,14 @@ export async function clearLocalConfigBackup(): Promise<void> {
 function isMeaningful(config: RemoteConfig): boolean {
   if (isDefaultSeed(config.rules)) return false;
   if (Array.isArray(config.rules) && config.rules.length > 0) return true;
+  if (Array.isArray(config.templates) && config.templates.length > 0) return true;
   const settings = config.settings ?? {};
   return Boolean(settings.defaultBoardId && settings.defaultListId);
 }
 
 async function applyRemote(config: RemoteConfig): Promise<void> {
   await saveRules(Array.isArray(config.rules) ? config.rules : []);
+  await replaceChecklistTemplates(config.templates);
   const patch: Partial<Settings> = {};
   for (const key of DESTINATION_KEYS) {
     const value = config.settings?.[key];

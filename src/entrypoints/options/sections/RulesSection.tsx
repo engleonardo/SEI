@@ -21,6 +21,7 @@ import { copyRulesToBoard } from '../../../core/domain/rule-copy';
 import { callRpc, errorMessage } from '../../../core/messaging/client';
 import type { RuleStats } from '../../../core/storage/rule-stats';
 import type { RuleLogEntry } from '../../../core/storage/rule-log';
+import type { ChecklistTemplate } from '../../../core/storage/checklist-templates';
 import { watchSyncChanges } from '../../../core/storage/sync-tick';
 import { Icon } from '../../../ui/icons';
 import { labelColorHex, labelTextColor } from '../../../ui/utils';
@@ -54,6 +55,7 @@ export function RulesSection({
   const [lastRun, setLastRun] = useState<RuleRun | null>(null);
   const [stats, setStats] = useState<RuleStats>({});
   const [log, setLog] = useState<RuleLogEntry[]>([]);
+  const [checklistTemplates, setChecklistTemplates] = useState<ChecklistTemplate[]>([]);
   const [undoOpen, setUndoOpen] = useState(false);
   const [undoing, setUndoing] = useState(false);
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
@@ -140,6 +142,11 @@ export function RulesSection({
     void loadLastRun();
     void loadStats();
     void loadLog();
+    void callRpc('checklists:templates', undefined)
+      .then((value) => {
+        if (active) setChecklistTemplates(value);
+      })
+      .catch(() => undefined);
     return () => {
       active = false;
     };
@@ -169,6 +176,9 @@ export function RulesSection({
   // O background pode puxar configuração nova (login/alarme); recarrega a lista.
   useEffect(() => {
     return watchSyncChanges(() => {
+      // Não recarrega enquanto o usuário digita (o próprio salvamento dispara o sync).
+      const focused = document.activeElement;
+      if (focused instanceof HTMLTextAreaElement || focused instanceof HTMLInputElement) return;
       void callRpc('rules:list', undefined)
         .then((value) => setRules(Array.isArray(value) ? value : []))
         .catch(() => undefined);
@@ -1025,6 +1035,7 @@ export function RulesSection({
                                 labelName: undefined,
                                 days: undefined,
                                 text: undefined,
+                                templateId: undefined,
                               })
                             }
                             aria-label="Ação da regra"
@@ -1119,6 +1130,26 @@ export function RulesSection({
                             />
                           )}
 
+                          {action.type === 'applyChecklist' && (
+                            <select
+                              className="sfo-select"
+                              value={action.templateId ?? ''}
+                              onChange={(event) =>
+                                updateAction(rule.id, index, {
+                                  templateId: event.target.value || undefined,
+                                })
+                              }
+                              aria-label="Modelo de checklist"
+                            >
+                              <option value="">Escolha o modelo</option>
+                              {checklistTemplates.map((template) => (
+                                <option key={template.id} value={template.id}>
+                                  {template.name} ({template.items.length})
+                                </option>
+                              ))}
+                            </select>
+                          )}
+
                           <button
                             type="button"
                             className="sfo-icon-btn sfo-icon-btn--danger"
@@ -1154,6 +1185,12 @@ export function RulesSection({
                       <p className="sfo-hint" style={{ margin: 0 }}>
                         Comentários aceitam {RULE_COMMENT_PLACEHOLDERS.join(', ')}.
                       </p>
+                      {rule.actions.some((action) => action.type === 'applyChecklist') &&
+                        checklistTemplates.length === 0 && (
+                          <p className="sfo-hint" style={{ margin: 0 }}>
+                            Nenhum modelo salvo. Abra a checklist de um cartão e use “Salvar como modelo”.
+                          </p>
+                        )}
                     </div>
                   </div>
 

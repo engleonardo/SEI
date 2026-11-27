@@ -1,6 +1,11 @@
 import { browser } from 'wxt/browser';
 import type { Rule } from '../domain/rules';
 import type { Settings } from '../domain/types';
+import {
+  listChecklistTemplates,
+  replaceChecklistTemplates,
+  type ChecklistTemplate,
+} from './checklist-templates';
 import { getRules, saveRules } from './rules';
 import { getSettings, normalizeOrigin, originPermissionPattern, saveSettings } from './settings';
 
@@ -12,10 +17,13 @@ export interface SettingsBackup {
   settings: Partial<Settings>;
   /** Ausente quando o backup foi gerado sem regras. */
   rules?: Rule[];
+  /** Modelos de checklist referenciados pelas regras. */
+  templates?: ChecklistTemplate[];
 }
 
 export interface ImportResult {
   rules: number;
+  templates: number;
   settings: Settings;
 }
 
@@ -57,7 +65,10 @@ export async function exportBackup(
     exportedAt: Date.now(),
     settings: payload,
   };
-  if (includeRules) backup.rules = await getRules();
+  if (includeRules) {
+    backup.rules = await getRules();
+    backup.templates = await listChecklistTemplates();
+  }
   return backup;
 }
 
@@ -145,8 +156,13 @@ export async function importBackup(value: unknown, options: ImportOptions = {}):
 
   const settings = await saveSettings(patch);
   let rules = 0;
+  let templates = 0;
   if (Array.isArray(data.rules) && options.importRules !== false) {
     rules = (await saveRules(data.rules)).length;
   }
-  return { rules, settings };
+  // Backups antigos não têm modelos; nesse caso preserva os atuais.
+  if (Array.isArray(data.templates) && options.importRules !== false) {
+    templates = (await replaceChecklistTemplates(data.templates)).length;
+  }
+  return { rules, templates, settings };
 }

@@ -1259,6 +1259,25 @@ describe('TrelloRepository', () => {
     expect(cacheGet).toHaveBeenCalledWith(`process:${PROCESS}`, Number.POSITIVE_INFINITY);
     expect(client.get).not.toHaveBeenCalled();
   });
+
+  it('remove a checklist criada quando um item do modelo falha', async () => {
+    const client = fakeClient();
+    vi.mocked(client.post)
+      .mockResolvedValueOnce({
+        id: 'checklist-1',
+        name: 'Judicial',
+        idCard: 'card-1',
+        checkItems: [],
+      })
+      .mockRejectedValueOnce(new Error('falha ao criar item'));
+    const repo = repository(client);
+
+    await expect(
+      repo.createChecklistWithItems('card-1', 'Judicial', ['Ler', 'Parecer']),
+    ).rejects.toThrow('falha ao criar item');
+
+    expect(client.delete).toHaveBeenCalledWith('/checklists/checklist-1');
+  });
 });
 
 describe('normalização de cartão', () => {

@@ -4,6 +4,10 @@ export default defineConfig({
   srcDir: 'src',
   manifestVersion: 3,
   modules: ['@wxt-dev/module-react'],
+  // Atalhos do Windows não fazem parte do projeto e não devem entrar no zip de fontes.
+  zip: {
+    excludeSources: ['*.lnk'],
+  },
   manifest: ({ browser }) => ({
     name: '__MSG_extensionName__',
     short_name: 'SEI Flow',

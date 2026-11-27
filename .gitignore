@@ -16,3 +16,4 @@ key.json
 client_secret*.json
 .DS_Store
 Thumbs.db
+*.lnk

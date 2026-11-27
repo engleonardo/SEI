@@ -39,6 +39,7 @@ export function toCard(
     checklistItems: Number(raw.badges?.checkItems ?? 0),
     checklistChecked: Number(raw.badges?.checkItemsChecked ?? 0),
     attachmentCount: Number(raw.badges?.attachments ?? 0),
+    commentCount: Number(raw.badges?.comments ?? 0),
     lastActivity: raw.dateLastActivity ?? null,
   };
 }

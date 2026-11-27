@@ -26,6 +26,8 @@ export interface CardItemProps {
   pinned?: boolean;
   onTogglePin?: (cardId: string) => void;
   descriptionExpanded?: boolean;
+  /** Mostra desvincular/excluir no início do rodapé, menores e discretos. */
+  dangerStart?: boolean;
   onToggleLabel?: (labelId: string) => void;
   onChanged: (card: TrelloCard) => void;
   onRemoved: (cardId: string) => void;
@@ -44,6 +46,7 @@ export function CardItem({
   pinned = false,
   onTogglePin,
   descriptionExpanded = false,
+  dangerStart = false,
   onToggleLabel,
   onChanged,
   onRemoved,
@@ -498,7 +501,12 @@ export function CardItem({
           </button>
         )}
 
-        <div className="sf-card__footer">
+        <div
+          className={classNames(
+            'sf-card__footer',
+            dangerStart && 'sf-card__footer--danger-start',
+          )}
+        >
           <div className="sf-card__footer-actions">
             <button
               type="button"
@@ -585,30 +593,59 @@ export function CardItem({
             </button>
           </div>
 
-          <div className="sf-card__footer-side">
-            {processNumber && (
+          {!dangerStart && (
+            <div className="sf-card__footer-side">
+              {processNumber && (
+                <button
+                  type="button"
+                  className="sf-icon-btn"
+                  onClick={() => setConfirmUnlink(true)}
+                  disabled={busy}
+                  aria-label="Desvincular deste processo"
+                  title="Desvincular deste processo"
+                >
+                  <Icon name="unlink" size={15} />
+                </button>
+              )}
               <button
                 type="button"
-                className="sf-icon-btn"
-                onClick={() => setConfirmUnlink(true)}
+                className="sf-icon-btn sf-icon-btn--danger"
+                onClick={() => setConfirmDelete(true)}
                 disabled={busy}
-                aria-label="Desvincular deste processo"
-                title="Desvincular deste processo"
+                aria-label="Excluir cartão"
+                title="Excluir cartão"
               >
-                <Icon name="unlink" size={15} />
+                <Icon name="trash" size={15} />
               </button>
-            )}
-            <button
-              type="button"
-              className="sf-icon-btn sf-icon-btn--danger"
-              onClick={() => setConfirmDelete(true)}
-              disabled={busy}
-              aria-label="Excluir cartão"
-              title="Excluir cartão"
-            >
-              <Icon name="trash" size={15} />
-            </button>
-          </div>
+            </div>
+          )}
+
+          {dangerStart && (
+            <div className="sf-card__footer-danger-row">
+              {processNumber && (
+                <button
+                  type="button"
+                  className="sf-icon-btn sf-card__footer-danger"
+                  onClick={() => setConfirmUnlink(true)}
+                  disabled={busy}
+                  aria-label="Desvincular deste processo"
+                  title="Desvincular deste processo"
+                >
+                  <Icon name="unlink" size={12} />
+                </button>
+              )}
+              <button
+                type="button"
+                className="sf-icon-btn sf-icon-btn--danger sf-card__footer-danger"
+                onClick={() => setConfirmDelete(true)}
+                disabled={busy}
+                aria-label="Excluir cartão"
+                title="Excluir cartão"
+              >
+                <Icon name="trash" size={12} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

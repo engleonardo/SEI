@@ -281,6 +281,17 @@ test('processo aberto mostra o painel completo', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Vincular cartões' })).toBeVisible();
   await expect(page.locator('.sf-process-panel .sf-markdown--roomy').first()).toBeVisible();
 
+  // Desvincular/excluir ficam numa linha própria, abaixo das demais ações.
+  const processActions = page.locator('.sf-process-panel .sf-card__footer-actions').first();
+  const processDanger = page.locator('.sf-process-panel .sf-card__footer-danger-row').first();
+  await expect(processDanger).toBeVisible();
+  const actionsBox = await processActions.boundingBox();
+  const dangerBox = await processDanger.boundingBox();
+  expect(Boolean(actionsBox && dangerBox && dangerBox.y > actionsBox.y + 2)).toBe(true);
+  expect(
+    Boolean(actionsBox && dangerBox && dangerBox.x <= actionsBox.x + 8),
+  ).toBe(true);
+
   // Etiqueta clicável aplica filtro dentro do painel do processo.
   const chip = page.locator('.sf-label-chip--button').first();
   await chip.click();
@@ -372,6 +383,20 @@ test('filtro sem cartão esconde processos que já têm cartão', async ({ page 
 
   await expect(page.getByText('Cartão vinculado')).toBeHidden();
   await expect(page.getByText(OTHER)).toBeVisible();
+});
+
+test('filtro com cartão mostra a contagem e esconde processos sem cartão', async ({ page }) => {
+  await openFixture(
+    page,
+    'sei-list-v4.html',
+    'http://sei.test/sei/controlador.php?acao=procedimento_controlar',
+  );
+
+  await page.getByRole('button', { name: 'Com cartão' }).click();
+
+  await expect(page.getByText('1 de 3 processos · 1 cartão')).toBeVisible();
+  await expect(page.getByText('Cartão vinculado')).toBeVisible();
+  await expect(page.getByText(OTHER)).toBeHidden();
 });
 
 test('atalho / foca a busca da barra', async ({ page }) => {

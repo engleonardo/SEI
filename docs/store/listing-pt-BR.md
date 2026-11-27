@@ -67,6 +67,11 @@ O SEI Flow conecta o Trello ao SEI (Sistema Eletrônico de Informações) para v
 • **Espelho de cartão**: nome e descrição ficam sincronizados; ao excluir, escolha só este ou todos os espelhos.
 • **Fixe cartões** no topo das listas e grupos.
 • **Regras por etiqueta**: exija qualquer uma ou todas as etiquetas, combinadas com a lista.
+• **Modelos de checklist**: salve uma checklist como modelo, edite nome/itens/ordem e aplique em outros cartões.
+• **Checklist automática**: uma regra pode aplicar um modelo quando o cartão atender aos critérios.
+• **Comentários no dashboard**: leia autor, data e texto e comente no cartão sem abrir o Trello.
+• **Controle de processos**: filtro rápido "Com cartão" e contagem de processos/cartões quando há filtro.
+• **Descrição no processo** com a mesma formatação do dashboard, sem linhas extras.
 
 Privacidade: sem servidor próprio, sem telemetria e sem anúncios. No login, os tokens do Trello ficam apenas no seu navegador. Regras e destino são sincronizados em um quadro privado na sua própria conta do Trello. O SEI Flow não salva dados de usuários fora do navegador. O uso é de responsabilidade exclusiva do usuário; o criador não tem ingerência sobre informações do SEI ou do Trello.
 

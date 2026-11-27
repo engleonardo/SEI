@@ -171,6 +171,7 @@ export function ProcessPanel({
         showProcessMeta={false}
         compact
         descriptionExpanded
+        dangerStart
         activeLabels={labelFilter}
         onToggleLabel={toggleLabel}
         emptyMessage={
