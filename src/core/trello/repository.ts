@@ -1545,13 +1545,25 @@ export class TrelloRepository {
     });
     const checklistId = created?.id;
     if (checklistId) {
-      for (const item of items) {
-        const clean = item.trim();
-        if (!clean) continue;
-        await this.client.post(`/checklists/${checklistId}/checkItems`, {
-          name: clean,
-          pos: 'bottom',
-        });
+      try {
+        for (const item of items) {
+          const clean = item.trim();
+          if (!clean) continue;
+          await this.client.post(`/checklists/${checklistId}/checkItems`, {
+            name: clean,
+            pos: 'bottom',
+          });
+        }
+      } catch (cause) {
+        // Não deixa uma checklist vazia/parcial no cartão: a regra passaria a
+        // considerá-la aplicada e os itens ficariam faltando para sempre.
+        try {
+          await this.client.delete(`/checklists/${checklistId}`);
+        } catch {
+          // melhor esforço: o erro original é o que importa para o usuário
+        }
+        await this.invalidateCardCaches();
+        throw cause;
       }
     }
     await this.invalidateCardCaches();

@@ -9,6 +9,7 @@ interface BackupPreview {
   data: unknown;
   exportedAt: number | null;
   rules: number;
+  templates: number;
   board: string;
   list: string;
   sites: string[];
@@ -51,6 +52,7 @@ function parseBackup(text: string): BackupPreview {
 
   const settings = envelope.settings as Record<string, unknown>;
   const rules = Array.isArray(envelope.rules) ? envelope.rules.length : 0;
+  const templates = Array.isArray(envelope.templates) ? envelope.templates.length : 0;
   const origins = Array.isArray(settings.activatedOrigins)
     ? settings.activatedOrigins.filter((origin): origin is string => typeof origin === 'string')
     : [];
@@ -59,6 +61,7 @@ function parseBackup(text: string): BackupPreview {
     data: envelope,
     exportedAt: typeof envelope.exportedAt === 'number' ? envelope.exportedAt : null,
     rules,
+    templates,
     board: asString(settings.defaultBoardName),
     list: asString(settings.defaultListName),
     sites: origins,
@@ -77,6 +80,7 @@ function previewLines(preview: BackupPreview, importRules: boolean): string[] {
       ? 'Sites: todos os sites.'
       : `Sites: ${preview.sites.length ? preview.sites.join(', ') : 'nenhum'}.`,
     `Regras: ${preview.rules}${preview.rules > 0 && !importRules ? ' (as atuais serão mantidas)' : ''}.`,
+    `Modelos de checklist: ${preview.templates}${preview.templates > 0 && !importRules ? ' (os atuais serão mantidos)' : ''}.`,
     preview.credentials
       ? 'Credenciais do Trello: incluídas no backup.'
       : 'Credenciais do Trello: não incluídas (as atuais serão mantidas).',
@@ -148,7 +152,9 @@ export function BackupSection({
       setPreview(null);
       notify({
         kind: 'success',
-        text: `Configurações importadas${result.rules ? ` com ${result.rules} regra(s)` : ''}. Recarregando a página…`,
+        text: `Configurações importadas${result.rules ? ` com ${result.rules} regra(s)` : ''}${
+          result.templates ? ` e ${result.templates} modelo(s) de checklist` : ''
+        }. Recarregando a página…`,
       });
       window.setTimeout(() => window.location.reload(), 900);
     } catch (cause) {

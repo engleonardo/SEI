@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { browser } from 'wxt/browser';
 import type { Rule } from '../domain/rules';
 import { exportBackup, importBackup } from './backup';
+import {
+  deleteChecklistTemplate,
+  listChecklistTemplates,
+  saveChecklistTemplate,
+} from './checklist-templates';
 import { getRules, saveRules } from './rules';
 import { getSettings, saveSettings } from './settings';
 
@@ -104,5 +109,22 @@ describe('backup das configurações', () => {
 
     expect(result.rules).toBe(0);
     expect((await getRules()).map((item) => item.id)).toEqual(['rule-current']);
+  });
+
+  it('exporta e importa modelos de checklist preservando o id usado pelas regras', async () => {
+    const [created] = await saveChecklistTemplate({
+      name: 'Judicial',
+      items: ['Ler os autos', 'Preparar parecer'],
+    });
+    const backup = await exportBackup(false);
+    expect(backup.templates).toHaveLength(1);
+
+    await deleteChecklistTemplate(created?.id ?? '');
+    const result = await importBackup(backup);
+
+    expect(result.templates).toBe(1);
+    const restored = await listChecklistTemplates();
+    expect(restored[0]?.id).toBe(created?.id);
+    expect(restored[0]?.items).toEqual(['Ler os autos', 'Preparar parecer']);
   });
 });

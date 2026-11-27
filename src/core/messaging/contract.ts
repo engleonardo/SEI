@@ -18,7 +18,7 @@ import type { Rule, RuleRun } from '../domain/rules';
 import type { RuleStats } from '../storage/rule-stats';
 import type { RuleLogEntry } from '../storage/rule-log';
 import type { LinkCandidate } from '../link/scan';
-import type { SettingsBackup } from '../storage/backup';
+import type { ImportResult, SettingsBackup } from '../storage/backup';
 import type { MirrorGroup } from '../storage/mirrors';
 import type { ChecklistTemplate } from '../storage/checklist-templates';
 import type { AuthStatus } from '../auth/session';
@@ -40,7 +40,7 @@ export interface RpcMap {
   };
   'settings:import': {
     payload: { data: unknown; importRules?: boolean };
-    result: { rules: number; settings: Settings };
+    result: ImportResult;
   };
   'options:open': { payload: { tab?: string } | undefined; result: undefined };
   'dashboard:open': { payload: undefined; result: undefined };

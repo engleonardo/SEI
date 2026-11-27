@@ -336,9 +336,16 @@ const handlers = {
   'trello:apply-checklist-template': ({ cardId, name, items }) =>
     repository.createChecklistWithItems(cardId, name, items),
   'checklists:templates': () => listChecklistTemplates(),
-  'checklists:template-save': ({ id, name, items }) =>
-    saveChecklistTemplate({ id, name, items }),
-  'checklists:template-delete': ({ id }) => deleteChecklistTemplate(id),
+  'checklists:template-save': async ({ id, name, items }) => {
+    const templates = await saveChecklistTemplate({ id, name, items });
+    queueConfigSync();
+    return templates;
+  },
+  'checklists:template-delete': async ({ id }) => {
+    const templates = await deleteChecklistTemplate(id);
+    queueConfigSync();
+    return templates;
+  },
   'trello:card-comments': ({ cardId }) => repository.getComments(cardId),
   'trello:add-comment': ({ cardId, text }) => repository.addComment(cardId, text),
 

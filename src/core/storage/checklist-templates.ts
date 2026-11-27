@@ -56,6 +56,21 @@ export async function listChecklistTemplates(): Promise<ChecklistTemplate[]> {
     .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 }
 
+/**
+ * Substitui todos os modelos (sincronização/backup), preservando os IDs para
+ * que as regras que apontam para `templateId` continuem funcionando.
+ */
+export async function replaceChecklistTemplates(values: unknown): Promise<ChecklistTemplate[]> {
+  const next = Array.isArray(values)
+    ? values
+        .map(sanitizeTemplate)
+        .filter((template): template is ChecklistTemplate => Boolean(template))
+        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+    : [];
+  await browser.storage.local.set({ [TEMPLATES_KEY]: next });
+  return next;
+}
+
 export async function saveChecklistTemplate(input: {
   id?: string;
   name: string;
