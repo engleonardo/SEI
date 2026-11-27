@@ -1,17 +1,19 @@
 # Publicação na Chrome Web Store - checklist
 
-> **Ordem da 1.8.0:** conferir a página de callback/privacidade ao vivo → tag `v1.8.0` → Release → lojas.
+> **Ordem da 1.8.1:** conferir a página de callback/privacidade ao vivo → tag `v1.8.1` → Release → lojas.
 >
-> A tag dispara o workflow **Release** e, quando ele termina, o **publish-store.yml**, que envia **e publica** no Chrome e na AMO automaticamente se os segredos estiverem configurados (nesta máquina eles estão: `CWS_*`, `AMO_*` e `EDGE_*`). O **Publish Edge (API)** também roda depois do Release quando os segredos do Edge estiverem corretos.
+> A tag dispara o workflow **Release** e, quando ele termina, o **publish-store.yml**, que envia **e publica** no Chrome e na AMO automaticamente se os segredos estiverem configurados. O **Publish Edge (API)** também roda depois do Release.
 >
-> **Situação:** 1.8.0 **publicada no Chrome** e na AMO (Firefox); **em análise no Edge** (envio manual). A 1.7.0 continua publicada no Edge até a aprovação. As credenciais do Edge já estão válidas; o próximo Release publica sozinho.
+> **Situação:** 1.8.1 pronta para publicar; 1.8.0 continua nas lojas até a aprovação da nova versão.
+>
+> A 1.8.1 **não adiciona permissões novas**; o rascunho de privacidade da 1.8.0 pode ser reaproveitado.
 
 ## Antes de enviar
 
 - [ ] Conta de desenvolvedor paga e verificada no Chrome Web Store.
 - [ ] `npm ci && npm run verify` passando.
 - [ ] `npm run check:package` sem nomes reservados (`_metadata`) no build.
-- [ ] `npm run build && npm run zip` gerando `.output/sei-flow-1.8.0-chrome.zip`.
+- [ ] `npm run build && npm run zip` gerando `.output/sei-flow-1.8.1-chrome.zip`.
 - [ ] Ícone 128×128 correto (`public/icon-128.png`).
 - [ ] Screenshots 1280×800 em `docs/store/screenshots-1280x800/`.
 - [ ] Banner 440×280 em `docs/store/banner-440x280.png` (opcional, para destaque).
@@ -30,7 +32,7 @@
 
 ## Após publicar
 
-- [ ] Criar uma tag `v1.8.0` (ou a versão publicada) no GitHub.
+- [ ] Criar uma tag `v1.8.1` (ou a versão publicada) no GitHub.
 - [ ] Anexar o zip ao GitHub Release.
 - [ ] Configurar os segredos da loja para o envio automático (veja `auto-publish.md`).
 - [ ] Confirmar o link da loja no README.
